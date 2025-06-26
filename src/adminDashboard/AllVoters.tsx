@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
@@ -339,9 +338,13 @@ const AllVoters = () => {
                             ) : column === 'Vote Probability (%)' ? (
                               <div className="flex items-center gap-1">
                                 <span className="font-medium">{getFieldValue(voter, column) || 0}%</span>
-                                {(getFieldValue(voter, column) || 0) >= 80 && (
-                                  <Badge variant="default" className="bg-green-600 text-xs">উচ্চ</Badge>
-                                )}
+                                {(() => {
+                                  const value = getFieldValue(voter, column);
+                                  const numValue = typeof value === 'string' ? parseInt(value) : value;
+                                  return (numValue && numValue >= 80) && (
+                                    <Badge variant="default" className="bg-green-600 text-xs">উচ্চ</Badge>
+                                  );
+                                })()}
                               </div>
                             ) : column === 'Will Vote' || column === 'Is Voter' || column === 'Student' || column === 'WhatsApp' || column === 'Has Disability' || column === 'Is Migrated' || column === 'Voted Before' ? (
                               <span className={getFieldValue(voter, column) === 'Yes' ? 'text-green-600 font-medium' : 'text-red-500'}>
