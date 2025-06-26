@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Login from "./authentication/Login";
 import SignUp from "./authentication/SignUp";
+import ForgotPassword from "./authentication/ForgotPassword";
 import PendingVerification from "./authentication/PendingVerification";
 import Unauthorized from "./authentication/Unauthorized";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<SignUp />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/pending-verification" element={<PendingVerification />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
             
