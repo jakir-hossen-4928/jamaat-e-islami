@@ -19,6 +19,7 @@ import AddVoters from "./adminDashboard/AddVoters";
 import Analytics from "./adminDashboard/Analytics";
 import SMSCampaign from "./adminDashboard/SMSCampaign";
 import DataHub from "./adminDashboard/DataHub";
+import UserVerify from "./adminDashboard/usersverify/UserVerify";
 
 const queryClient = new QueryClient();
 
@@ -51,32 +52,38 @@ const App = () => (
             } />
             
             <Route path="/admin/voters" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute>
                 <AllVoters />
               </ProtectedRoute>
             } />
             
             <Route path="/admin/add-voters" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute>
                 <AddVoters />
               </ProtectedRoute>
             } />
             
             <Route path="/admin/analytics" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute>
                 <Analytics />
               </ProtectedRoute>
             } />
             
             <Route path="/admin/sms" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute requiredRole="moderator">
                 <SMSCampaign />
               </ProtectedRoute>
             } />
             
             <Route path="/admin/data-hub" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute requiredRole="moderator">
                 <DataHub />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/users" element={
+              <ProtectedRoute requiredRole="admin">
+                <UserVerify />
               </ProtectedRoute>
             } />
             

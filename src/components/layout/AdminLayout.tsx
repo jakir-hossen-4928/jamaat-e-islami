@@ -12,7 +12,8 @@ import {
   Menu, 
   X, 
   LogOut,
-  Home
+  Home,
+  UserCheck
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -37,6 +38,9 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { icon: BarChart3, label: 'বিশ্লেষণ', path: '/admin/analytics' },
     { icon: MessageSquare, label: 'SMS ক্যাম্পেইন', path: '/admin/sms' },
     { icon: Database, label: 'ডেটা হাব', path: '/admin/data-hub' },
+    ...(userProfile?.role === 'admin' ? [
+      { icon: UserCheck, label: 'ব্যবহারকারী যাচাই', path: '/admin/users' }
+    ] : [])
   ];
 
   return (
@@ -94,6 +98,10 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           <div className="bg-green-700 rounded-lg p-4 mb-4">
             <p className="text-white text-sm font-medium">{userProfile?.displayName}</p>
             <p className="text-green-200 text-xs">{userProfile?.email}</p>
+            <p className="text-green-200 text-xs capitalize">
+              {userProfile?.role === 'admin' ? 'অ্যাডমিন' : 
+               userProfile?.role === 'moderator' ? 'মডারেটর' : 'ব্যবহারকারী'}
+            </p>
           </div>
           <Button
             onClick={handleLogout}

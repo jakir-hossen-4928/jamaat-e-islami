@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
@@ -8,17 +9,61 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Trash2, Search, Eye } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Edit, Trash2, Search, Eye, Settings, Plus } from 'lucide-react';
 import { VoterData } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import AdvancedPDFGenerator from '@/components/AdvancedPDFGenerator';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 
 const AllVoters = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedVoter, setSelectedVoter] = useState<VoterData | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { userProfile } = useAuth();
+
+  const allColumns = [
+    'Voter Name', 'House Name', 'FatherOrHusband', 'Age', 'Gender', 'Marital Status',
+    'Student', 'Occupation', 'Education', 'Religion', 'Phone', 'WhatsApp', 'NID',
+    'Is Voter', 'Will Vote', 'Voted Before', 'Vote Probability (%)', 'Political Support',
+    'Priority Level', 'Has Disability', 'Is Migrated', 'Remarks', 'Collector', 'Collection Date'
+  ];
+
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
+    'Voter Name': true,
+    'Age': true,
+    'Phone': true,
+    'Will Vote': true,
+    'Priority Level': true,
+    'Vote Probability (%)': true,
+    'House Name': false,
+    'FatherOrHusband': false,
+    'Gender': false,
+    'Marital Status': false,
+    'Student': false,
+    'Occupation': false,
+    'Education': false,
+    'Religion': false,
+    'WhatsApp': false,
+    'NID': false,
+    'Is Voter': false,
+    'Voted Before': false,
+    'Political Support': false,
+    'Has Disability': false,
+    'Is Migrated': false,
+    'Remarks': false,
+    'Collector': false,
+    'Collection Date': false
+  });
 
   const { data: voters = [], isLoading } = useQuery({
     queryKey: ['voters'],
@@ -78,8 +123,30 @@ const AllVoters = () => {
   const filteredVoters = voters.filter(voter =>
     voter['Voter Name']?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     voter.Phone?.includes(searchTerm) ||
-    voter.ID?.includes(searchTerm)
+    voter.ID?.includes(searchTerm) ||
+    voter.NID?.includes(searchTerm)
   );
+
+  const totalPages = Math.ceil(filteredVoters.length / pageSize);
+  const paginatedVoters = filteredVoters.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  // Stats calculation
+  const stats = {
+    totalVoters: voters.length,
+    willVoteCount: voters.filter(v => v['Will Vote'] === 'Yes').length,
+    highPriorityCount: voters.filter(v => v['Priority Level'] === 'High').length,
+    studentCount: voters.filter(v => v.Student === 'Yes').length,
+  };
+
+  const handleColumnToggle = (column: string) => {
+    setVisibleColumns(prev => ({
+      ...prev,
+      [column]: !prev[column]
+    }));
+  };
 
   const handleEdit = (voter: VoterData) => {
     setSelectedVoter(voter);
@@ -97,107 +164,285 @@ const AllVoters = () => {
     }
   };
 
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const getFieldValue = (voter: VoterData, field: string) => {
+    return voter[field as keyof VoterData] || '-';
+  };
+
+  const canEdit = userProfile?.role === 'admin' || userProfile?.role === 'moderator';
+  const canDelete = userProfile?.role === 'admin';
+
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <h1 className="text-2xl font-bold text-gray-900">সকল ভোটার</h1>
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="নাম, ফোন বা ID দিয়ে খুঁজুন..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full md:w-80"
-              />
-            </div>
-          </div>
+      <div className="space-y-4 p-2 sm:p-4">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+          <Card className="shadow-lg border-l-4 border-l-green-600">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-gray-600">মোট ভোটার</p>
+                  <p className="text-lg sm:text-2xl font-bold text-green-600">{stats.totalVoters}</p>
+                </div>
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-100 rounded-full flex items-center justify-center">
+                  <Eye className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg border-l-4 border-l-red-600">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-gray-600">উচ্চ অগ্রাধিকার</p>
+                  <p className="text-lg sm:text-2xl font-bold text-red-600">{stats.highPriorityCount}</p>
+                </div>
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-red-100 rounded-full flex items-center justify-center">
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg border-l-4 border-l-blue-600">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-gray-600">ভোট দেবেন</p>
+                  <p className="text-lg sm:text-2xl font-bold text-blue-600">{stats.willVoteCount}</p>
+                </div>
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg border-l-4 border-l-purple-600">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs sm:text-sm text-gray-600">ছাত্র</p>
+                  <p className="text-lg sm:text-2xl font-bold text-purple-600">{stats.studentCount}</p>
+                </div>
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>ভোটার তালিকা ({filteredVoters.length})</CardTitle>
+        {/* Controls */}
+        <Card className="shadow-lg">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base sm:text-lg flex items-center justify-between">
+              <span>ভোটার ব্যবস্থাপনা</span>
+              <Badge variant="outline" className="bg-green-50 text-green-700">
+                পৃষ্ঠা {currentPage} এর {totalPages} • মোট {stats.totalVoters}
+              </Badge>
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8">লোড হচ্ছে...</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
+            <div className="flex flex-col gap-4">
+              <div className="flex gap-2 items-center">
+                <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <Input
+                  placeholder="নাম, ফোন বা NID দিয়ে খুঁজুন..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <AdvancedPDFGenerator />
+
+                <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex items-center gap-1 text-xs hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300">
+                      <Settings className="w-3 h-3" />
+                      কলাম
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>টেবিল কলাম সেটিংস</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto">
+                      {allColumns.map((column) => (
+                        <div key={column} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={column}
+                            checked={visibleColumns[column]}
+                            onCheckedChange={() => handleColumnToggle(column)}
+                          />
+                          <Label htmlFor={column} className="text-sm cursor-pointer">
+                            {column}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Voters Table */}
+        <Card className="shadow-lg">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-green-50">
+                    {allColumns.filter(col => visibleColumns[col]).map((column) => (
+                      <TableHead key={column} className="text-xs sm:text-sm whitespace-nowrap font-semibold">
+                        {column}
+                      </TableHead>
+                    ))}
+                    <TableHead className="text-xs sm:text-sm font-semibold">কার্যক্রম</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
                     <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>নাম</TableHead>
-                      <TableHead>ফোন</TableHead>
-                      <TableHead>বয়স</TableHead>
-                      <TableHead>ভোট দেবেন</TableHead>
-                      <TableHead>অগ্রাধিকার</TableHead>
-                      <TableHead>কার্যক্রম</TableHead>
+                      <TableCell colSpan={Object.values(visibleColumns).filter(Boolean).length + 1} className="text-center py-8 text-sm text-gray-500">
+                        লোড হচ্ছে...
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredVoters.map((voter) => (
-                      <TableRow key={voter.id}>
-                        <TableCell className="font-medium">{voter.ID}</TableCell>
-                        <TableCell>{voter['Voter Name']}</TableCell>
-                        <TableCell>{voter.Phone}</TableCell>
-                        <TableCell>{voter.Age}</TableCell>
+                  ) : paginatedVoters.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={Object.values(visibleColumns).filter(Boolean).length + 1} className="text-center py-8 text-sm text-gray-500">
+                        {searchTerm ? `"${searchTerm}" খুঁজে পাওয়া যায়নি` : 'কোন ভোটার পাওয়া যায়নি'}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedVoters.map((voter) => (
+                      <TableRow key={voter.id} className="hover:bg-gray-50 transition-colors">
+                        {allColumns.filter(col => visibleColumns[col]).map((column) => (
+                          <TableCell key={column} className="text-xs sm:text-sm">
+                            {column === 'Priority Level' ? (
+                              <Badge variant={
+                                getFieldValue(voter, column) === 'High' ? 'destructive' :
+                                  getFieldValue(voter, column) === 'Medium' ? 'default' : 'secondary'
+                              } className="text-xs shadow-sm">
+                                {getFieldValue(voter, column) === 'High' ? 'উচ্চ' : 
+                                 getFieldValue(voter, column) === 'Medium' ? 'মাঝারি' : 'নিম্ন'}
+                              </Badge>
+                            ) : column === 'Vote Probability (%)' ? (
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">{getFieldValue(voter, column) || 0}%</span>
+                                {(getFieldValue(voter, column) || 0) >= 80 && (
+                                  <Badge variant="default" className="bg-green-600 text-xs">উচ্চ</Badge>
+                                )}
+                              </div>
+                            ) : column === 'Will Vote' || column === 'Is Voter' || column === 'Student' || column === 'WhatsApp' || column === 'Has Disability' || column === 'Is Migrated' || column === 'Voted Before' ? (
+                              <span className={getFieldValue(voter, column) === 'Yes' ? 'text-green-600 font-medium' : 'text-red-500'}>
+                                {getFieldValue(voter, column) === 'Yes' ? '✓ হ্যাঁ' : getFieldValue(voter, column) === 'No' ? '✗ না' : '-'}
+                              </span>
+                            ) : (
+                              <span className={column === 'Voter Name' ? 'font-medium text-gray-900' : ''}>
+                                {getFieldValue(voter, column)}
+                              </span>
+                            )}
+                          </TableCell>
+                        ))}
                         <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            voter['Will Vote'] === 'Yes' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {voter['Will Vote'] === 'Yes' ? 'হ্যাঁ' : 'না'}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            voter['Priority Level'] === 'High' 
-                              ? 'bg-red-100 text-red-800' 
-                              : voter['Priority Level'] === 'Medium'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {voter['Priority Level'] === 'High' ? 'উচ্চ' : 
-                             voter['Priority Level'] === 'Medium' ? 'মাঝারি' : 'নিম্ন'}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
+                          <div className="flex gap-1">
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleView(voter)}
+                              className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300"
+                              title="বিস্তারিত দেখুন"
                             >
-                              <Eye className="w-4 h-4" />
+                              <Eye className="w-3 h-3" />
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleEdit(voter)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDelete(voter.id!)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            {canEdit && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEdit(voter)}
+                                className="h-7 w-7 p-0 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
+                                title="সম্পাদনা করুন"
+                              >
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                            )}
+                            {canDelete && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 h-7 w-7 p-0 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                                onClick={() => handleDelete(voter.id!)}
+                                title="মুছে ফেলুন"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    style={{
+                      pointerEvents: currentPage === 1 ? 'none' : 'auto',
+                      opacity: currentPage === 1 ? 0.5 : 1
+                    }}
+                    className="hover:bg-green-50 hover:text-green-700"
+                  />
+                </PaginationItem>
+                
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const pageNum = Math.max(1, Math.min(totalPages, currentPage - 2 + i));
+                  return (
+                    <PaginationItem key={pageNum}>
+                      <PaginationLink
+                        onClick={() => handlePageChange(pageNum)}
+                        isActive={pageNum === currentPage}
+                        className={pageNum === currentPage ? 'bg-green-600 text-white hover:bg-green-700' : 'hover:bg-green-50 hover:text-green-700'}
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+                
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    style={{
+                      pointerEvents: currentPage === totalPages ? 'none' : 'auto',
+                      opacity: currentPage === totalPages ? 0.5 : 1
+                    }}
+                    className="hover:bg-green-50 hover:text-green-700"
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
 
         {/* View Dialog */}
         <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
@@ -309,7 +554,7 @@ const VoterEditForm = ({
         <div>
           <label className="block text-sm font-medium mb-1">ভোট দেবেন</label>
           <select
-            className="w-full p-2 border rounded-md"
+            className="w-full p-2 border rounded-md hover:border-green-300 focus:border-green-500"
             value={formData['Will Vote'] || ''}
             onChange={(e) => setFormData({...formData, 'Will Vote': e.target.value as 'Yes' | 'No'})}
           >
@@ -321,7 +566,7 @@ const VoterEditForm = ({
         <div>
           <label className="block text-sm font-medium mb-1">অগ্রাধিকার</label>
           <select
-            className="w-full p-2 border rounded-md"
+            className="w-full p-2 border rounded-md hover:border-green-300 focus:border-green-500"
             value={formData['Priority Level'] || ''}
             onChange={(e) => setFormData({...formData, 'Priority Level': e.target.value as 'Low' | 'Medium' | 'High'})}
           >
@@ -346,7 +591,7 @@ const VoterEditForm = ({
       <div>
         <label className="block text-sm font-medium mb-1">মন্তব্য</label>
         <textarea
-          className="w-full p-2 border rounded-md"
+          className="w-full p-2 border rounded-md hover:border-green-300 focus:border-green-500"
           rows={3}
           value={formData.Remarks || ''}
           onChange={(e) => setFormData({...formData, Remarks: e.target.value})}
@@ -354,7 +599,11 @@ const VoterEditForm = ({
       </div>
 
       <div className="flex justify-end space-x-4">
-        <Button type="submit" disabled={isLoading}>
+        <Button 
+          type="submit" 
+          disabled={isLoading}
+          className="bg-green-600 hover:bg-green-700 text-white"
+        >
           {isLoading ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
         </Button>
       </div>
