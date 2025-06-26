@@ -13,6 +13,12 @@ import PendingVerification from "./authentication/PendingVerification";
 import Unauthorized from "./authentication/Unauthorized";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
+import AdminDashboard from "./adminDashboard/AdminDashboard";
+import AllVoters from "./adminDashboard/AllVoters";
+import AddVoters from "./adminDashboard/AddVoters";
+import Analytics from "./adminDashboard/Analytics";
+import SMSCampaign from "./adminDashboard/SMSCampaign";
+import DataHub from "./adminDashboard/DataHub";
 
 const queryClient = new QueryClient();
 
@@ -34,13 +40,43 @@ const App = () => (
             {/* Protected Routes */}
             <Route path="/dashboard" element={
               <ProtectedRoute>
-                <div>Dashboard Coming Soon</div>
+                <AdminDashboard />
               </ProtectedRoute>
             } />
             
-            <Route path="/admin/*" element={
+            <Route path="/admin/dashboard" element={
               <ProtectedRoute requiredRole="admin">
-                <div>Admin Panel Coming Soon</div>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/voters" element={
+              <ProtectedRoute requiredRole="admin">
+                <AllVoters />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/add-voters" element={
+              <ProtectedRoute requiredRole="admin">
+                <AddVoters />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/analytics" element={
+              <ProtectedRoute requiredRole="admin">
+                <Analytics />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/sms" element={
+              <ProtectedRoute requiredRole="admin">
+                <SMSCampaign />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/admin/data-hub" element={
+              <ProtectedRoute requiredRole="admin">
+                <DataHub />
               </ProtectedRoute>
             } />
             

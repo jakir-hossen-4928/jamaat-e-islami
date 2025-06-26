@@ -1,0 +1,298 @@
+
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import AdminLayout from '@/components/layout/AdminLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { MessageSquare, Users, Send, Filter } from 'lucide-react';
+import { VoterData } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
+
+const SMSCampaign = () => {
+  const [message, setMessage] = useState('');
+  const [selectedVoters, setSelectedVoters] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({
+    willVote: '',
+    priority: '',
+    gender: '',
+    minAge: '',
+    maxAge: ''
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const { toast } = useToast();
+
+  const { data: voters = [], isLoading } = useQuery({
+    queryKey: ['voters'],
+    queryFn: async () => {
+      const votersRef = collection(db, 'voters');
+      const snapshot = await getDocs(votersRef);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoterData));
+    }
+  });
+
+  const filteredVoters = voters.filter(voter => {
+    const matchesSearch = voter['Voter Name']?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         voter.Phone?.includes(searchTerm);
+    
+    const matchesWillVote = !filters.willVote || voter['Will Vote'] === filters.willVote;
+    const matchesPriority = !filters.priority || voter['Priority Level'] === filters.priority;
+    const matchesGender = !filters.gender || voter.Gender === filters.gender;
+    const matchesMinAge = !filters.minAge || (voter.Age && voter.Age >= parseInt(filters.minAge));
+    const matchesMaxAge = !filters.maxAge || (voter.Age && voter.Age <= parseInt(filters.maxAge));
+    
+    return matchesSearch && matchesWillVote && matchesPriority && matchesGender && 
+           matchesMinAge && matchesMaxAge && voter.Phone;
+  });
+
+  const selectedVoterData = filteredVoters.filter(voter => selectedVoters.includes(voter.id!));
+  const estimatedCost = selectedVoters.length * 0.35; // Assuming 0.35 taka per SMS
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedVoters(filteredVoters.map(v => v.id!));
+    } else {
+      setSelectedVoters([]);
+    }
+  };
+
+  const handleVoterSelect = (voterId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedVoters([...selectedVoters, voterId]);
+    } else {
+      setSelectedVoters(selectedVoters.filter(id => id !== voterId));
+    }
+  };
+
+  const sendSMS = async () => {
+    if (!message.trim()) {
+      toast({
+        title: "ত্রুটি",
+        description: "অনুগ্রহ করে SMS বার্তা লিখুন",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedVoters.length === 0) {
+      toast({
+        title: "ত্রুটি",
+        description: "অনুগ্রহ করে কমপক্ষে একজন ভোটার নির্বাচন করুন",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Simulate SMS sending
+    toast({
+      title: "SMS পাঠানো হয়েছে",
+      description: `${selectedVoters.length} জন ভোটারের কাছে SMS পাঠানো হয়েছে`,
+    });
+
+    // Reset form
+    setMessage('');
+    setSelectedVoters([]);
+  };
+
+  const placeholders = [
+    { key: '{name}', label: 'নাম' },
+    { key: '{phone}', label: 'ফোন' },
+    { key: '{age}', label: 'বয়স' },
+  ];
+
+  const insertPlaceholder = (placeholder: string) => {
+    setMessage(prev => `${prev}${placeholder} `);
+  };
+
+  return (
+    <AdminLayout>
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+          <h1 className="text-2xl font-bold text-gray-900">SMS ক্যাম্পেইন</h1>
+          <div className="flex items-center space-x-2 mt-4 md:mt-0">
+            <MessageSquare className="w-5 h-5 text-blue-600" />
+            <span className="text-sm text-gray-600">নির্বাচিত: {selectedVoters.length}</span>
+            <span className="text-sm text-gray-600">খরচ: ৳{estimatedCost.toFixed(2)}</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Message Composition */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <MessageSquare className="w-5 h-5 text-blue-600" />
+                <span>বার্তা লিখুন</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                placeholder="আপনার SMS বার্তা এখানে লিখুন..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                rows={6}
+                className="resize-none"
+              />
+              
+              <div>
+                <p className="text-sm font-medium mb-2">প্লেসহোল্ডার ব্যবহার করুন:</p>
+                <div className="flex flex-wrap gap-2">
+                  {placeholders.map(placeholder => (
+                    <Button
+                      key={placeholder.key}
+                      size="sm"
+                      variant="outline"
+                      onClick={() => insertPlaceholder(placeholder.key)}
+                    >
+                      {placeholder.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center text-sm text-gray-600">
+                <span>বার্তার দৈর্ঘ্য: {message.length}/160</span>
+                <span>SMS পার্ট: {Math.ceil(message.length / 160)}</span>
+              </div>
+
+              <Button
+                onClick={sendSMS}
+                className="w-full bg-green-600 hover:bg-green-700"
+                disabled={selectedVoters.length === 0 || !message.trim()}
+              >
+                <Send className="w-4 h-4 mr-2" />
+                SMS পাঠান ({selectedVoters.length} জন)
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Voter Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Users className="w-5 h-5 text-green-600" />
+                  <span>ভোটার নির্বাচন</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowFilters(!showFilters)}
+                >
+                  <Filter className="w-4 h-4 mr-2" />
+                  ফিল্টার
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Input
+                placeholder="নাম বা ফোন দিয়ে খুঁজুন..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+
+              {showFilters && (
+                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                  <select
+                    className="p-2 border rounded"
+                    value={filters.willVote}
+                    onChange={(e) => setFilters({...filters, willVote: e.target.value})}
+                  >
+                    <option value="">ভোট দেবেন?</option>
+                    <option value="Yes">হ্যাঁ</option>
+                    <option value="No">না</option>
+                  </select>
+                  
+                  <select
+                    className="p-2 border rounded"
+                    value={filters.priority}
+                    onChange={(e) => setFilters({...filters, priority: e.target.value})}
+                  >
+                    <option value="">অগ্রাধিকার</option>
+                    <option value="High">উচ্চ</option>
+                    <option value="Medium">মাঝারি</option>
+                    <option value="Low">নিম্ন</option>
+                  </select>
+                  
+                  <select
+                    className="p-2 border rounded"
+                    value={filters.gender}
+                    onChange={(e) => setFilters({...filters, gender: e.target.value})}
+                  >
+                    <option value="">লিঙ্গ</option>
+                    <option value="Male">পুরুষ</option>
+                    <option value="Female">মহিলা</option>
+                  </select>
+                  
+                  <div className="flex space-x-2">
+                    <Input
+                      placeholder="সর্বনিম্ন বয়স"
+                      type="number"
+                      value={filters.minAge}
+                      onChange={(e) => setFilters({...filters, minAge: e.target.value})}
+                    />
+                    <Input
+                      placeholder="সর্বোচ্চ বয়স"
+                      type="number"
+                      value={filters.maxAge}
+                      onChange={(e) => setFilters({...filters, maxAge: e.target.value})}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  checked={selectedVoters.length === filteredVoters.length && filteredVoters.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+                <span className="text-sm">সবাই নির্বাচন করুন ({filteredVoters.length})</span>
+              </div>
+
+              <div className="max-h-96 overflow-y-auto space-y-2">
+                {isLoading ? (
+                  <div className="text-center py-4">লোড হচ্ছে...</div>
+                ) : (
+                  filteredVoters.map(voter => (
+                    <div key={voter.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                      <Checkbox
+                        checked={selectedVoters.includes(voter.id!)}
+                        onCheckedChange={(checked) => handleVoterSelect(voter.id!, checked as boolean)}
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium">{voter['Voter Name']}</p>
+                        <p className="text-sm text-gray-600">{voter.Phone}</p>
+                        <div className="flex space-x-2 text-xs">
+                          <span className={`px-2 py-1 rounded ${
+                            voter['Will Vote'] === 'Yes' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {voter['Will Vote'] === 'Yes' ? 'ভোট দেবেন' : 'ভোট দেবেন না'}
+                          </span>
+                          <span className={`px-2 py-1 rounded ${
+                            voter['Priority Level'] === 'High' ? 'bg-red-100 text-red-800' :
+                            voter['Priority Level'] === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {voter['Priority Level'] === 'High' ? 'উচ্চ' :
+                             voter['Priority Level'] === 'Medium' ? 'মাঝারি' : 'নিম্ন'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </AdminLayout>
+  );
+};
+
+export default SMSCampaign;

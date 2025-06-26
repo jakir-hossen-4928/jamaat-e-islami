@@ -4,6 +4,7 @@ import { User as FirebaseUser, onAuthStateChanged, signInWithEmailAndPassword, c
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { User } from '@/lib/types';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -30,7 +31,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const login = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    
+    // Fetch user profile to check approval status
+    const userDoc = await getDoc(doc(db, 'users', result.user.uid));
+    if (userDoc.exists()) {
+      const profile = userDoc.data() as User;
+      
+      // Navigate based on role and approval status
+      if (!profile.approved) {
+        // Will be handled by ProtectedRoute
+        return;
+      }
+      
+      // Navigate to appropriate dashboard
+      if (profile.role === 'admin') {
+        window.location.href = '/admin/dashboard';
+      } else {
+        window.location.href = '/dashboard';
+      }
+    }
   };
 
   const register = async (email: string, password: string, displayName: string) => {
