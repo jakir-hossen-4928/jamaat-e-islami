@@ -44,7 +44,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div 
@@ -53,10 +53,10 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         />
       )}
 
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-green-800 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+      {/* Sidebar - Fixed positioning for desktop */}
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-green-800 transform transition-transform duration-300 ease-in-out ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:static lg:inset-0`}>
+      } lg:translate-x-0 lg:static lg:inset-0`}>
         <div className="flex items-center justify-between h-16 px-6 bg-green-900">
           <div className="flex items-center space-x-3">
             <img 
@@ -74,7 +74,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           </button>
         </div>
 
-        <nav className="mt-6">
+        <nav className="mt-6 flex-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -82,7 +82,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center px-6 py-3 text-white hover:bg-green-700 transition-colors ${
+                className={`flex items-center px-6 py-3 text-white hover:bg-green-700 transition-colors duration-200 ${
                   isActive ? 'bg-green-700 border-r-4 border-green-400' : ''
                 }`}
                 onClick={() => setSidebarOpen(false)}
@@ -94,7 +94,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           })}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-6">
+        <div className="p-6">
           <div className="bg-green-700 rounded-lg p-4 mb-4">
             <p className="text-white text-sm font-medium">{userProfile?.displayName}</p>
             <p className="text-green-200 text-xs">{userProfile?.email}</p>
@@ -106,7 +106,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           <Button
             onClick={handleLogout}
             variant="outline"
-            className="w-full text-white border-white hover:bg-white hover:text-green-800"
+            className="w-full text-white border-white hover:bg-white hover:text-green-800 transition-colors duration-200"
           >
             <LogOut className="w-4 h-4 mr-2" />
             লগআউট
@@ -114,14 +114,14 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="lg:ml-64">
+      {/* Main content - Properly positioned for desktop */}
+      <div className="flex-1 lg:ml-0">
         {/* Top bar */}
         <div className="bg-white shadow-sm border-b">
           <div className="flex items-center justify-between h-16 px-6">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-gray-600 hover:text-gray-900"
+              className="lg:hidden text-gray-600 hover:text-gray-900 transition-colors duration-200"
             >
               <Menu className="w-6 h-6" />
             </button>
@@ -137,7 +137,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         </div>
 
         {/* Page content */}
-        <main className="p-6">
+        <main className="p-4 lg:p-6">
           {children}
         </main>
       </div>

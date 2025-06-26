@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, addDoc, writeBatch, doc } from 'firebase/firestore';
@@ -6,32 +7,51 @@ import AdminLayout from '@/components/layout/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserPlus, Upload, Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ArrowLeft, Save, User, Phone, MapPin, Vote, Info, CheckCircle, Upload } from 'lucide-react';
 import { VoterData } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 import Papa from 'papaparse';
 
 const AddVoters = () => {
-  const [singleVoter, setSingleVoter] = useState<Partial<VoterData>>({
-    'Voter Name': '',
-    Age: undefined,
-    Gender: undefined,
-    Phone: '',
-    'Will Vote': undefined,
-    'Priority Level': undefined,
-    'Vote Probability (%)': undefined,
-    Collector: 'Admin',
-    'Collection Date': new Date().toISOString(),
-    'Last Updated': new Date().toISOString()
-  });
-
-  const [csvData, setCsvData] = useState<VoterData[]>([]);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [isUploadingBulk, setIsUploadingBulk] = useState(false);
   
   const queryClient = useQueryClient();
-  const { toast } = useToast();
+
+  const [formData, setFormData] = useState({
+    'Voter Name': '',
+    'House Name': '',
+    'FatherOrHusband': '',
+    Age: '',
+    Gender: '' as 'Male' | 'Female' | 'Other' | '',
+    'Marital Status': '' as 'Married' | 'Unmarried' | 'Widowed' | 'Divorced' | '',
+    Student: '' as 'Yes' | 'No' | '',
+    Occupation: '',
+    Education: '',
+    Religion: '',
+    Phone: '',
+    WhatsApp: '' as 'Yes' | 'No' | '',
+    NID: '',
+    'Is Voter': '' as 'Yes' | 'No' | '',
+    'Will Vote': '' as 'Yes' | 'No' | '',
+    'Voted Before': '' as 'Yes' | 'No' | '',
+    'Vote Probability (%)': '',
+    'Political Support': '',
+    'Priority Level': 'Medium' as 'Low' | 'Medium' | 'High',
+    'Has Disability': '' as 'Yes' | 'No' | '',
+    'Is Migrated': '' as 'Yes' | 'No' | '',
+    Remarks: ''
+  });
 
   const addSingleVoterMutation = useMutation({
     mutationFn: async (voter: Partial<VoterData>) => {
@@ -40,7 +60,8 @@ const AddVoters = () => {
         ...voter,
         ID: Date.now().toString(),
         'Collection Date': new Date().toISOString(),
-        'Last Updated': new Date().toISOString()
+        'Last Updated': new Date().toISOString(),
+        Collector: 'Admin'
       });
     },
     onSuccess: () => {
@@ -49,19 +70,10 @@ const AddVoters = () => {
         title: "সফল",
         description: "নতুন ভোটার যোগ করা হয়েছে",
       });
-      // Reset form
-      setSingleVoter({
-        'Voter Name': '',
-        Age: undefined,
-        Gender: undefined,
-        Phone: '',
-        'Will Vote': undefined,
-        'Priority Level': undefined,
-        'Vote Probability (%)': undefined,
-        Collector: 'Admin',
-        'Collection Date': new Date().toISOString(),
-        'Last Updated': new Date().toISOString()
-      });
+      setShowSuccess(true);
+      setTimeout(() => {
+        resetForm();
+      }, 3000);
     },
     onError: () => {
       toast({
@@ -72,44 +84,38 @@ const AddVoters = () => {
     }
   });
 
-  const addBulkVotersMutation = useMutation({
-    mutationFn: async (voters: VoterData[]) => {
-      const batch = writeBatch(db);
-      const votersRef = collection(db, 'voters');
-      
-      voters.forEach((voter, index) => {
-        const docRef = doc(votersRef);
-        batch.set(docRef, {
-          ...voter,
-          ID: (Date.now() + index).toString(),
-          'Collection Date': new Date().toISOString(),
-          'Last Updated': new Date().toISOString()
-        });
-      });
-      
-      await batch.commit();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['voters'] });
-      toast({
-        title: "সফল",
-        description: `${csvData.length} জন ভোটার যোগ করা হয়েছে`,
-      });
-      setCsvData([]);
-      setCsvFile(null);
-    },
-    onError: () => {
-      toast({
-        title: "ত্রুটি",
-        description: "বাল্ক ভোটার যোগ করতে সমস্যা হয়েছে",
-        variant: "destructive",
-      });
-    }
-  });
+  const resetForm = () => {
+    setFormData({
+      'Voter Name': '',
+      'House Name': '',
+      'FatherOrHusband': '',
+      Age: '',
+      Gender: '',
+      'Marital Status': '',
+      Student: '',
+      Occupation: '',
+      Education: '',
+      Religion: '',
+      Phone: '',
+      WhatsApp: '',
+      NID: '',
+      'Is Voter': '',
+      'Will Vote': '',
+      'Voted Before': '',
+      'Vote Probability (%)': '',
+      'Political Support': '',
+      'Priority Level': 'Medium',
+      'Has Disability': '',
+      'Is Migrated': '',
+      Remarks: ''
+    });
+    setShowSuccess(false);
+  };
 
-  const handleSingleVoterSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!singleVoter['Voter Name']) {
+    
+    if (!formData['Voter Name'].trim()) {
       toast({
         title: "ত্রুটি",
         description: "ভোটারের নাম আবশ্যক",
@@ -117,305 +123,454 @@ const AddVoters = () => {
       });
       return;
     }
-    addSingleVoterMutation.mutate(singleVoter);
+
+    setIsLoading(true);
+    try {
+      const voterData: Partial<VoterData> = {
+        'Voter Name': formData['Voter Name'],
+        'House Name': formData['House Name'] || undefined,
+        'FatherOrHusband': formData['FatherOrHusband'] || undefined,
+        Age: formData.Age ? parseInt(formData.Age) : undefined,
+        Gender: formData.Gender || undefined,
+        'Marital Status': formData['Marital Status'] || undefined,
+        Student: formData.Student || undefined,
+        Occupation: formData.Occupation || undefined,
+        Education: formData.Education || undefined,
+        Religion: formData.Religion || undefined,
+        Phone: formData.Phone || undefined,
+        WhatsApp: formData.WhatsApp || undefined,
+        NID: formData.NID || undefined,
+        'Is Voter': formData['Is Voter'] || undefined,
+        'Will Vote': formData['Will Vote'] || undefined,
+        'Voted Before': formData['Voted Before'] || undefined,
+        'Vote Probability (%)': formData['Vote Probability (%)'] ? parseInt(formData['Vote Probability (%)']) : undefined,
+        'Political Support': formData['Political Support'] || undefined,
+        'Priority Level': formData['Priority Level'],
+        'Has Disability': formData['Has Disability'] || undefined,
+        'Is Migrated': formData['Is Migrated'] || undefined,
+        Remarks: formData.Remarks || undefined,
+      };
+      
+      addSingleVoterMutation.mutate(voterData);
+      
+    } catch (error: any) {
+      toast({
+        title: "ত্রুটি",
+        description: error.message || "ভোটার যোগ করতে সমস্যা হয়েছে",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleBulkUpload = async () => {
+    if (!csvFile) {
+      toast({
+        title: "ফাইল নির্বাচিত নেই",
+        description: "অনুগ্রহ করে একটি CSV ফাইল নির্বাচন করুন",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    setCsvFile(file);
-    
-    Papa.parse(file, {
-      header: true,
-      complete: (results) => {
-        const validData = results.data.filter((row: any) => row['Voter Name'] && row['Voter Name'].trim() !== '');
-        setCsvData(validData as VoterData[]);
-      },
-      error: () => {
-        toast({
-          title: "ত্রুটি",
-          description: "CSV ফাইল পড়তে সমস্যা হয়েছে",
-          variant: "destructive",
-        });
-      }
-    });
+    setIsUploadingBulk(true);
+    try {
+      Papa.parse(csvFile, {
+        header: true,
+        complete: async (results) => {
+          const validData = results.data.filter((row: any) => row['Voter Name'] && row['Voter Name'].trim() !== '');
+          
+          const batch = writeBatch(db);
+          const votersRef = collection(db, 'voters');
+          
+          validData.forEach((voter: any, index) => {
+            const docRef = doc(votersRef);
+            batch.set(docRef, {
+              ...voter,
+              ID: (Date.now() + index).toString(),
+              'Collection Date': new Date().toISOString(),
+              'Last Updated': new Date().toISOString(),
+              Collector: 'Admin'
+            });
+          });
+          
+          await batch.commit();
+          
+          queryClient.invalidateQueries({ queryKey: ['voters'] });
+          toast({
+            title: "সফল",
+            description: `${validData.length} জন ভোটার যোগ করা হয়েছে`,
+          });
+          setIsBulkUploadOpen(false);
+          setCsvFile(null);
+        },
+        error: () => {
+          toast({
+            title: "ত্রুটি",
+            description: "CSV ফাইল পড়তে সমস্যা হয়েছে",
+            variant: "destructive",
+          });
+        }
+      });
+    } catch (error: any) {
+      toast({
+        title: "আপলোড ত্রুটি",
+        description: error.message || "CSV ফাইল প্রক্রিয়া করতে সমস্যা হয়েছে",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingBulk(false);
+    }
   };
 
-  const downloadSampleCSV = () => {
-    const sampleData = [
-      {
-        'Voter Name': 'নমুনা নাম',
-        'House Name': 'নমুনা বাড়ি',
-        'FatherOrHusband': 'নমুনা পিতা',
-        'Age': 35,
-        'Gender': 'Male',
-        'Marital Status': 'Married',
-        'Student': 'No',
-        'Occupation': 'ব্যবসা',
-        'Education': 'এসএসসি',
-        'Religion': 'Islam',
-        'Phone': '01711000000',
-        'WhatsApp': 'Yes',
-        'NID': '1234567890',
-        'Is Voter': 'Yes',
-        'Will Vote': 'Yes',
-        'Voted Before': 'Yes',
-        'Vote Probability (%)': 75,
-        'Political Support': 'Supporting',
-        'Priority Level': 'High',
-        'Has Disability': 'No',
-        'Is Migrated': 'No',
-        'Remarks': 'নমুনা মন্তব্য'
-      }
-    ];
-
-    const csv = Papa.unparse(sampleData);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'voter_sample.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  if (showSuccess) {
+    return (
+      <AdminLayout>
+        <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
+          <Card className="max-w-md w-full shadow-lg">
+            <CardContent className="p-8 text-center">
+              <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">ভোটার সফলভাবে যোগ হয়েছে!</h2>
+              <p className="text-gray-600 mb-6">
+                {formData['Voter Name']} ভোটার ডাটাবেজে যোগ করা হয়েছে।
+              </p>
+              <div className="space-y-3">
+                <Button 
+                  onClick={resetForm}
+                  className="w-full bg-green-600 hover:bg-green-700 transition-colors duration-200"
+                >
+                  আরো ভোটার যোগ করুন
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/admin/voters')}
+                  className="w-full"
+                >
+                  সকল ভোটার দেখুন
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">ভোটার যোগ করুন</h1>
-        </div>
-
-        <Tabs defaultValue="single" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="single" className="flex items-center space-x-2">
-              <UserPlus className="w-4 h-4" />
-              <span>একক ভোটার</span>
-            </TabsTrigger>
-            <TabsTrigger value="bulk" className="flex items-center space-x-2">
-              <Users className="w-4 h-4" />
-              <span>বাল্ক আপলোড</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="single">
-            <Card>
-              <CardHeader>
-                <CardTitle>নতুন ভোটার যোগ করুন</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSingleVoterSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">ভোটারের নাম *</label>
-                      <Input
-                        value={singleVoter['Voter Name'] || ''}
-                        onChange={(e) => setSingleVoter({...singleVoter, 'Voter Name': e.target.value})}
-                        required
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium mb-1">বাড়ির নাম</label>
-                      <Input
-                        value={singleVoter['House Name'] || ''}
-                        onChange={(e) => setSingleVoter({...singleVoter, 'House Name': e.target.value})}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-1">পিতা/স্বামীর নাম</label>
-                      <Input
-                        value={singleVoter.FatherOrHusband || ''}
-                        onChange={(e) => setSingleVoter({...singleVoter, FatherOrHusband: e.target.value})}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-1">বয়স</label>
-                      <Input
-                        type="number"
-                        value={singleVoter.Age || ''}
-                        onChange={(e) => setSingleVoter({...singleVoter, Age: parseInt(e.target.value) || undefined})}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-1">লিঙ্গ</label>
-                      <select
-                        className="w-full p-2 border rounded-md"
-                        value={singleVoter.Gender || ''}
-                        onChange={(e) => setSingleVoter({...singleVoter, Gender: e.target.value as 'Male' | 'Female' | 'Other'})}
-                      >
-                        <option value="">নির্বাচন করুন</option>
-                        <option value="Male">পুরুষ</option>
-                        <option value="Female">মহিলা</option>
-                        <option value="Other">অন্যান্য</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-1">ফোন নম্বর</label>
-                      <Input
-                        value={singleVoter.Phone || ''}
-                        onChange={(e) => setSingleVoter({...singleVoter, Phone: e.target.value})}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-1">NID নম্বর</label>
-                      <Input
-                        value={singleVoter.NID || ''}
-                        onChange={(e) => setSingleVoter({...singleVoter, NID: e.target.value})}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-1">পেশা</label>
-                      <Input
-                        value={singleVoter.Occupation || ''}
-                        onChange={(e) => setSingleVoter({...singleVoter, Occupation: e.target.value})}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-1">ভোট দেবেন?</label>
-                      <select
-                        className="w-full p-2 border rounded-md"
-                        value={singleVoter['Will Vote'] || ''}
-                        onChange={(e) => setSingleVoter({...singleVoter, 'Will Vote': e.target.value as 'Yes' | 'No'})}
-                      >
-                        <option value="">নির্বাচন করুন</option>
-                        <option value="Yes">হ্যাঁ</option>
-                        <option value="No">না</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-1">অগ্রাধিকার স্তর</label>
-                      <select
-                        className="w-full p-2 border rounded-md"
-                        value={singleVoter['Priority Level'] || ''}
-                        onChange={(e) => setSingleVoter({...singleVoter, 'Priority Level': e.target.value as 'Low' | 'Medium' | 'High'})}
-                      >
-                        <option value="">নির্বাচন করুন</option>
-                        <option value="Low">নিম্ন</option>
-                        <option value="Medium">মাঝারি</option>
-                        <option value="High">উচ্চ</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-1">ভোট সম্ভাবনা (%)</label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={singleVoter['Vote Probability (%)'] || ''}
-                        onChange={(e) => setSingleVoter({...singleVoter, 'Vote Probability (%)': parseInt(e.target.value) || undefined})}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-1">রাজনৈতিক সমর্থন</label>
-                      <Input
-                        value={singleVoter['Political Support'] || ''}
-                        onChange={(e) => setSingleVoter({...singleVoter, 'Political Support': e.target.value})}
-                      />
-                    </div>
-                  </div>
-
+      <div className="min-h-screen bg-gray-50 p-2 sm:p-4">
+        <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white p-4 rounded-lg shadow-sm gap-4">
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate('/admin/voters')}
+                className="flex items-center gap-2 transition-colors duration-200"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                ভোটারদের কাছে ফিরুন
+              </Button>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">নতুন ভোটার যোগ করুন</h1>
+                <p className="text-sm text-gray-600 hidden sm:block">ভোটারের তথ্য প্রবেশ করান ডাটাবেজে যোগ করতে</p>
+              </div>
+            </div>
+            <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Upload className="w-4 h-4" />
+                  বাল্ক আপলোড CSV
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>বাল্ক ভোটার আপলোড</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">মন্তব্য</label>
-                    <Textarea
-                      value={singleVoter.Remarks || ''}
-                      onChange={(e) => setSingleVoter({...singleVoter, Remarks: e.target.value})}
-                      rows={3}
+                    <Label htmlFor="csvFile">CSV ফাইল নির্বাচন করুন</Label>
+                    <Input
+                      id="csvFile"
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
+                      className="mt-1"
                     />
                   </div>
-
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-green-600 hover:bg-green-700"
-                    disabled={addSingleVoterMutation.isPending}
-                  >
-                    {addSingleVoterMutation.isPending ? 'যোগ করা হচ্ছে...' : 'ভোটার যোগ করুন'}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="bulk">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>বাল্ক ভোটার আপলোড</span>
-                  <Button onClick={downloadSampleCSV} variant="outline" size="sm">
-                    <Upload className="w-4 h-4 mr-2" />
-                    নমুনা CSV ডাউনলোড
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">CSV ফাইল আপলোড করুন</label>
-                  <Input
-                    type="file"
-                    accept=".csv"
-                    onChange={handleFileUpload}
-                    className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                  <p className="text-sm text-gray-600 mt-1">
-                    শুধুমাত্র CSV ফাইল গ্রহণযোগ্য। প্রথমে নমুনা ফাইল ডাউনলোড করে ফরম্যাট দেখুন।
-                  </p>
-                </div>
-
-                {csvData.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-medium mb-2">প্রিভিউ ({csvData.length} টি রেকর্ড)</h3>
-                    <div className="max-h-96 overflow-y-auto border rounded-lg">
-                      <table className="w-full text-sm">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="p-2 text-left">নাম</th>
-                            <th className="p-2 text-left">ফোন</th>
-                            <th className="p-2 text-left">বয়স</th>
-                            <th className="p-2 text-left">ভোট দেবেন</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {csvData.slice(0, 10).map((voter, index) => (
-                            <tr key={index} className="border-t">
-                              <td className="p-2">{voter['Voter Name']}</td>
-                              <td className="p-2">{voter.Phone}</td>
-                              <td className="p-2">{voter.Age}</td>
-                              <td className="p-2">{voter['Will Vote']}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {csvData.length > 10 && (
-                        <p className="p-2 text-center text-gray-600">আরও {csvData.length - 10} টি রেকর্ড...</p>
-                      )}
-                    </div>
-                    
-                    <Button
-                      onClick={() => addBulkVotersMutation.mutate(csvData)}
-                      className="w-full mt-4 bg-green-600 hover:bg-green-700"
-                      disabled={addBulkVotersMutation.isPending}
+                  <div className="text-sm text-gray-600">
+                    <p>CSV-তে এই হেডার থাকতে হবে:</p>
+                    <p className="font-mono text-xs bg-gray-100 p-2 rounded mt-1">
+                      Voter Name,Age,Gender,Phone,Will Vote,Priority Level,...
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleBulkUpload} 
+                      disabled={!csvFile || isUploadingBulk}
+                      className="bg-green-600 hover:bg-green-700 transition-colors duration-200"
                     >
-                      {addBulkVotersMutation.isPending ? 'আপলোড হচ্ছে...' : `${csvData.length} জন ভোটার যোগ করুন`}
+                      {isUploadingBulk ? 'আপলোড হচ্ছে...' : 'ভোটার আপলোড করুন'}
+                    </Button>
+                    <Button variant="outline" onClick={() => setIsBulkUploadOpen(false)}>
+                      বাতিল
                     </Button>
                   </div>
-                )}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+            {/* Personal Information */}
+            <Card className="shadow-lg">
+              <CardHeader className="bg-green-50">
+                <CardTitle className="flex items-center gap-2 text-green-800 text-base sm:text-lg">
+                  <User className="w-5 h-5" />
+                  ব্যক্তিগত তথ্য
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="voterName" className="text-sm font-medium">
+                      ভোটারের নাম <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="voterName"
+                      value={formData['Voter Name']}
+                      onChange={(e) => handleInputChange('Voter Name', e.target.value)}
+                      placeholder="পূর্ণ নাম লিখুন"
+                      required
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="houseName" className="text-sm font-medium">বাড়ির নাম</Label>
+                    <Input
+                      id="houseName"
+                      value={formData['House Name']}
+                      onChange={(e) => handleInputChange('House Name', e.target.value)}
+                      placeholder="বাড়ি/পারিবারিক নাম"
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="fatherHusband" className="text-sm font-medium">পিতা/স্বামীর নাম</Label>
+                    <Input
+                      id="fatherHusband"
+                      value={formData['FatherOrHusband']}
+                      onChange={(e) => handleInputChange('FatherOrHusband', e.target.value)}
+                      placeholder="পিতা বা স্বামীর নাম"
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="age" className="text-sm font-medium">বয়স</Label>
+                    <Input
+                      id="age"
+                      type="number"
+                      min="0"
+                      max="120"
+                      value={formData.Age}
+                      onChange={(e) => handleInputChange('Age', e.target.value)}
+                      placeholder="বছরের হিসাবে বয়স"
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="gender" className="text-sm font-medium">লিঙ্গ</Label>
+                    <Select value={formData.Gender} onValueChange={(value) => handleInputChange('Gender', value)}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="লিঙ্গ নির্বাচন করুন" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">পুরুষ</SelectItem>
+                        <SelectItem value="Female">মহিলা</SelectItem>
+                        <SelectItem value="Other">অন্যান্য</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="maritalStatus" className="text-sm font-medium">বৈবাহিক অবস্থা</Label>
+                    <Select value={formData['Marital Status']} onValueChange={(value) => handleInputChange('Marital Status', value)}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="অবস্থা নির্বাচন করুন" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Married">বিবাহিত</SelectItem>
+                        <SelectItem value="Unmarried">অবিবাহিত</SelectItem>
+                        <SelectItem value="Widowed">বিধবা</SelectItem>
+                        <SelectItem value="Divorced">তালাকপ্রাপ্ত</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+
+            {/* Contact Information */}
+            <Card className="shadow-lg">
+              <CardHeader className="bg-blue-50">
+                <CardTitle className="flex items-center gap-2 text-blue-800 text-base sm:text-lg">
+                  <Phone className="w-5 h-5" />
+                  যোগাযোগ ও পরিচয়
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="phone" className="text-sm font-medium">ফোন</Label>
+                    <Input
+                      id="phone"
+                      value={formData.Phone}
+                      onChange={(e) => handleInputChange('Phone', e.target.value)}
+                      placeholder="ফোন নম্বর"
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="whatsapp" className="text-sm font-medium">হোয়াটসঅ্যাপ</Label>
+                    <Select value={formData.WhatsApp} onValueChange={(value) => handleInputChange('WhatsApp', value)}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="হোয়াটসঅ্যাপ আছে?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                        <SelectItem value="No">না</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="nid" className="text-sm font-medium">NID</Label>
+                    <Input
+                      id="nid"
+                      value={formData.NID}
+                      onChange={(e) => handleInputChange('NID', e.target.value)}
+                      placeholder="জাতীয় পরিচয়পত্র নম্বর"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Political Information */}
+            <Card className="shadow-lg">
+              <CardHeader className="bg-orange-50">
+                <CardTitle className="flex items-center gap-2 text-orange-800 text-base sm:text-lg">
+                  <Vote className="w-5 h-5" />
+                  রাজনৈতিক তথ্য
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="isVoter" className="text-sm font-medium">ভোটার কিনা</Label>
+                    <Select value={formData['Is Voter']} onValueChange={(value) => handleInputChange('Is Voter', value)}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="নিবন্ধিত ভোটার?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                        <SelectItem value="No">না</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="willVote" className="text-sm font-medium">ভোট দেবেন</Label>
+                    <Select value={formData['Will Vote']} onValueChange={(value) => handleInputChange('Will Vote', value)}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="ভোট দেবেন?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                        <SelectItem value="No">না</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="priorityLevel" className="text-sm font-medium">অগ্রাধিকার স্তর</Label>
+                    <Select value={formData['Priority Level']} onValueChange={(value) => handleInputChange('Priority Level', value)}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="High">উচ্চ</SelectItem>
+                        <SelectItem value="Medium">মাঝারি</SelectItem>
+                        <SelectItem value="Low">নিম্ন</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Additional Information */}
+            <Card className="shadow-lg">
+              <CardHeader className="bg-gray-50">
+                <CardTitle className="flex items-center gap-2 text-gray-800 text-base sm:text-lg">
+                  <Info className="w-5 h-5" />
+                  অতিরিক্ত তথ্য
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6 space-y-4">
+                <div>
+                  <Label htmlFor="remarks" className="text-sm font-medium">মন্তব্য</Label>
+                  <Textarea
+                    id="remarks"
+                    value={formData.Remarks}
+                    onChange={(e) => handleInputChange('Remarks', e.target.value)}
+                    placeholder="অতিরিক্ত নোট বা মন্তব্য..."
+                    className="mt-1 min-h-[80px]"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Submit Button */}
+            <div className="flex justify-end gap-3 bg-white p-4 rounded-lg shadow-sm">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => navigate('/admin/voters')} 
+                disabled={isLoading}
+                className="transition-colors duration-200"
+              >
+                বাতিল
+              </Button>
+              <Button 
+                type="submit" 
+                className="bg-green-600 hover:bg-green-700 flex items-center gap-2 transition-colors duration-200" 
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  "ভোটার যোগ করা হচ্ছে..."
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    ভোটার যোগ করুন
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
     </AdminLayout>
   );
