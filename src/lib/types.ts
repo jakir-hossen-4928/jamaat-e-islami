@@ -1,9 +1,10 @@
 
 export interface VoterData {
+  id?: string; // Add id property for Firestore document ID
   ID: string;
   'House Name'?: string;
   'Voter Name': string;
-  'Father/Husband'?: string;
+  FatherOrHusband?: string; // Use FatherOrHusband instead of 'Father/Husband'
   Age?: number;
   Gender?: 'Male' | 'Female' | 'Other';
   'Marital Status'?: 'Married' | 'Unmarried' | 'Widowed' | 'Divorced';

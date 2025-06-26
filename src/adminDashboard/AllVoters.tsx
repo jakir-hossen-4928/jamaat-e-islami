@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
@@ -53,6 +52,7 @@ const AllVoters = () => {
   const updateVoterMutation = useMutation({
     mutationFn: async (voter: VoterData) => {
       const { id, ...voterData } = voter;
+      if (!id) return;
       await updateDoc(doc(db, 'voters', id), {
         ...voterData,
         'Last Updated': new Date().toISOString()

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, addDoc, writeBatch, doc } from 'firebase/firestore';
@@ -27,6 +26,7 @@ const AddVoters = () => {
     'Collection Date': new Date().toISOString(),
     'Last Updated': new Date().toISOString()
   });
+
   const [csvData, setCsvData] = useState<VoterData[]>([]);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   
