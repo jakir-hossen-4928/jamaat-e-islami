@@ -21,6 +21,7 @@ import AddVoters from "./adminDashboard/AddVoters";
 import Analytics from "./adminDashboard/Analytics";
 import SMSCampaign from "./adminDashboard/SMSCampaign";
 import DataHub from "./adminDashboard/DataHub";
+import GoogleForm from "./adminDashboard/GoogleForm";
 import UserVerify from "./adminDashboard/usersverify/UserVerify";
 
 const queryClient = new QueryClient();
@@ -64,6 +65,14 @@ const App = () => (
               <Route path="/admin/add-voters" element={
                 <ProtectedRoute>
                   <AddVoters />
+                </ProtectedRoute>
+              } />
+
+              
+              
+              <Route path="/admin/google-form" element={
+                <ProtectedRoute>
+                  <GoogleForm />
                 </ProtectedRoute>
               } />
               
