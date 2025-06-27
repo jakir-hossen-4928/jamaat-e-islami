@@ -11,16 +11,460 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Edit, Trash2, Search, Eye, Settings, Plus, Phone, User, MapPin, Calendar } from 'lucide-react';
+import { Edit, Trash2, Search, Eye, Settings, Plus, Phone, MapPin, FileText } from 'lucide-react';
 import { VoterData } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { usePageTitle } from '@/lib/usePageTitle';
-import AdvancedPDFGenerator from '@/components/AdvancedPDFGenerator';
+import { useNavigate } from 'react-router-dom';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+
+const StatsCards = ({ stats }: { stats: { totalVoters: number; willVoteCount: number; highPriorityCount: number; studentCount: number } }) => {
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+      <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-green-600">
+        <CardContent className="p-2 sm:p-3 lg:p-4">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">মোট ভোটার</p>
+              <p className="text-base sm:text-lg lg:text-2xl font-bold text-green-600">{stats.totalVoters}</p>
+            </div>
+            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+              <Eye className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-red-600">
+        <CardContent className="p-2 sm:p-3 lg:p-4">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">উচ্চ অগ্রাধিকার</p>
+              <p className="text-base sm:text-lg lg:text-2xl font-bold text-red-600">{stats.highPriorityCount}</p>
+            </div>
+            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+              <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-blue-600">
+        <CardContent className="p-2 sm:p-3 lg:p-4">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">ভোট দেবেন</p>
+              <p className="text-base sm:text-lg lg:text-2xl font-bold text-blue-600">{stats.willVoteCount}</p>
+            </div>
+            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+              <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-purple-600">
+        <CardContent className="p-2 sm:p-3 lg:p-4">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs sm:text-sm text-gray-600 truncate">ছাত্র</p>
+              <p className="text-base sm:text-lg lg:text-2xl font-bold text-purple-600">{stats.studentCount}</p>
+            </div>
+            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+              <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+const VoterTable = ({
+  voters,
+  visibleColumns,
+  handleView,
+  handleEdit,
+  handleDelete,
+  canEdit,
+  canDelete,
+  isLoading,
+  searchTerm,
+  paginatedVoters,
+  allColumns,
+  getFieldValue,
+}: {
+  voters: VoterData[];
+  visibleColumns: Record<string, boolean>;
+  handleView: (voter: VoterData) => void;
+  handleEdit: (voter: VoterData) => void;
+  handleDelete: (voterId: string) => void;
+  canEdit: boolean;
+  canDelete: boolean;
+  isLoading: boolean;
+  searchTerm: string;
+  paginatedVoters: VoterData[];
+  allColumns: string[];
+  getFieldValue: (voter: VoterData, field: string) => any;
+}) => {
+  return (
+    <div className="hidden lg:block">
+      <Card className="shadow-md hover:shadow-lg transition-shadow">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto -mx-2 sm:mx-0">
+            <div style={{ minWidth: '600px' }}>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-green-50">
+                    {allColumns.filter(col => visibleColumns[col]).map((column) => (
+                      <TableHead key={column} className="text-xs font-semibold px-2 py-3 whitespace-nowrap">
+                        {column}
+                      </TableHead>
+                    ))}
+                    <TableHead className="text-xs font-semibold px-2 py-3 whitespace-nowrap sticky right-0 bg-green-50">
+                      কার্যক্রম
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={Object.values(visibleColumns).filter(Boolean).length + 1} className="text-center py-8 text-sm text-gray-500">
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                          লোড হচ্ছে...
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : paginatedVoters.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={Object.values(visibleColumns).filter(Boolean).length + 1} className="text-center py-8 text-sm text-gray-500">
+                        {searchTerm ? `"${searchTerm}" খুঁজে পাওয়া যায়নি` : 'কোন ভোটার পাওয়া যায়নি'}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    paginatedVoters.map((voter) => (
+                      <TableRow key={voter.id} className="hover:bg-gray-50 transition-colors">
+                        {allColumns.filter(col => visibleColumns[col]).map((column) => (
+                          <TableCell key={column} className="text-xs px-2 py-3">
+                            {column === 'Priority Level' ? (
+                              <Badge variant={
+                                getFieldValue(voter, column) === 'High' ? 'destructive' :
+                                  getFieldValue(voter, column) === 'Medium' ? 'default' : 'secondary'
+                              } className="text-xs">
+                                {getFieldValue(voter, column) === 'High' ? 'উচ্চ' : 
+                                 getFieldValue(voter, column) === 'Medium' ? 'মাঝারি' : 'নিম্ন'}
+                              </Badge>
+                            ) : column === 'Vote Probability (%)' ? (
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium text-xs">{getFieldValue(voter, column) || 0}%</span>
+                                {(() => {
+                                  const value = getFieldValue(voter, column);
+                                  const numValue = typeof value === 'string' ? parseInt(value) : value;
+                                  return (numValue && numValue >= 80) && (
+                                    <Badge variant="default" className="bg-green-600 text-xs px-1 py-0">উচ্চ</Badge>
+                                  );
+                                })()}
+                              </div>
+                            ) : column === 'Will Vote' || column === 'Is Voter' || column === 'Student' || column === 'WhatsApp' || column === 'Has Disability' || column === 'Is Migrated' || column === 'Voted Before' ? (
+                              <span className={`text-xs ${getFieldValue(voter, column) === 'Yes' ? 'text-green-600 font-medium' : 'text-red-500'}`}>
+                                {getFieldValue(voter, column) === 'Yes' ? '✓ হ্যাঁ' : getFieldValue(voter, column) === 'No' ? '✗ না' : '-'}
+                              </span>
+                            ) : (
+                              <span className={`text-xs ${column === 'Voter Name' ? 'font-medium text-gray-900' : ''} truncate block max-w-24`} title={getFieldValue(voter, column)?.toString()}>
+                                {getFieldValue(voter, column)}
+                              </span>
+                            )}
+                          </TableCell>
+                        ))}
+                        <TableCell className="sticky right-0 bg-white px-2 py-3">
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleView(voter)}
+                              className="h-6 w-6 p-0 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors"
+                              title="বিস্তারিত দেখুন"
+                            >
+                              <Eye className="w-3 h-3" />
+                            </Button>
+                            {canEdit && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEdit(voter)}
+                                className="h-6 w-6 p-0 hover:bg-green-50 hover:text-green-700 hover:border-green-300 transition-colors"
+                                title="সম্পাদনা করুন"
+                              >
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                            )}
+                            {canDelete && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 h-6 w-6 p-0 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors"
+                                onClick={() => handleDelete(voter.id!)}
+                                title="মুছে ফেলুন"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+const VoterCard = ({
+  voter,
+  handleView,
+  handleEdit,
+  handleDelete,
+  canEdit,
+  canDelete,
+}: {
+  voter: VoterData;
+  handleView: (voter: VoterData) => void;
+  handleEdit: (voter: VoterData) => void;
+  handleDelete: (voterId: string) => void;
+  canEdit: boolean;
+  canDelete: boolean;
+}) => {
+  return (
+    <Card className="shadow-md hover:shadow-lg transition-shadow">
+      <CardContent className="p-3 sm:p-4">
+        <div className="space-y-3">
+          {/* Header with Name and Actions */}
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate">
+                {voter['Voter Name']}
+              </h3>
+              <div className="flex items-center gap-2 mt-1">
+                {voter.Phone && (
+                  <div className="flex items-center gap-1 text-xs text-gray-600">
+                    <Phone className="w-3 h-3" />
+                    <span>{voter.Phone}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-1 flex-shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleView(voter)}
+                className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-700"
+              >
+                <Eye className="w-3 h-3" />
+              </Button>
+              {canEdit && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleEdit(voter)}
+                  className="h-7 w-7 p-0 hover:bg-green-50 hover:text-green-700"
+                >
+                  <Edit className="w-3 h-3" />
+                </Button>
+              )}
+              {canDelete && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-red-600 h-7 w-7 p-0 hover:bg-red-50"
+                  onClick={() => handleDelete(voter.id!)}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Key Info Row */}
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <span className="text-gray-500">বয়স:</span>
+              <span className="ml-1 font-medium">{voter.Age || '-'}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">লিঙ্গ:</span>
+              <span className="ml-1 font-medium">{voter.Gender || '-'}</span>
+            </div>
+            {voter['House Name'] && (
+              <div className="col-span-2">
+                <div className="flex items-center gap-1 text-gray-600">
+                  <MapPin className="w-3 h-3" />
+                  <span>{voter['House Name']}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Status Badges */}
+          <div className="flex flex-wrap items-center gap-2">
+            {voter['Will Vote'] && (
+              <Badge variant={voter['Will Vote'] === 'Yes' ? 'default' : 'secondary'} className="text-xs">
+                {voter['Will Vote'] === 'Yes' ? '✓ ভোট দেবেন' : '✗ ভোট দেবেন না'}
+              </Badge>
+            )}
+            {voter['Priority Level'] && (
+              <Badge variant={
+                voter['Priority Level'] === 'High' ? 'destructive' :
+                voter['Priority Level'] === 'Medium' ? 'default' : 'secondary'
+              } className="text-xs">
+                {voter['Priority Level'] === 'High' ? 'উচ্চ অগ্রাধিকার' : 
+                 voter['Priority Level'] === 'Medium' ? 'মাঝারি অগ্রাধিকার' : 'নিম্ন অগ্রাধিকার'}
+              </Badge>
+            )}
+            {voter['Vote Probability (%)'] && (
+              <Badge variant="outline" className="text-xs">
+                {voter['Vote Probability (%)']}% সম্ভাবনা
+              </Badge>
+            )}
+          </div>
+
+          {/* Additional Info */}
+          {(voter.Occupation || voter.Education) && (
+            <div className="text-xs text-gray-600 space-y-1">
+              {voter.Occupation && (
+                <div>
+                  <span className="font-medium">পেশা:</span> {voter.Occupation}
+                </div>
+              )}
+              {voter.Education && (
+                <div>
+                  <span className="font-medium">শিক্ষা:</span> {voter.Education}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const VoterEditForm = ({ 
+  voter, 
+  onSave, 
+  isLoading 
+}: { 
+  voter: VoterData; 
+  onSave: (voter: VoterData) => void;
+  isLoading: boolean;
+}) => {
+  const [formData, setFormData] = useState(voter);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div>
+          <label className="block text-xs sm:text-sm font-medium mb-1">নাম *</label>
+          <Input
+            value={formData['Voter Name']}
+            onChange={(e) => setFormData({...formData, 'Voter Name': e.target.value})}
+            required
+            className="text-sm focus:ring-2 focus:ring-green-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs sm:text-sm font-medium mb-1">ফোন</label>
+          <Input
+            value={formData.Phone || ''}
+            onChange={(e) => setFormData({...formData, Phone: e.target.value})}
+            className="text-sm focus:ring-2 focus:ring-green-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs sm:text-sm font-medium mb-1">বয়স</label>
+          <Input
+            type="number"
+            value={formData.Age || ''}
+            onChange={(e) => setFormData({...formData, Age: parseInt(e.target.value) || undefined})}
+            className="text-sm focus:ring-2 focus:ring-green-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs sm:text-sm font-medium mb-1">ভোট দেবেন</label>
+          <select
+            className="w-full p-2 border rounded-md hover:border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-500 text-sm"
+            value={formData['Will Vote'] || ''}
+            onChange={(e) => setFormData({...formData, 'Will Vote': e.target.value as 'Yes' | 'No'})}
+          >
+            <option value="">নির্বাচন করুন</option>
+            <option value="Yes">হ্যাঁ</option>
+            <option value="No">না</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs sm:text-sm font-medium mb-1">অগ্রাধিকার</label>
+          <select
+            className="w-full p-2 border rounded-md hover:border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-500 text-sm"
+            value={formData['Priority Level'] || ''}
+            onChange={(e) => setFormData({...formData, 'Priority Level': e.target.value as 'Low' | 'Medium' | 'High'})}
+          >
+            <option value="">নির্বাচন করুন</option>
+            <option value="Low">নিম্ন</option>
+            <option value="Medium">মাঝারি</option>
+            <option value="High">উচ্চ</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs sm:text-sm font-medium mb-1">ভোট সম্ভাবনা (%)</label>
+          <Input
+            type="number"
+            min="0"
+            max="100"
+            value={formData['Vote Probability (%)'] || ''}
+            onChange={(e) => setFormData({...formData, 'Vote Probability (%)': parseInt(e.target.value) || undefined})}
+            className="text-sm focus:ring-2 focus:ring-green-500"
+          />
+        </div>
+      </div>
+      
+      <div>
+        <label className="block text-xs sm:text-sm font-medium mb-1">মন্তব্য</label>
+        <textarea
+          className="w-full p-2 border rounded-md hover:border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-500 text-sm"
+          rows={3}
+          value={formData.Remarks || ''}
+          onChange={(e) => setFormData({...formData, Remarks: e.target.value})}
+        />
+      </div>
+
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button 
+          type="submit" 
+          disabled={isLoading}
+          className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 transition-colors"
+        >
+          {isLoading ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
+        </Button>
+      </div>
+    </form>
+  );
+};
 
 const AllVoters = () => {
   usePageTitle('সকল ভোটার - ডাটাবেজ');
+  const navigate = useNavigate();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedVoter, setSelectedVoter] = useState<VoterData | null>(null);
@@ -181,64 +625,7 @@ const AllVoters = () => {
   return (
     <AdminLayout>
       <div className="space-y-3 p-2 sm:p-4 lg:p-6">
-        {/* Mobile-First Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
-          <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-green-600">
-            <CardContent className="p-2 sm:p-3 lg:p-4">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm text-gray-600 truncate">মোট ভোটার</p>
-                  <p className="text-base sm:text-lg lg:text-2xl font-bold text-green-600">{stats.totalVoters}</p>
-                </div>
-                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
-                  <Eye className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-red-600">
-            <CardContent className="p-2 sm:p-3 lg:p-4">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm text-gray-600 truncate">উচ্চ অগ্রাধিকার</p>
-                  <p className="text-base sm:text-lg lg:text-2xl font-bold text-red-600">{stats.highPriorityCount}</p>
-                </div>
-                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
-                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-blue-600">
-            <CardContent className="p-2 sm:p-3 lg:p-4">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm text-gray-600 truncate">ভোট দেবেন</p>
-                  <p className="text-base sm:text-lg lg:text-2xl font-bold text-blue-600">{stats.willVoteCount}</p>
-                </div>
-                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
-                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-purple-600">
-            <CardContent className="p-2 sm:p-3 lg:p-4">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm text-gray-600 truncate">ছাত্র</p>
-                  <p className="text-base sm:text-lg lg:text-2xl font-bold text-purple-600">{stats.studentCount}</p>
-                </div>
-                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
-                  <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <StatsCards stats={stats} />
 
         {/* Mobile-Optimized Controls */}
         <Card className="shadow-md hover:shadow-lg transition-shadow">
@@ -261,7 +648,15 @@ const AllVoters = () => {
               />
             </div>
             <div className="flex gap-2 flex-wrap">
-              <AdvancedPDFGenerator voters={voters} />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/admin/pdf-preview')}
+                className="flex items-center gap-1 text-xs hover:bg-green-50 hover:text-green-700 hover:border-green-300 transition-colors"
+              >
+                <FileText className="w-3 h-3" />
+                পিডিএফ প্রিভিউ
+              </Button>
 
               <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
                 <DialogTrigger asChild>
@@ -294,257 +689,51 @@ const AllVoters = () => {
           </CardContent>
         </Card>
 
-        {/* Voters Display - Desktop Table + Mobile Cards */}
-        <div className="space-y-3">
-          {/* Desktop Table View */}
-          <div className="hidden lg:block">
-            <Card className="shadow-md hover:shadow-lg transition-shadow">
-              <CardContent className="p-0">
-                <div className="overflow-x-auto -mx-2 sm:mx-0">
-                  <div style={{ minWidth: '600px' }}>
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-green-50">
-                          {allColumns.filter(col => visibleColumns[col]).map((column) => (
-                            <TableHead key={column} className="text-xs font-semibold px-2 py-3 whitespace-nowrap">
-                              {column}
-                            </TableHead>
-                          ))}
-                          <TableHead className="text-xs font-semibold px-2 py-3 whitespace-nowrap sticky right-0 bg-green-50">
-                            কার্যক্রম
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {isLoading ? (
-                          <TableRow>
-                            <TableCell colSpan={Object.values(visibleColumns).filter(Boolean).length + 1} className="text-center py-8 text-sm text-gray-500">
-                              <div className="flex items-center justify-center gap-2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
-                                লোড হচ্ছে...
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ) : paginatedVoters.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={Object.values(visibleColumns).filter(Boolean).length + 1} className="text-center py-8 text-sm text-gray-500">
-                              {searchTerm ? `"${searchTerm}" খুঁজে পাওয়া যায়নি` : 'কোন ভোটার পাওয়া যায়নি'}
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          paginatedVoters.map((voter) => (
-                            <TableRow key={voter.id} className="hover:bg-gray-50 transition-colors">
-                              {allColumns.filter(col => visibleColumns[col]).map((column) => (
-                                <TableCell key={column} className="text-xs px-2 py-3">
-                                  {column === 'Priority Level' ? (
-                                    <Badge variant={
-                                      getFieldValue(voter, column) === 'High' ? 'destructive' :
-                                        getFieldValue(voter, column) === 'Medium' ? 'default' : 'secondary'
-                                    } className="text-xs">
-                                      {getFieldValue(voter, column) === 'High' ? 'উচ্চ' : 
-                                       getFieldValue(voter, column) === 'Medium' ? 'মাঝারি' : 'নিম্ন'}
-                                    </Badge>
-                                  ) : column === 'Vote Probability (%)' ? (
-                                    <div className="flex items-center gap-1">
-                                      <span className="font-medium text-xs">{getFieldValue(voter, column) || 0}%</span>
-                                      {(() => {
-                                        const value = getFieldValue(voter, column);
-                                        const numValue = typeof value === 'string' ? parseInt(value) : value;
-                                        return (numValue && numValue >= 80) && (
-                                          <Badge variant="default" className="bg-green-600 text-xs px-1 py-0">উচ্চ</Badge>
-                                        );
-                                      })()}
-                                    </div>
-                                  ) : column === 'Will Vote' || column === 'Is Voter' || column === 'Student' || column === 'WhatsApp' || column === 'Has Disability' || column === 'Is Migrated' || column === 'Voted Before' ? (
-                                    <span className={`text-xs ${getFieldValue(voter, column) === 'Yes' ? 'text-green-600 font-medium' : 'text-red-500'}`}>
-                                      {getFieldValue(voter, column) === 'Yes' ? '✓ হ্যাঁ' : getFieldValue(voter, column) === 'No' ? '✗ না' : '-'}
-                                    </span>
-                                  ) : (
-                                    <span className={`text-xs ${column === 'Voter Name' ? 'font-medium text-gray-900' : ''} truncate block max-w-24`} title={getFieldValue(voter, column)?.toString()}>
-                                      {getFieldValue(voter, column)}
-                                    </span>
-                                  )}
-                                </TableCell>
-                              ))}
-                              <TableCell className="sticky right-0 bg-white px-2 py-3">
-                                <div className="flex gap-1">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleView(voter)}
-                                    className="h-6 w-6 p-0 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors"
-                                    title="বিস্তারিত দেখুন"
-                                  >
-                                    <Eye className="w-3 h-3" />
-                                  </Button>
-                                  {canEdit && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handleEdit(voter)}
-                                      className="h-6 w-6 p-0 hover:bg-green-50 hover:text-green-700 hover:border-green-300 transition-colors"
-                                      title="সম্পাদনা করুন"
-                                    >
-                                      <Edit className="w-3 h-3" />
-                                    </Button>
-                                  )}
-                                  {canDelete && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="text-red-600 h-6 w-6 p-0 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors"
-                                      onClick={() => handleDelete(voter.id!)}
-                                      title="মুছে ফেলুন"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
+        <VoterTable
+          voters={voters}
+          visibleColumns={visibleColumns}
+          handleView={handleView}
+          handleEdit={handleEdit}
+          handleDelete={handleDelete}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          isLoading={isLoading}
+          searchTerm={searchTerm}
+          paginatedVoters={paginatedVoters}
+          allColumns={allColumns}
+          getFieldValue={getFieldValue}
+        />
+
+        {/* Mobile Card View */}
+        <div className="lg:hidden space-y-3">
+          {isLoading ? (
+            <Card className="shadow-md">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+                  <span className="text-sm">লোড হচ্ছে...</span>
                 </div>
               </CardContent>
             </Card>
-          </div>
-
-          {/* Mobile Card View */}
-          <div className="lg:hidden space-y-3">
-            {isLoading ? (
-              <Card className="shadow-md">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
-                    <span className="text-sm">লোড হচ্ছে...</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : paginatedVoters.length === 0 ? (
-              <Card className="shadow-md">
-                <CardContent className="p-4 text-center text-sm text-gray-500">
-                  {searchTerm ? `"${searchTerm}" খুঁজে পাওয়া যায়নি` : 'কোন ভোটার পাওয়া যায়নি'}
-                </CardContent>
-              </Card>
-            ) : (
-              paginatedVoters.map((voter) => (
-                <Card key={voter.id} className="shadow-md hover:shadow-lg transition-shadow">
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="space-y-3">
-                      {/* Header with Name and Actions */}
-                      <div className="flex items-start justify-between">
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate">
-                            {voter['Voter Name']}
-                          </h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            {voter.Phone && (
-                              <div className="flex items-center gap-1 text-xs text-gray-600">
-                                <Phone className="w-3 h-3" />
-                                <span>{voter.Phone}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex gap-1 flex-shrink-0">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleView(voter)}
-                            className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-700"
-                          >
-                            <Eye className="w-3 h-3" />
-                          </Button>
-                          {canEdit && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleEdit(voter)}
-                              className="h-7 w-7 p-0 hover:bg-green-50 hover:text-green-700"
-                            >
-                              <Edit className="w-3 h-3" />
-                            </Button>
-                          )}
-                          {canDelete && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-red-600 h-7 w-7 p-0 hover:bg-red-50"
-                              onClick={() => handleDelete(voter.id!)}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Key Info Row */}
-                      <div className="grid grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <span className="text-gray-500">বয়স:</span>
-                          <span className="ml-1 font-medium">{voter.Age || '-'}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">লিঙ্গ:</span>
-                          <span className="ml-1 font-medium">{voter.Gender || '-'}</span>
-                        </div>
-                        {voter['House Name'] && (
-                          <div className="col-span-2">
-                            <div className="flex items-center gap-1 text-gray-600">
-                              <MapPin className="w-3 h-3" />
-                              <span>{voter['House Name']}</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Status Badges */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        {voter['Will Vote'] && (
-                          <Badge variant={voter['Will Vote'] === 'Yes' ? 'default' : 'secondary'} className="text-xs">
-                            {voter['Will Vote'] === 'Yes' ? '✓ ভোট দেবেন' : '✗ ভোট দেবেন না'}
-                          </Badge>
-                        )}
-                        {voter['Priority Level'] && (
-                          <Badge variant={
-                            voter['Priority Level'] === 'High' ? 'destructive' :
-                            voter['Priority Level'] === 'Medium' ? 'default' : 'secondary'
-                          } className="text-xs">
-                            {voter['Priority Level'] === 'High' ? 'উচ্চ অগ্রাধিকার' : 
-                             voter['Priority Level'] === 'Medium' ? 'মাঝারি অগ্রাধিকার' : 'নিম্ন অগ্রাধিকার'}
-                          </Badge>
-                        )}
-                        {voter['Vote Probability (%)'] && (
-                          <Badge variant="outline" className="text-xs">
-                            {voter['Vote Probability (%)']}% সম্ভাবনা
-                          </Badge>
-                        )}
-                      </div>
-
-                      {/* Additional Info */}
-                      {(voter.Occupation || voter.Education) && (
-                        <div className="text-xs text-gray-600 space-y-1">
-                          {voter.Occupation && (
-                            <div>
-                              <span className="font-medium">পেশা:</span> {voter.Occupation}
-                            </div>
-                          )}
-                          {voter.Education && (
-                            <div>
-                              <span className="font-medium">শিক্ষা:</span> {voter.Education}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+          ) : paginatedVoters.length === 0 ? (
+            <Card className="shadow-md">
+              <CardContent className="p-4 text-center text-sm text-gray-500">
+                {searchTerm ? `"${searchTerm}" খুঁজে পাওয়া যায়নি` : 'কোন ভোটার পাওয়া যায়নি'}
+              </CardContent>
+            </Card>
+          ) : (
+            paginatedVoters.map((voter) => (
+              <VoterCard
+                key={voter.id}
+                voter={voter}
+                handleView={handleView}
+                handleEdit={handleEdit}
+                handleDelete={handleDelete}
+                canEdit={canEdit}
+                canDelete={canDelete}
+              />
+            ))
+          )}
         </div>
 
         {/* Mobile-Optimized Pagination */}
@@ -648,112 +837,6 @@ const AllVoters = () => {
         </Dialog>
       </div>
     </AdminLayout>
-  );
-};
-
-const VoterEditForm = ({ 
-  voter, 
-  onSave, 
-  isLoading 
-}: { 
-  voter: VoterData; 
-  onSave: (voter: VoterData) => void;
-  isLoading: boolean;
-}) => {
-  const [formData, setFormData] = useState(voter);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        <div>
-          <label className="block text-xs sm:text-sm font-medium mb-1">নাম *</label>
-          <Input
-            value={formData['Voter Name']}
-            onChange={(e) => setFormData({...formData, 'Voter Name': e.target.value})}
-            required
-            className="text-sm focus:ring-2 focus:ring-green-500"
-          />
-        </div>
-        <div>
-          <label className="block text-xs sm:text-sm font-medium mb-1">ফোন</label>
-          <Input
-            value={formData.Phone || ''}
-            onChange={(e) => setFormData({...formData, Phone: e.target.value})}
-            className="text-sm focus:ring-2 focus:ring-green-500"
-          />
-        </div>
-        <div>
-          <label className="block text-xs sm:text-sm font-medium mb-1">বয়স</label>
-          <Input
-            type="number"
-            value={formData.Age || ''}
-            onChange={(e) => setFormData({...formData, Age: parseInt(e.target.value) || undefined})}
-            className="text-sm focus:ring-2 focus:ring-green-500"
-          />
-        </div>
-        <div>
-          <label className="block text-xs sm:text-sm font-medium mb-1">ভোট দেবেন</label>
-          <select
-            className="w-full p-2 border rounded-md hover:border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-500 text-sm"
-            value={formData['Will Vote'] || ''}
-            onChange={(e) => setFormData({...formData, 'Will Vote': e.target.value as 'Yes' | 'No'})}
-          >
-            <option value="">নির্বাচন করুন</option>
-            <option value="Yes">হ্যাঁ</option>
-            <option value="No">না</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs sm:text-sm font-medium mb-1">অগ্রাধিকার</label>
-          <select
-            className="w-full p-2 border rounded-md hover:border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-500 text-sm"
-            value={formData['Priority Level'] || ''}
-            onChange={(e) => setFormData({...formData, 'Priority Level': e.target.value as 'Low' | 'Medium' | 'High'})}
-          >
-            <option value="">নির্বাচন করুন</option>
-            <option value="Low">নিম্ন</option>
-            <option value="Medium">মাঝারি</option>
-            <option value="High">উচ্চ</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs sm:text-sm font-medium mb-1">ভোট সম্ভাবনা (%)</label>
-          <Input
-            type="number"
-            min="0"
-            max="100"
-            value={formData['Vote Probability (%)'] || ''}
-            onChange={(e) => setFormData({...formData, 'Vote Probability (%)': parseInt(e.target.value) || undefined})}
-            className="text-sm focus:ring-2 focus:ring-green-500"
-          />
-        </div>
-      </div>
-      
-      <div>
-        <label className="block text-xs sm:text-sm font-medium mb-1">মন্তব্য</label>
-        <textarea
-          className="w-full p-2 border rounded-md hover:border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-500 text-sm"
-          rows={3}
-          value={formData.Remarks || ''}
-          onChange={(e) => setFormData({...formData, Remarks: e.target.value})}
-        />
-      </div>
-
-      <div className="flex justify-end space-x-2 pt-4">
-        <Button 
-          type="submit" 
-          disabled={isLoading}
-          className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 transition-colors"
-        >
-          {isLoading ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
-        </Button>
-      </div>
-    </form>
   );
 };
 

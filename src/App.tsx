@@ -24,6 +24,7 @@ import SMSCampaignNew from "./adminDashboard/SMSCampaignNew";
 import DataHub from "./adminDashboard/DataHub";
 import GoogleForm from "./adminDashboard/GoogleForm";
 import UserVerify from "./adminDashboard/usersverify/UserVerify";
+import PDFPreview from "./adminDashboard/PDFPreview";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,12 @@ const App = () => (
               <Route path="/admin/voters" element={
                 <ProtectedRoute>
                   <AllVoters />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/pdf-preview" element={
+                <ProtectedRoute>
+                  <PDFPreview />
                 </ProtectedRoute>
               } />
               
