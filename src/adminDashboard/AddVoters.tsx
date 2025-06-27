@@ -160,7 +160,7 @@ const AddVoters = () => {
         if (error.code === 'permission-denied') {
           errorMessage = 'অনুমতি অস্বীকৃত: দয়া করে আপনার অ্যাক্সেস অনুমতি পরীক্ষা করুন।';
         } else if (error.code === 'invalid-argument') {
-          erroreskape_message = 'অবৈধ তথ্য প্রদান করা হয়েছে। দয়া করে ফর্মটি সঠিকভাবে পূরণ করুন।';
+          errorMessage = 'অবৈধ তথ্য প্রদান করা হয়েছে। দয়া করে ফর্মটি সঠিকভাবে পূরণ করুন।';
         } else if (error.code === 'unavailable') {
           errorMessage = 'ডাটাবেস সংযোগে সমস্যা। অনুগ্রহ করে পরে আবার চেষ্টা করুন।';
         } else if (error.message) {
@@ -180,7 +180,7 @@ const AddVoters = () => {
         resetForm();
       }, 3000);
     },
-  onError: (error: any) => {
+    onError: (error: any) => {
       console.error('Mutation error:', error);
       toast({
         title: 'ত্রুটি',
@@ -257,7 +257,7 @@ const AddVoters = () => {
         Remarks: formData.Remarks || undefined,
       };
 
-      await addSingleVoterMutation.mutateAsync(v async (voterData);
+      await addSingleVoterMutation.mutateAsync(voterData);
     } catch (error: any) {
       toast({
         title: 'ত্রুটি',
@@ -382,7 +382,7 @@ const AddVoters = () => {
 
   return (
     <AdminLayout>
-      <div className="min-h-screen bg-gray-50 p-2 sm:p-4">
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-4">
         <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white p-4 rounded-lg shadow-sm gap-4">
