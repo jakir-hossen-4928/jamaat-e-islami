@@ -1,76 +1,47 @@
 
-import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Star, Users, BarChart3, Shield, Phone, Mail, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { ChevronRight, Users, BarChart3, Shield, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, Pagination, Autoplay, EffectFade } from 'swiper/modules';
-import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-
-// Import Swiper styles
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay, Pagination, EffectFade } from 'swiper/modules';
 import 'swiper/css';
-import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-fade';
 
 const Hero = () => {
-  const { currentUser } = useAuth();
-  const [isLoaded, setIsLoaded] = useState(false);
+  const { currentUser, userProfile } = useAuth();
+  const [currentSlide, setCurrentSlide] = useState(0);
 
-  const slides = [
+  // Hero carousel images - using placeholder images for Islamic culture and election themes
+  const heroImages = [
     {
-      image: "https://i.ibb.co/JRpJQ2L6/jamat-main-2.jpg",
-      title: "জামায়াতে ইসলামী বাংলাদেশ",
-      subtitle: "ন্যায়বিচার ও সুশাসনের জন্য",
-      description: "একটি ন্যায়পরায়ণ ও কল্যাণকর সমাজ গড়তে আমাদের সাথে থাকুন"
-    },
-    {
-      image: "https://i.ibb.co/99tHm1hs/jamat-main-1.jpg",
+      url: "https://images.unsplash.com/photo-1564769662533-4f00a87b4056?w=1200&h=600&fit=crop",
       title: "ভোটার ব্যবস্থাপনা সিস্টেম",
-      subtitle: "আধুনিক প্রযুক্তির সাহায্যে",
-      description: "নির্বাচনী প্রচারণা পরিচালনা করুন দক্ষতার সাথে"
+      subtitle: "আধুনিক প্রযুক্তির সাহায্যে নির্বাচনী প্রচারণা"
     },
     {
-      image: "https://i.ibb.co/WNX98LRX/jamat3.jpg",
-      title: "একসাথে এগিয়ে চলি",
-      subtitle: "উন্নত বাংলাদেশ গড়ার প্রত্যয়ে",
-      description: "সবার অংশগ্রহণে গড়ব স্বপ্নের বাংলাদেশ"
+      url: "https://images.unsplash.com/photo-1517491978816-9de84ba2ef5e?w=1200&h=600&fit=crop",
+      title: "গণতান্ত্রিক প্রক্রিয়া",
+      subtitle: "স্বচ্ছ ও নিরপেক্ষ নির্বাচনের জন্য"
     },
     {
-      image: "https://i.ibb.co/tj06qkc/jamat2.jpg",
-      title: "যুব শক্তির সাথে",
-      subtitle: "নতুন বাংলাদেশের স্বপ্ন",
-      description: "তারুণ্যের শক্তিতে এগিয়ে চলেছে দেশ"
-    },
-    {
-      image: "https://i.ibb.co/wkCY6Vr/jamat1.jpg",
-      title: "গণতান্ত্রিক মূল্যবোধ",
-      subtitle: "সকলের অংশগ্রহণে উন্নতি",
-      description: "প্রকৃত গণতন্ত্রের পথে এগিয়ে চলুন আমাদের সাথে"
+      url: "https://images.unsplash.com/photo-1529258283598-8d6fe60b27f4?w=1200&h=600&fit=crop",
+      title: "সামাজিক দায়বদ্ধতা",
+      subtitle: "একটি উন্নত সমাজ গঠনে আমাদের অংশগ্রহণ"
     }
   ];
 
-  useEffect(() => {
-    setIsLoaded(true);
-  }, []);
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.3,
-        delayChildren: 0.2
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 30, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
+  const fadeInUp = {
+    hidden: { 
+      y: 30, 
+      opacity: 0 
+    },
+    visible: { 
+      y: 0, 
+      opacity: 1, 
       transition: {
         type: "spring" as const,
         stiffness: 100,
@@ -79,203 +50,233 @@ const Hero = () => {
     }
   };
 
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2,
+        delayChildren: 0.1
+      }
+    }
+  };
+
   return (
-    <div className="relative">
-      {/* Hero Slideshow */}
-      <div className="relative h-[400px] sm:h-[500px] lg:h-[600px] w-full overflow-hidden bg-gradient-to-br from-green-900 to-green-700">
-        {/* Islamic Pattern Overlay */}
-        <div className="absolute inset-0 z-10 opacity-5">
-          <div className="h-full w-full bg-repeat" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M30 30l15-15v30l-15-15zm0 0l-15-15v30l15-15z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }} />
-        </div>
+    <div className="relative min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] overflow-hidden bg-gradient-to-br from-green-900 via-green-800 to-green-700">
+      {/* Logo Animation */}
+      <motion.div 
+        className="absolute top-4 left-4 z-20"
+        initial={{ scale: 0, rotate: -180 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ 
+          type: "spring" as const, 
+          stiffness: 260, 
+          damping: 20,
+          delay: 0.5 
+        }}
+      >
+        <img
+          src="/bangladesh-jamaat-e-islami-seeklogo.svg"
+          alt="Jamaat-e-Islami Bangladesh"
+          className="w-12 h-12 sm:w-16 sm:h-16 filter brightness-0 invert"
+          loading="eager"
+        />
+      </motion.div>
 
-        {/* Logo - Fixed position */}
-        <motion.div 
-          className="absolute top-4 left-4 z-30 bg-white/95 backdrop-blur-sm rounded-full p-2 sm:p-3 shadow-lg"
-          initial={{ scale: 0, rotate: -180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ 
-            type: "spring" as const, 
-            stiffness: 260, 
-            damping: 20,
-            delay: 0.5 
-          }}
-        >
-          <img 
-            src="https://i.ibb.co/6Rt79ScS/bangladesh-jamaat-e-islami-seeklogo.png" 
-            alt="Jamaat-e-Islami Logo" 
-            className="w-8 h-8 sm:w-12 sm:h-12 object-contain"
-            loading="eager"
-          />
-        </motion.div>
-
-        {/* Swiper Slideshow */}
+      {/* Background Carousel */}
+      <div className="absolute inset-0">
         <Swiper
-          modules={[Navigation, Pagination, Autoplay, EffectFade]}
+          modules={[Autoplay, Pagination, EffectFade]}
           effect="fade"
-          navigation={{
-            prevEl: '.swiper-button-prev-custom',
-            nextEl: '.swiper-button-next-custom',
+          autoplay={{
+            delay: 4000,
+            disableOnInteraction: false,
           }}
           pagination={{
-            el: '.swiper-pagination-custom',
             clickable: true,
             bulletClass: 'swiper-pagination-bullet-custom',
             bulletActiveClass: 'swiper-pagination-bullet-active-custom',
           }}
-          autoplay={{
-            delay: 5000,
-            disableOnInteraction: false,
-          }}
           loop={true}
-          className="h-full"
+          onSlideChange={(swiper) => setCurrentSlide(swiper.realIndex)}
+          className="w-full h-full"
         >
-          {slides.map((slide, index) => (
+          {heroImages.map((image, index) => (
             <SwiperSlide key={index}>
-              <div className="relative h-full">
+              <div className="relative w-full h-full">
                 <img
-                  src={slide.image}
-                  alt={slide.title}
+                  src={image.url}
+                  alt={image.title}
                   className="w-full h-full object-cover"
                   loading={index === 0 ? "eager" : "lazy"}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
-                
-                {/* Content */}
-                <motion.div 
-                  className="absolute inset-x-4 bottom-16 sm:bottom-24 md:bottom-32 text-white"
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate={isLoaded ? "visible" : "hidden"}
-                >
-                  <div className="max-w-4xl mx-auto text-center">
-                    {/* Islamic Star Decoration */}
-                    <motion.div 
-                      className="flex justify-center mb-4"
-                      variants={itemVariants}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <Star className="w-4 h-4 sm:w-6 sm:h-6 text-green-400 fill-current" />
-                        <div className="w-8 sm:w-12 h-0.5 bg-green-400"></div>
-                        <Star className="w-4 h-4 sm:w-6 sm:h-6 text-green-400 fill-current" />
-                      </div>
-                    </motion.div>
-                    
-                    <motion.h1 
-                      className="text-xl sm:text-3xl md:text-5xl font-bold mb-2 sm:mb-3 drop-shadow-2xl"
-                      variants={itemVariants}
-                    >
-                      {slide.title}
-                    </motion.h1>
-                    <motion.p 
-                      className="text-sm sm:text-lg md:text-2xl mb-2 sm:mb-4 drop-shadow-lg text-green-200"
-                      variants={itemVariants}
-                    >
-                      {slide.subtitle}
-                    </motion.p>
-                    <motion.p 
-                      className="text-xs sm:text-sm md:text-lg mb-6 sm:mb-8 max-w-2xl mx-auto opacity-90"
-                      variants={itemVariants}
-                    >
-                      {slide.description}
-                    </motion.p>
-                    
-                    <motion.div 
-                      className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center"
-                      variants={itemVariants}
-                    >
-                      {!currentUser ? (
-                        <>
-                          <Button 
-                            size="lg" 
-                            className="bg-green-600 hover:bg-green-700 text-white border-0 shadow-xl transform hover:scale-105 transition-all duration-200 rounded-full px-6 sm:px-8"
-                            asChild
-                          >
-                            <Link to="/register">
-                              <Users className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                              Request Access
-                            </Link>
-                          </Button>
-                          <Button 
-                            size="lg" 
-                            variant="outline" 
-                            className="bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white hover:text-green-700 shadow-xl transform hover:scale-105 transition-all duration-200 rounded-full px-6 sm:px-8"
-                            asChild
-                          >
-                            <Link to="/login">
-                              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                              Login
-                            </Link>
-                          </Button>
-                        </>
-                      ) : (
-                        <Button 
-                          size="lg" 
-                          className="bg-green-600 hover:bg-green-700 text-white border-0 shadow-xl transform hover:scale-105 transition-all duration-200 rounded-full px-6 sm:px-8"
-                          asChild
-                        >
-                          <Link to="/dashboard">
-                            <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                            Go to Dashboard
-                          </Link>
-                        </Button>
-                      )}
-                    </motion.div>
-                  </div>
-                </motion.div>
+                <div className="absolute inset-0 bg-gradient-to-r from-green-900/80 via-green-800/60 to-transparent" />
               </div>
             </SwiperSlide>
           ))}
         </Swiper>
-
-        {/* Custom Navigation Buttons */}
-        <button className="swiper-button-prev-custom absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm rounded-full p-2 sm:p-3 z-20 transition-all duration-200">
-          <ChevronLeft className="h-4 w-4 sm:h-6 sm:w-6" />
-        </button>
-        
-        <button className="swiper-button-next-custom absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm rounded-full p-2 sm:p-3 z-20 transition-all duration-200">
-          <ChevronRight className="h-4 w-4 sm:h-6 sm:w-6" />
-        </button>
-
-        {/* Custom Pagination */}
-        <div className="swiper-pagination-custom absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20"></div>
       </div>
 
-      {/* Stats Section */}
-      <motion.div 
-        className="bg-gradient-to-r from-green-800 to-green-600 py-8 sm:py-12"
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8, duration: 0.6 }}
-      >
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 text-center text-white">
+      {/* Content Overlay */}
+      <div className="relative z-10 h-full flex items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            
+            {/* Left Content */}
             <motion.div 
-              className="transform hover:scale-105 transition-transform duration-200"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              className="text-white space-y-4 sm:space-y-6"
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
             >
-              <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">১০০+</div>
-              <div className="text-green-200 text-sm sm:text-base">সক্রিয় সদস্য</div>
+              <motion.div variants={fadeInUp}>
+                <span className="inline-block px-3 py-1 bg-green-600/30 backdrop-blur-sm rounded-full text-xs sm:text-sm font-medium border border-green-400/30 mb-4">
+                  জামায়াতে ইসলামী বাংলাদেশ
+                </span>
+              </motion.div>
+              
+              <motion.h1 
+                className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight"
+                variants={fadeInUp}
+              >
+                {heroImages[currentSlide]?.title || "ভোটার ব্যবস্থাপনা সিস্টেম"}
+              </motion.h1>
+              
+              <motion.p 
+                className="text-base sm:text-lg lg:text-xl text-green-100 max-w-2xl leading-relaxed"
+                variants={fadeInUp}
+              >
+                {heroImages[currentSlide]?.subtitle || "আধুনিক প্রযুক্তির সাহায্যে নির্বাচনী প্রচারণা পরিচালনা করুন। ভোটার তথ্য সংগ্রহ, বিশ্লেষণ এবং কার্যকর যোগাযোগের জন্য একটি সম্পূর্ণ সমাধান।"}
+              </motion.p>
+
+              <motion.div 
+                className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4"
+                variants={fadeInUp}
+              >
+                {!currentUser ? (
+                  <>
+                    <Button 
+                      asChild 
+                      size="lg" 
+                      className="bg-white text-green-800 hover:bg-green-50 hover:text-green-900 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 rounded-full px-6 sm:px-8 font-semibold"
+                    >
+                      <Link to="/register" className="flex items-center justify-center gap-2">
+                        <Users className="w-4 h-4 sm:w-5 sm:h-5" /> 
+                        Request Access
+                        <ChevronRight className="w-4 h-4" />
+                      </Link>
+                    </Button>
+                    <Button 
+                      asChild 
+                      size="lg" 
+                      variant="outline" 
+                      className="text-white border-white/50 hover:text-green-800 hover:bg-white hover:border-white backdrop-blur-sm shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 rounded-full px-6 sm:px-8 font-semibold"
+                    >
+                      <Link to="/login" className="flex items-center justify-center gap-2">
+                        <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" /> 
+                        Login
+                      </Link>
+                    </Button>
+                  </>
+                ) : (
+                  <Button 
+                    asChild 
+                    size="lg" 
+                    className="bg-white text-green-800 hover:bg-green-50 hover:text-green-900 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 rounded-full px-6 sm:px-8 font-semibold"
+                  >
+                    <Link to="/dashboard" className="flex items-center justify-center gap-2">
+                      <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" /> 
+                      Dashboard
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </Button>
+                )}
+              </motion.div>
+
+              {/* Stats */}
+              <motion.div 
+                className="grid grid-cols-3 gap-4 pt-6 sm:pt-8"
+                variants={fadeInUp}
+              >
+                {[
+                  { icon: Users, label: 'ভোটার', value: '১০,০০০+' },
+                  { icon: Shield, label: 'নিরাপত্তা', value: '১০০%' },
+                  { icon: MessageSquare, label: 'SMS', value: '৫০,০০০+' }
+                ].map((stat, index) => (
+                  <div key={index} className="text-center">
+                    <stat.icon className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-green-300" />
+                    <div className="text-lg sm:text-xl font-bold">{stat.value}</div>
+                    <div className="text-xs sm:text-sm text-green-200">{stat.label}</div>
+                  </div>
+                ))}
+              </motion.div>
             </motion.div>
+
+            {/* Right Content - Features Cards */}
             <motion.div 
-              className="transform hover:scale-105 transition-transform duration-200"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              className="lg:pl-8"
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5, duration: 0.8 }}
             >
-              <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">৫০+</div>
-              <div className="text-green-200 text-sm sm:text-base">এলাকায় কার্যক্রম</div>
-            </motion.div>
-            <motion.div 
-              className="transform hover:scale-105 transition-transform duration-200"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">২৪/৭</div>
-              <div className="text-green-200 text-sm sm:text-base">সেবা প্রদান</div>
+              <div className="grid gap-4 sm:gap-6">
+                {[
+                  {
+                    icon: Users,
+                    title: 'ভোটার ডাটাবেস',
+                    desc: 'সহজে ভোটার তথ্য সংগ্রহ ও পরিচালনা',
+                    color: 'bg-white/10 hover:bg-white/20'
+                  },
+                  {
+                    icon: BarChart3,
+                    title: 'বিশ্লেষণ ও রিপোর্ট',
+                    desc: 'উন্নত বিশ্লেষণ ও তথ্যভিত্তিক সিদ্ধান্ত',
+                    color: 'bg-white/10 hover:bg-white/20'
+                  },
+                  {
+                    icon: MessageSquare,
+                    title: 'SMS ক্যাম্পেইন',
+                    desc: 'লক্ষ্যভিত্তিক যোগাযোগ ও প্রচারণা',
+                    color: 'bg-white/10 hover:bg-white/20'
+                  }
+                ].map((feature, index) => (
+                  <motion.div
+                    key={index}
+                    className={`${feature.color} backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-white/20 transition-all duration-300 hover:scale-105 hover:shadow-lg`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7 + index * 0.1 }}
+                  >
+                    <feature.icon className="w-6 h-6 sm:w-8 sm:h-8 text-green-300 mb-3" />
+                    <h3 className="text-white font-semibold text-sm sm:text-base mb-2">{feature.title}</h3>
+                    <p className="text-green-100 text-xs sm:text-sm leading-relaxed">{feature.desc}</p>
+                  </motion.div>
+                ))}
+              </div>
             </motion.div>
           </div>
+        </div>
+      </div>
+
+      {/* Developer Credit */}
+      <motion.div 
+        className="absolute bottom-4 right-4 z-20"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.5 }}
+      >
+        <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/20">
+          <p className="text-white text-xs">
+            Developed by{' '}
+            <a 
+              href="https://www.facebook.com/jakir.hossen.4928" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-green-300 hover:text-green-200 font-medium transition-colors"
+            >
+              Jakir Hossen
+            </a>
+          </p>
         </div>
       </motion.div>
 
