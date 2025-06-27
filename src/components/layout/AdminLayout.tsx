@@ -65,7 +65,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         <div className="flex items-center justify-between h-16 px-6 bg-green-900">
           <div className="flex items-center space-x-3">
             <img
-              src="/public/bangladesh-jamaat-e-islami-seeklogo.svg"
+              src="https://i.ibb.co/6Rt79ScS/bangladesh-jamaat-e-islami-seeklogo.png"
               alt="Logo"
               className="w-8 h-8"
             />

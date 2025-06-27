@@ -44,62 +44,58 @@ const App = () => (
               <Route path="/pending-verification" element={<PendingVerification />} />
               <Route path="/verification-loading" element={<VerificationLoading />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
-              
+
               {/* Protected Routes */}
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <AdminDashboard />
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/admin" element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminDashboard />
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/admin/dashboard" element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminDashboard />
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/admin/voters" element={
                 <ProtectedRoute>
                   <AllVoters />
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/admin/pdf-preview" element={
                 <ProtectedRoute>
                   <PDFPreview />
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/admin/add-voter" element={
                 <ProtectedRoute>
                   <AddVoters />
                 </ProtectedRoute>
               } />
-              
-              <Route path="/admin/bulk-upload" element={
-                <ProtectedRoute>
-                  <AddVoters />
-                </ProtectedRoute>
-              } />
-              
+
+
+
               <Route path="/admin/google-form" element={
                 <ProtectedRoute>
                   <GoogleForm />
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/admin/analytics" element={
                 <ProtectedRoute>
                   <Analytics />
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/admin/sms-campaign" element={
                 <ProtectedRoute requiredRole="moderator">
                   <SMSCampaign />
@@ -111,19 +107,19 @@ const App = () => (
                   <SMSCampaignNew />
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/admin/data-hub" element={
                 <ProtectedRoute requiredRole="moderator">
                   <DataHub />
                 </ProtectedRoute>
               } />
-              
+
               <Route path="/admin/verify-users" element={
                 <ProtectedRoute requiredRole="admin">
                   <UserVerify />
                 </ProtectedRoute>
               } />
-              
+
               {/* Catch-all route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
