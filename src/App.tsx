@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import AuthWrapper from "@/components/layout/AuthWrapper";
 import Index from "./pages/Index";
 import Login from "./authentication/Login";
 import SignUp from "./authentication/SignUp";
@@ -31,67 +32,69 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<SignUp />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/pending-verification" element={<PendingVerification />} />
-            <Route path="/verification-loading" element={<VerificationLoading />} />
-            <Route path="/unauthorized" element={<Unauthorized />} />
-            
-            {/* Protected Routes */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <AdminDashboard />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/dashboard" element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminDashboard />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/voters" element={
-              <ProtectedRoute>
-                <AllVoters />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/add-voters" element={
-              <ProtectedRoute>
-                <AddVoters />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/analytics" element={
-              <ProtectedRoute>
-                <Analytics />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/sms" element={
-              <ProtectedRoute requiredRole="moderator">
-                <SMSCampaign />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/data-hub" element={
-              <ProtectedRoute requiredRole="moderator">
-                <DataHub />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/admin/users" element={
-              <ProtectedRoute requiredRole="admin">
-                <UserVerify />
-              </ProtectedRoute>
-            } />
-            
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AuthWrapper>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<SignUp />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/pending-verification" element={<PendingVerification />} />
+              <Route path="/verification-loading" element={<VerificationLoading />} />
+              <Route path="/unauthorized" element={<Unauthorized />} />
+              
+              {/* Protected Routes */}
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/dashboard" element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/voters" element={
+                <ProtectedRoute>
+                  <AllVoters />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/add-voters" element={
+                <ProtectedRoute>
+                  <AddVoters />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/analytics" element={
+                <ProtectedRoute>
+                  <Analytics />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/sms" element={
+                <ProtectedRoute requiredRole="moderator">
+                  <SMSCampaign />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/data-hub" element={
+                <ProtectedRoute requiredRole="moderator">
+                  <DataHub />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/admin/users" element={
+                <ProtectedRoute requiredRole="admin">
+                  <UserVerify />
+                </ProtectedRoute>
+              } />
+              
+              {/* Catch-all route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthWrapper>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
