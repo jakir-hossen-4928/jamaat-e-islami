@@ -1,389 +1,354 @@
+
 import React, { useState } from 'react';
-import { FileText, Download, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Download, FileText, Settings, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { VoterData } from '@/lib/types';
 import html2pdf from 'html2pdf.js';
 
-const AdvancedPDFGenerator = () => {
-  const { userProfile } = useAuth();
-  const { toast } = useToast();
-  const [isOpen, setIsOpen] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedFields, setSelectedFields] = useState<Record<string, boolean>>({
-    'Voter Name': true,
-    'House Name': true,
-    'FatherOrHusband': true,
-    'Age': true,
-    'Gender': true,
-    'Phone': true,
-    'Will Vote': true,
-    'Vote Probability (%)': true,
-    'Priority Level': true,
-    'NID': false,
-    'Political Support': false,
-    'Education': false,
-    'Occupation': false,
-    'Marital Status': false,
-    'Religion': false,
-    'Student': false,
-    'WhatsApp': false,
-    'Is Voter': false,
-    'Voted Before': false,
-    'Has Disability': false,
-    'Is Migrated': false,
-    'Remarks': false,
-    'Collector': false,
-    'Collection Date': false,
-    'Last Updated': false
-  });
+interface VoterData {
+  id: string;
+  'Voter Name': string;
+  Phone?: string;
+  Age?: number;
+  Gender?: string;
+  'Priority Level'?: string;
+  'Political Support'?: string;
+  'Is Voter'?: string;
+  'Will Vote'?: string;
+  Occupation?: string;
+  Education?: string;
+  Address?: string;
+  NID?: string;
+  Remarks?: string;
+}
 
-  const allFields = [
-    'Voter Name', 'House Name', 'FatherOrHusband', 'Age', 'Gender', 'Marital Status',
-    'Student', 'Occupation', 'Education', 'Religion', 'Phone', 'WhatsApp', 'NID',
-    'Is Voter', 'Will Vote', 'Voted Before', 'Vote Probability (%)', 'Political Support',
-    'Priority Level', 'Has Disability', 'Is Migrated', 'Remarks', 'Collector', 'Collection Date', 'Last Updated'
+interface PDFGeneratorProps {
+  voters: VoterData[];
+  title?: string;
+}
+
+const AdvancedPDFGenerator: React.FC<PDFGeneratorProps> = ({ voters, title = 'ভোটারদের তালিকা' }) => {
+  const [selectedFields, setSelectedFields] = useState<string[]>([
+    'Voter Name', 'Phone', 'Age', 'Gender', 'Priority Level'
+  ]);
+  const [pdfTitle, setPdfTitle] = useState(title);
+  const [pageSize, setPageSize] = useState('a4');
+  const [orientation, setOrientation] = useState('portrait');
+  const [fontSize, setFontSize] = useState('12');
+  const [includeHeader, setIncludeHeader] = useState(true);
+  const [includeFooter, setIncludeFooter] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  const { toast } = useToast();
+
+  const availableFields = [
+    { key: 'Voter Name', label: 'ভোটারের নাম' },
+    { key: 'Phone', label: 'ফোন' },
+    { key: 'Age', label: 'বয়স' },
+    { key: 'Gender', label: 'লিঙ্গ' },
+    { key: 'Priority Level', label: 'অগ্রাধিকার' },
+    { key: 'Political Support', label: 'রাজনৈতিক সমর্থন' },
+    { key: 'Is Voter', label: 'ভোটার কিনা' },
+    { key: 'Will Vote', label: 'ভোট দেবেন' },
+    { key: 'Occupation', label: 'পেশা' },
+    { key: 'Education', label: 'শিক্ষা' },
+    { key: 'NID', label: 'NID' },
+    { key: 'Remarks', label: 'মন্তব্য' }
   ];
 
   const handleFieldToggle = (field: string) => {
-    const selectedCount = Object.values(selectedFields).filter(Boolean).length;
-    if (selectedFields[field] || selectedCount < 9) {
-      setSelectedFields(prev => ({ ...prev, [field]: !prev[field] }));
-    } else {
-      toast({
-        title: "সীমা অতিক্রম",
-        description: "আপনি সর্বাধিক ৯টি কলাম নির্বাচন করতে পারেন।",
-        variant: "destructive",
-      });
-    }
+    setSelectedFields(prev => 
+      prev.includes(field) 
+        ? prev.filter(f => f !== field)
+        : [...prev, field]
+    );
+  };
+
+  const generatePDFContent = () => {
+    const currentDate = new Date().toLocaleDateString('bn-BD');
+    
+    return `
+      <div style="font-family: 'SolaimanLipi', 'Noto Sans Bengali', Arial, sans-serif; color: #333; line-height: 1.6; max-width: 100%; margin: 0 auto;">
+        ${includeHeader ? `
+          <header style="text-align: center; margin-bottom: 30px; padding: 20px; border-bottom: 3px solid #059669;">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 15px;">
+              <img src="https://i.ibb.co/6Rt79ScS/bangladesh-jamaat-e-islami-seeklogo.png" alt="Logo" style="width: 60px; height: 60px;">
+              <div>
+                <h1 style="margin: 0; font-size: 24px; font-weight: bold; color: #059669;">জামায়াতে ইসলামী</h1>
+                <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">ভোটার ব্যবস্থাপনা সিস্টেম</p>
+              </div>
+            </div>
+            <h2 style="margin: 15px 0 5px 0; font-size: ${parseInt(fontSize) + 4}px; color: #1f2937; font-weight: 600;">${pdfTitle}</h2>
+            <p style="margin: 0; font-size: 12px; color: #6b7280;">তারিখ: ${currentDate} | মোট ভোটার: ${voters.length} জন</p>
+          </header>
+        ` : ''}
+        
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: ${fontSize}px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <thead>
+              <tr style="background: linear-gradient(135deg, #059669, #047857); color: white;">
+                <th style="padding: 12px 8px; text-align: center; font-weight: 600; border: 1px solid #d1d5db; width: 40px;">#</th>
+                ${selectedFields.map(field => {
+                  const fieldLabel = availableFields.find(f => f.key === field)?.label || field;
+                  return `<th style="padding: 12px 8px; text-align: left; font-weight: 600; border: 1px solid #d1d5db; min-width: 100px;">${fieldLabel}</th>`;
+                }).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${voters.map((voter, index) => `
+                <tr style="background-color: ${index % 2 === 0 ? '#f9fafb' : 'white'}; border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 10px 8px; text-align: center; border: 1px solid #d1d5db; font-weight: 500; color: #6b7280;">${index + 1}</td>
+                  ${selectedFields.map(field => {
+                    const value = voter[field as keyof VoterData];
+                    const displayValue = value || '-';
+                    return `<td style="padding: 10px 8px; border: 1px solid #d1d5db; word-wrap: break-word; max-width: 150px;">${displayValue}</td>`;
+                  }).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        
+        ${includeFooter ? `
+          <footer style="margin-top: 30px; padding: 20px; border-top: 2px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 11px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <p style="margin: 0; font-weight: 500;">বাংলাদেশ জামায়াতে ইসলামী</p>
+                <p style="margin: 2px 0 0 0;">ভোটার ব্যবস্থাপনা সিস্টেম</p>
+              </div>
+              <div style="text-align: right;">
+                <p style="margin: 0;">তৈরি: ${new Date().toLocaleString('bn-BD')}</p>
+                <p style="margin: 2px 0 0 0;">পৃষ্ঠা: <span class="pageNumber"></span></p>
+              </div>
+            </div>
+          </footer>
+        ` : ''}
+      </div>
+    `;
   };
 
   const generatePDF = async () => {
-    if (userProfile?.role !== 'admin') {
+    if (selectedFields.length === 0) {
       toast({
-        title: "অ্যাক্সেস অস্বীকৃত",
-        description: "শুধুমাত্র অ্যাডমিন ব্যবহারকারীরা সমস্ত ভোটার ডেটা এক্সপোর্ট করতে পারেন।",
-        variant: "destructive",
+        title: 'ত্রুটি',
+        description: 'অন্তত একটি ফিল্ড নির্বাচন করুন',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (voters.length === 0) {
+      toast({
+        title: 'ত্রুটি',
+        description: 'পিডিএফ তৈরি করার জন্য কোন ভোটার নেই',
+        variant: 'destructive',
       });
       return;
     }
 
     setIsGenerating(true);
+
     try {
-      console.log('📊 Fetching all voters from Firebase for PDF generation');
-      const votersRef = collection(db, 'voters');
-      const snapshot = await getDocs(votersRef);
-      const voters = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoterData));
-      
-      const selectedFieldsList = allFields.filter(field => selectedFields[field]);
-      const currentDate = new Date();
-      const formatDate = currentDate.toLocaleDateString('bn-BD', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-      const formatTime = currentDate.toLocaleTimeString('bn-BD', {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      
-      // Calculate statistics
-      const stats = {
-        total: voters.length,
-        willVote: voters.filter(v => v['Will Vote'] === 'Yes').length,
-        highPriority: voters.filter(v => v['Priority Level'] === 'High').length,
-        students: voters.filter(v => v.Student === 'Yes').length,
-        avgAge: Math.round(voters.reduce((sum, v) => sum + (v.Age || 0), 0) / voters.length),
-        maleCount: voters.filter(v => v.Gender === 'Male').length,
-        femaleCount: voters.filter(v => v.Gender === 'Female').length
-      };
-      
+      const content = generatePDFContent();
       const element = document.createElement('div');
-      element.innerHTML = `
-        <div style="padding: 25px; font-family: 'Arial', 'Helvetica', sans-serif; font-size: 11px; line-height: 1.4; color: #2c3e50;">
-          <!-- Professional Header -->
-          <div class="header" style="text-align: center; margin-bottom: 25px; background: linear-gradient(135deg, #16a34a 0%, #059669 100%); color: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);">
-            <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px;">
-              <img src="https://i.ibb.co/6Rt79ScS/bangladesh-jamaat-e-islami-seeklogo.png" alt="জামায়াত লোগো" style="width: 60px; height: 60px; margin-right: 15px; border: 2px solid white; border-radius: 50%; padding: 5px; background: white;">
-              <div style="text-align: left;">
-                <h1 style="margin: 0; font-size: 24px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">বাংলাদেশ জামায়াতে ইসলামী</h1>
-                <p style="margin: 5px 0 0 0; font-size: 16px; opacity: 0.9;">কাকৈর খোলা, চৌদ্দগ্রাম শাখা</p>
-              </div>
-            </div>
-            <h2 style="margin: 15px 0 5px 0; font-size: 20px; font-weight: normal; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">ভোটার ডেটা বিশ্লেষণ রিপোর্ট</h2>
-            <div style="display: flex; justify-content: center; gap: 30px; margin-top: 15px; font-size: 13px;">
-              <div><strong>তারিখ:</strong> ${formatDate}</div>
-              <div><strong>সময়:</strong> ${formatTime}</div>
-              <div><strong>রিপোর্ট ID:</strong> #${Date.now().toString().slice(-6)}</div>
-            </div>
-          </div>
-
-          <!-- Executive Summary -->
-          <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #16a34a;">
-            <h3 style="margin: 0 0 15px 0; color: #16a34a; font-size: 16px; font-weight: bold;">নির্বাহী সারসংক্ষেপ</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-              <div style="background: white; padding: 12px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <div style="font-size: 24px; font-weight: bold; color: #059669;">${stats.total}</div>
-                <div style="color: #64748b; font-size: 12px;">মোট নিবন্ধিত ভোটার</div>
-              </div>
-              <div style="background: white; padding: 12px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <div style="font-size: 24px; font-weight: bold; color: #2563eb;">${stats.willVote} (${Math.round((stats.willVote/stats.total)*100)}%)</div>
-                <div style="color: #64748b; font-size: 12px;">ভোট দেবেন</div>
-              </div>
-              <div style="background: white; padding: 12px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <div style="font-size: 24px; font-weight: bold; color: #dc2626;">${stats.highPriority}</div>
-                <div style="color: #64748b; font-size: 12px;">উচ্চ অগ্রাধিকার</div>
-              </div>
-              <div style="background: white; padding: 12px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <div style="font-size: 24px; font-weight: bold; color: #7c3aed;">${stats.avgAge} বছর</div>
-                <div style="color: #64748b; font-size: 12px;">গড় বয়স</div>
-              </div>
-            </div>
-            <div style="margin-top: 15px; padding: 12px; background: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-              <strong>লিঙ্গ বন্টন:</strong> পুরুষ ${stats.maleCount} জন (${Math.round((stats.maleCount/stats.total)*100)}%), মহিলা ${stats.femaleCount} জন (${Math.round((stats.femaleCount/stats.total)*100)}%)
-            </div>
-          </div>
-
-          <!-- Report Details -->
-          <div style="margin-bottom: 20px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px; font-weight: bold;">রিপোর্ট বিবরণ</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; font-size: 11px;">
-              <div><strong>তৈরিকারী:</strong> ${userProfile?.displayName || 'অজানা'} (${userProfile?.role?.toUpperCase() || 'USER'})</div>
-              <div><strong>নির্বাচিত ফিল্ড:</strong> ${selectedFieldsList.length}টি</div>
-            </div>
-          </div>
-
-          <!-- Data Table -->
-          <div style="margin-bottom: 20px;">
-            <h3 style="margin: 0 0 15px 0; color: #374151; font-size: 14px; font-weight: bold; padding-bottom: 8px; border-bottom: 2px solid #16a34a;">বিস্তারিত ভোটার তথ্য</h3>
-            <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-              <thead>
-                <tr style="background: linear-gradient(135deg, #16a34a 0%, #059669 100%); color: white;">
-                  <th style="border: 1px solid #059669; padding: 8px; text-align: left; font-size: 9px; font-weight: bold;">ক্রম</th>
-                  ${selectedFieldsList.map(field => `<th style="border: 1px solid #059669; padding: 8px; text-align: left; font-size: 9px; font-weight: bold; white-space: nowrap;">${field}</th>`).join('')}
-                </tr>
-              </thead>
-              <tbody>
-                ${voters.map((voter, index) => `
-                  <tr style="background-color: ${index % 2 === 0 ? '#f8fafc' : 'white'}; border-bottom: 1px solid #e2e8f0;">
-                    <td style="border: 1px solid #e2e8f0; padding: 6px; font-size: 9px; text-align: center; font-weight: bold; color: #374151;">${index + 1}</td>
-                    ${selectedFieldsList.map(field => {
-                      let value = voter[field as keyof VoterData] || '-';
-                      let cellStyle = 'border: 1px solid #e2e8f0; padding: 6px; font-size: 9px; word-wrap: break-word; max-width: 80px;';
-                      
-                      // Special formatting for certain fields
-                      if (field === 'Priority Level') {
-                        if (value === 'High') cellStyle += ' background-color: #fee2e2; color: #991b1b; font-weight: bold;';
-                        else if (value === 'Medium') cellStyle += ' background-color: #fef3c7; color: #92400e; font-weight: bold;';
-                        else if (value === 'Low') cellStyle += ' background-color: #f3f4f6; color: #374151;';
-                      } else if (field === 'Will Vote' && value === 'Yes') {
-                        cellStyle += ' background-color: #dcfce7; color: #166534; font-weight: bold;';
-                        value = '✓ হ্যাঁ';
-                      } else if (field === 'Will Vote' && value === 'No') {
-                        cellStyle += ' background-color: #fee2e2; color: #991b1b;';
-                        value = '✗ না';
-                      } else if (field === 'Vote Probability (%)' && value !== '-') {
-                        const numValue = parseInt(value.toString());
-                        if (numValue >= 80) cellStyle += ' background-color: #dcfce7; color: #166534; font-weight: bold;';
-                        else if (numValue >= 60) cellStyle += ' background-color: #fef3c7; color: #92400e;';
-                        else cellStyle += ' background-color: #fee2e2; color: #991b1b;';
-                        value = value + '%';
-                      }
-                      
-                      return `<td style="${cellStyle}">${value}</td>`;
-                    }).join('')}
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Professional Footer -->
-          <div style="margin-top: 25px; padding: 20px; text-align: center; background: #f8fafc; border-radius: 8px; border-top: 3px solid #16a34a;">
-            <div style="margin-bottom: 10px;">
-              <strong style="color: #16a34a; font-size: 12px;">বাংলাদেশ জামায়াতে ইসলামী - কাকৈর খোলা, চৌদ্দগ্রাম শাখা</strong>
-            </div>
-            <div style="font-size: 10px; color: #64748b; line-height: 1.6;">
-              <div>📍 কাকৈর খোলা, চৌদ্দগ্রাম, কুমিল্লা | 📱 01647470849</div>
-              <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0;">
-                <strong>গোপনীয়তা নোটিস:</strong> এই রিপোর্টটি গোপনীয় এবং শুধুমাত্র অনুমোদিত ব্যক্তিদের জন্য। অনুমতি ছাড়া কোনো তথ্য ব্যবহার বা বিতরণ করা যাবে না।
-              </div>
-              <div style="margin-top: 5px; font-size: 9px;">
-                © ${new Date().getFullYear()} জামায়াতে ইসলামী বাংলাদেশ। সকল অধিকার সংরক্ষিত। | সিস্টেম ভার্সন: 2.1.0 | রিপোর্ট জেনারেটেড: ${formatDate} ${formatTime}
-              </div>
-              <div style="margin-top: 5px; font-size: 9px; font-weight: bold;">
-                Powered by Jakir Hossen
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-
-      // Enhanced CSS for print optimization
-      const style = document.createElement('style');
-      style.textContent = `
-        @media print {
-          @page { 
-            margin: 0.4in; 
-            size: A4 portrait; 
-          }
-          .header, th, .summary-card {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
-          }
-          table {
-            font-size: 8px !important;
-            page-break-inside: auto;
-          }
-          tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
-          }
-          td, th {
-            font-size: 8px !important;
-            padding: 4px !important;
-            word-wrap: break-word !important;
-            overflow-wrap: break-word !important;
-            max-width: 80px !important;
-          }
-          thead {
-            display: table-header-group;
-          }
-          .header {
-            background: linear-gradient(135deg, #16a34a 0%, #059669 100%) !important;
-          }
-          div[style*="background: linear-gradient"] {
-            background: #16a34a !important;
-          }
-        }
-        @media screen {
-          table { page-break-inside: auto; }
-          tr { page-break-inside: avoid; page-break-after: auto; }
-          td, th { word-wrap: break-word; overflow-wrap: break-word; }
-        }
-      `;
-      element.appendChild(style);
-
-      const options = {
-        margin: [0.4, 0.4, 0.4, 0.4],
-        filename: `জামায়াত-ভোটার-রিপোর্ট-${new Date().toISOString().split('T')[0]}.pdf`,
+      element.innerHTML = content;
+      
+      const opt = {
+        margin: [15, 10, 15, 10],
+        filename: `${pdfTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
         image: { type: 'jpeg', quality: 0.95 },
         html2canvas: { 
-          scale: 1.5, 
+          scale: 2,
           useCORS: true,
           letterRendering: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff'
+          allowTaint: true
         },
         jsPDF: { 
-          unit: 'in', 
-          format: 'a4', 
-          orientation: 'portrait',
-          compress: true,
-          precision: 2
+          unit: 'mm', 
+          format: pageSize, 
+          orientation: orientation,
+          putOnlyUsedFonts: true
         },
-        pagebreak: { 
-          mode: ['avoid-all', 'css', 'legacy'],
-          before: '.page-break-before',
-          after: '.page-break-after'
-        }
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       };
 
-      await html2pdf().set(options).from(element).save();
+      await html2pdf().set(opt).from(element).save();
       
       toast({
-        title: "✅ PDF সফলভাবে তৈরি হয়েছে",
-        description: `${voters.length} জন ভোটারের তথ্য প্রফেশনাল PDF রিপোর্টে এক্সপোর্ট করা হয়েছে।`,
+        title: 'সফল',
+        description: 'PDF সফলভাবে তৈরি এবং ডাউনলোড হয়েছে',
       });
-      
-      setIsOpen(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error('PDF generation error:', error);
       toast({
-        title: "❌ PDF তৈরি করতে ব্যর্থ",
-        description: error.message || "PDF তৈরি করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
-        variant: "destructive",
+        title: 'ত্রুটি',
+        description: 'PDF তৈরি করতে সমস্যা হয়েছে',
+        variant: 'destructive',
       });
     } finally {
       setIsGenerating(false);
     }
   };
 
-  if (userProfile?.role !== 'admin') {
-    return null;
-  }
-
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="flex items-center gap-1 text-xs shadow-md hover:shadow-lg hover:bg-green-50 hover:text-green-700 hover:border-green-300 transition-all duration-200">
-          <FileText className="w-3 h-3" />
-          <span className="hidden sm:inline">PDF এক্সপোর্ট</span>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-xs sm:max-w-lg md:max-w-2xl mx-2 max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
-            <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
-            প্রফেশনাল PDF রিপোর্ট সেটিংস
-          </DialogTitle>
-        </DialogHeader>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm sm:text-lg">যে ফিল্ডগুলি অন্তর্ভুক্ত করতে চান তা নির্বাচন করুন (সর্বাধিক ৯টি)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 max-h-60 overflow-y-auto pr-2">
-              {allFields.map((field) => (
-                <div key={field} className="flex items-center space-x-2 py-1">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Configuration Panel */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Settings className="w-5 h-5" />
+            পিডিএফ সেটিংস
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 sm:space-y-6">
+          {/* Basic Settings */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <Label htmlFor="pdfTitle" className="text-sm font-medium">পিডিএফ শিরোনাম</Label>
+              <Input
+                id="pdfTitle"
+                value={pdfTitle}
+                onChange={(e) => setPdfTitle(e.target.value)}
+                className="mt-1"
+                placeholder="পিডিএফের শিরোনাম"
+              />
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium">পেজ সাইজ</Label>
+              <Select value={pageSize} onValueChange={setPageSize}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="a4">A4</SelectItem>
+                  <SelectItem value="a3">A3</SelectItem>
+                  <SelectItem value="letter">Letter</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium">অরিয়েন্টেশন</Label>
+              <Select value={orientation} onValueChange={setOrientation}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="portrait">পোর্ট্রেট</SelectItem>
+                  <SelectItem value="landscape">ল্যান্ডস্কেপ</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium">ফন্ট সাইজ</Label>
+              <Select value={fontSize} onValueChange={setFontSize}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">১০px</SelectItem>
+                  <SelectItem value="12">১২px</SelectItem>
+                  <SelectItem value="14">১৪px</SelectItem>
+                  <SelectItem value="16">১৬px</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Header/Footer Options */}
+          <div className="flex flex-wrap gap-4 sm:gap-6">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="includeHeader"
+                checked={includeHeader}
+                onCheckedChange={setIncludeHeader}
+              />
+              <Label htmlFor="includeHeader" className="text-sm">হেডার অন্তর্ভুক্ত করুন</Label>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="includeFooter"
+                checked={includeFooter}
+                onCheckedChange={setIncludeFooter}
+              />
+              <Label htmlFor="includeFooter" className="text-sm">ফুটার অন্তর্ভুক্ত করুন</Label>
+            </div>
+          </div>
+
+          {/* Field Selection */}
+          <div>
+            <Label className="text-sm font-medium mb-3 block">পিডিএফে অন্তর্ভুক্ত করার জন্য ফিল্ড নির্বাচন করুন:</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {availableFields.map((field) => (
+                <div key={field.key} className="flex items-center space-x-2">
                   <Checkbox
-                    id={field}
-                    checked={selectedFields[field]}
-                    onCheckedChange={() => handleFieldToggle(field)}
+                    id={field.key}
+                    checked={selectedFields.includes(field.key)}
+                    onCheckedChange={() => handleFieldToggle(field.key)}
                   />
-                  <Label htmlFor={field} className="text-xs sm:text-sm cursor-pointer flex-1">
-                    {field}
-                  </Label>
+                  <Label htmlFor={field.key} className="text-sm">{field.label}</Label>
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
+            <Button
+              onClick={() => setShowPreview(!showPreview)}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              {showPreview ? 'প্রিভিউ লুকান' : 'প্রিভিউ দেখুন'}
+            </Button>
+            
+            <Button
+              onClick={generatePDF}
+              disabled={isGenerating || selectedFields.length === 0}
+              className="bg-green-600 hover:bg-green-700 flex items-center gap-2 flex-1 sm:flex-initial"
+            >
+              {isGenerating ? (
+                'তৈরি হচ্ছে...'
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  পিডিএফ ডাউনলোড করুন
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Preview Panel */}
+      {showPreview && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <FileText className="w-5 h-5" />
+              পিডিএফ প্রিভিউ
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div 
+              className="border rounded-lg p-4 bg-white max-h-96 overflow-auto text-sm"
+              style={{ fontFamily: 'SolaimanLipi, Noto Sans Bengali, Arial, sans-serif' }}
+              dangerouslySetInnerHTML={{ __html: generatePDFContent() }}
+            />
           </CardContent>
         </Card>
-
-        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-          <h4 className="font-semibold text-blue-800 text-sm mb-2">📋 রিপোর্টের বৈশিষ্ট্য:</h4>
-          <ul className="text-xs text-blue-700 space-y-1">
-            <li>• প্রফেশনাল হেডার ও ফুটার ডিজাইন</li>
-            <li>• নির্বাহী সারসংক্ষেপ ও পরিসংখ্যান</li>
-            <li>• মোবাইল-বান্ধব ও প্রিন্ট-অপ্টিমাইজড</li>
-            <li>• নেতৃত্বের জন্য উপযুক্ত ফরম্যাট</li>
-          </ul>
-        </div>
-
-        <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
-          <Button variant="outline" onClick={() => setIsOpen(false)} className="hover:bg-gray-50 text-sm">
-            বাতিল
-          </Button>
-          <Button 
-            onClick={generatePDF} 
-            disabled={isGenerating} 
-            className="bg-green-600 hover:bg-green-700 text-white text-sm transition-colors"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            {isGenerating ? '📄 তৈরি হচ্ছে...' : '📊 প্রফেশনাল PDF তৈরি করুন'}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      )}
+    </div>
   );
 };
 
