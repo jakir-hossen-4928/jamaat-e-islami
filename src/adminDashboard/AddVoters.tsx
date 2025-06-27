@@ -9,13 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { ArrowLeft, Save, User, Phone, Vote, Info, CheckCircle, Upload, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import Papa from 'papaparse';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { Checkbox } from '@/components/ui/checkbox';
+import BulkVoterUpload from './BulkVoterUpload';
 
 // Updated VoterData interface
 export interface VoterData {
@@ -56,8 +56,6 @@ const AddVoters = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isColumnSettingsOpen, setIsColumnSettingsOpen] = useState(false);
-  const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [isUploadingBulk, setIsUploadingBulk] = useState(false);
 
   // State for form data
   const [formData, setFormData] = useState({
@@ -269,74 +267,6 @@ const AddVoters = () => {
     }
   };
 
-  const handleBulkUpload = async () => {
-    if (!csvFile) {
-      toast({
-        title: 'ফাইল নির্বাচিত নেই',
-        description: 'অনুগ্রহ করে একটি CSV ফাইল নির্বাচন করুন',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsUploadingBulk(true);
-    try {
-      Papa.parse(csvFile, {
-        header: true,
-        complete: async (results) => {
-          const validData = results.data.filter((row: any) => row['Voter Name'] && row['Voter Name'].trim() !== '');
-
-          const batch = writeBatch(db);
-          const votersRef = collection(db, 'voters');
-
-          validData.forEach((voter: any, index) => {
-            const docRef = doc(votersRef);
-            const voterData: VoterData = {
-              ...voter,
-              ID: (Date.now() + index).toString(),
-              'Collection Date': new Date().toISOString(),
-              'Last Updated': new Date().toISOString(),
-              Collector: 'Admin'
-            };
-
-            Object.keys(voterData).forEach((key) => {
-              if (voterData[key as keyof VoterData] === '' || voterData[key as keyof VoterData] === undefined) {
-                delete voterData[key as keyof VoterData];
-              }
-            });
-
-            batch.set(docRef, voterData);
-          });
-
-          await batch.commit();
-
-          queryClient.invalidateQueries({ queryKey: ['voters'] });
-          toast({
-            title: 'সফল',
-            description: `${validData.length} জন ভোটার যোগ করা হয়েছে`,
-          });
-          setIsBulkUploadOpen(false);
-          setCsvFile(null);
-        },
-        error: () => {
-          toast({
-            title: 'ত্রুটি',
-            description: 'CSV ফাইল পড়তে সমস্যা হয়েছে',
-            variant: 'destructive',
-          });
-        },
-      });
-    } catch (error: any) {
-      toast({
-        title: 'আপলোড ত্রুটি',
-        description: error.message || 'CSV ফাইল প্রক্রিয়া করতে সমস্যা হয়েছে',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsUploadingBulk(false);
-    }
-  };
-
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -409,41 +339,7 @@ const AddVoters = () => {
                     বাল্ক আপলোড CSV
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>বাল্ক ভোটার আপলোড</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="csvFile">CSV ফাইল নির্বাচন করুন</Label>
-                      <Input
-                        id="csvFile"
-                        type="file"
-                        accept=".csv"
-                        onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      <p>CSV-তে এই হেডার থাকতে হবে:</p>
-                      <p className="font-mono text-xs bg-gray-100 p-2 rounded mt-1">
-                        Voter Name,Age,Gender,Phone,Will Vote,Priority Level,...
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleBulkUpload}
-                        disabled={!csvFile || isUploadingBulk}
-                        className="bg-green-600 hover:bg-green-700 transition-colors duration-200"
-                      >
-                        {isUploadingBulk ? 'আপলোড হচ্ছে...' : 'ভোটার আপলোড করুন'}
-                      </Button>
-                      <Button variant="outline" onClick={() => setIsBulkUploadOpen(false)}>
-                        বাতিল
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
+                <BulkVoterUpload />
               </Dialog>
               <Dialog open={isColumnSettingsOpen} onOpenChange={setIsColumnSettingsOpen}>
                 <DialogTrigger asChild>
