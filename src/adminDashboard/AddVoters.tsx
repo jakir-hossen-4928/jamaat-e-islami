@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, addDoc, writeBatch, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -10,17 +10,20 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ArrowLeft, Save, User, Phone, Vote, Info, CheckCircle, Upload } from 'lucide-react';
+import { ArrowLeft, Save, User, Phone, Vote, Info, CheckCircle, Upload, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import Papa from 'papaparse';
 import { usePageTitle } from '@/lib/usePageTitle';
+import { Checkbox } from '@/components/ui/checkbox';
 
-// Define VoterData type to ensure type safety
-interface VoterData {
-  'Voter Name': string;
+// Updated VoterData interface
+export interface VoterData {
+  id?: string;
+  ID: string;
   'House Name'?: string;
-  'FatherOrHusband'?: string;
+  'Voter Name': string;
+  FatherOrHusband?: string;
   Age?: number;
   Gender?: 'Male' | 'Female' | 'Other';
   'Marital Status'?: 'Married' | 'Unmarried' | 'Widowed' | 'Divorced';
@@ -36,14 +39,13 @@ interface VoterData {
   'Voted Before'?: 'Yes' | 'No';
   'Vote Probability (%)'?: number;
   'Political Support'?: string;
-  'Priority Level': 'Low' | 'Medium' | 'High';
+  'Priority Level'?: 'Low' | 'Medium' | 'High';
   'Has Disability'?: 'Yes' | 'No';
   'Is Migrated'?: 'Yes' | 'No';
   Remarks?: string;
-  ID: string;
-  'Collection Date': string;
-  'Last Updated': string;
-  Collector: string;
+  Collector?: string;
+  'Collection Date'?: string;
+  'Last Updated'?: string;
 }
 
 const AddVoters = () => {
@@ -53,15 +55,15 @@ const AddVoters = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [isColumnSettingsOpen, setIsColumnSettingsOpen] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isUploadingBulk, setIsUploadingBulk] = useState(false);
 
-  const queryClient = useQueryClient();
-
+  // State for form data
   const [formData, setFormData] = useState({
     'Voter Name': '',
     'House Name': '',
-    'FatherOrHusband': '',
+    FatherOrHusband: '',
     Age: '',
     Gender: '' as 'Male' | 'Female' | 'Other' | '',
     'Marital Status': '' as 'Married' | 'Unmarried' | 'Widowed' | 'Divorced' | '',
@@ -83,10 +85,51 @@ const AddVoters = () => {
     Remarks: ''
   });
 
+  // State for selected columns, initialized from localStorage
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(() => {
+    const saved = localStorage.getItem('voterFormColumns');
+    return saved
+      ? JSON.parse(saved)
+      : Object.keys(formData).filter(
+          (key) => key !== 'Voter Name' // Ensure 'Voter Name' is always included
+        );
+  });
+
+  // Save selected columns to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('voterFormColumns', JSON.stringify(selectedColumns));
+  }, [selectedColumns]);
+
+  const queryClient = useQueryClient();
+
+  // Available columns for selection (excluding required 'Voter Name')
+  const availableColumns: { key: keyof VoterData; label: string }[] = [
+    { key: 'House Name', label: 'বাড়ির নাম' },
+    { key: 'FatherOrHusband', label: 'পিতা/স্বামীর নাম' },
+    { key: 'Age', label: 'বয়স' },
+    { key: 'Gender', label: 'লিঙ্গ' },
+    { key: 'Marital Status', label: 'বৈবাহিক অবস্থা' },
+    { key: 'Student', label: 'ছাত্র/ছাত্রী' },
+    { key: 'Occupation', label: 'পেশা' },
+    { key: 'Education', label: 'শিক্ষা' },
+    { key: 'Religion', label: 'ধর্ম' },
+    { key: 'Phone', label: 'ফোন' },
+    { key: 'WhatsApp', label: 'হোয়াটসঅ্যাপ' },
+    { key: 'NID', label: 'NID' },
+    { key: 'Is Voter', label: 'ভোটার কিনা' },
+    { key: 'Will Vote', label: 'ভোট দেবেন' },
+    { key: 'Voted Before', label: 'আগে ভোট দিয়েছেন' },
+    { key: 'Vote Probability (%)', label: 'ভোট দেওয়ার সম্ভাবনা (%)' },
+    { key: 'Political Support', label: 'রাজনৈতিক সমর্থন' },
+    { key: 'Priority Level', label: 'অগ্রাধিকার স্তর' },
+    { key: 'Has Disability', label: 'প্রতিবন্ধী কিনা' },
+    { key: 'Is Migrated', label: 'প্রবাসী কিনা' },
+    { key: 'Remarks', label: 'মন্তব্য' },
+  ];
+
   const addSingleVoterMutation = useMutation({
     mutationFn: async (voter: Partial<VoterData>) => {
       try {
-        // Validate required fields
         if (!voter['Voter Name']?.trim()) {
           throw new Error('ভোটারের নাম আবশ্যক');
         }
@@ -100,18 +143,15 @@ const AddVoters = () => {
           Collector: 'Admin'
         } as VoterData;
 
-        // Ensure numeric fields are properly formatted
         if (voter.Age) voterData.Age = parseInt(voter.Age.toString());
         if (voter['Vote Probability (%)']) voterData['Vote Probability (%)'] = parseInt(voter['Vote Probability (%)'].toString());
 
-        // Remove undefined or empty string fields to avoid Firestore issues
-        Object.keys(voterData).forEach(key => {
+        Object.keys(voterData).forEach((key) => {
           if (voterData[key as keyof VoterData] === '' || voterData[key as keyof VoterData] === undefined) {
             delete voterData[key as keyof VoterData];
           }
         });
 
-        // Add voter to Firestore
         const docRef = await addDoc(votersRef, voterData);
         return docRef.id;
       } catch (error: any) {
@@ -132,8 +172,8 @@ const AddVoters = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voters'] });
       toast({
-        title: "সফল",
-        description: "নতুন ভোটার যোগ করা হয়েছে",
+        title: 'সফল',
+        description: 'নতুন ভোটার যোগ করা হয়েছে',
       });
       setShowSuccess(true);
       setTimeout(() => {
@@ -143,18 +183,18 @@ const AddVoters = () => {
     onError: (error: any) => {
       console.error('Mutation error:', error);
       toast({
-        title: "ত্রুটি",
-        description: error.message || "ভোটার যোগ করতে সমস্যা হয়েছে",
-        variant: "destructive",
+        title: 'ত্রুটি',
+        description: error.message || 'ভোটার যোগ করতে সমস্যা হয়েছে',
+        variant: 'destructive',
       });
-    }
+    },
   });
 
   const resetForm = () => {
     setFormData({
       'Voter Name': '',
       'House Name': '',
-      'FatherOrHusband': '',
+      FatherOrHusband: '',
       Age: '',
       Gender: '',
       'Marital Status': '',
@@ -183,9 +223,9 @@ const AddVoters = () => {
 
     if (!formData['Voter Name'].trim()) {
       toast({
-        title: "ত্রুটি",
-        description: "ভোটারের নাম আবশ্যক",
-        variant: "destructive",
+        title: 'ত্রুটি',
+        description: 'ভোটারের নাম আবশ্যক',
+        variant: 'destructive',
       });
       return;
     }
@@ -195,7 +235,7 @@ const AddVoters = () => {
       const voterData: Partial<VoterData> = {
         'Voter Name': formData['Voter Name'],
         'House Name': formData['House Name'] || undefined,
-        'FatherOrHusband': formData['FatherOrHusband'] || undefined,
+        FatherOrHusband: formData.FatherOrHusband || undefined,
         Age: formData.Age ? parseInt(formData.Age) : undefined,
         Gender: formData.Gender || undefined,
         'Marital Status': formData['Marital Status'] || undefined,
@@ -220,9 +260,9 @@ const AddVoters = () => {
       await addSingleVoterMutation.mutateAsync(voterData);
     } catch (error: any) {
       toast({
-        title: "ত্রুটি",
-        description: error.message || "ভোটার যোগ করতে সমস্যা হয়েছে",
-        variant: "destructive",
+        title: 'ত্রুটি',
+        description: error.message || 'ভোটার যোগ করতে সমস্যা হয়েছে',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -232,9 +272,9 @@ const AddVoters = () => {
   const handleBulkUpload = async () => {
     if (!csvFile) {
       toast({
-        title: "ফাইল নির্বাচিত নেই",
-        description: "অনুগ্রহ করে একটি CSV ফাইল নির্বাচন করুন",
-        variant: "destructive",
+        title: 'ফাইল নির্বাচিত নেই',
+        description: 'অনুগ্রহ করে একটি CSV ফাইল নির্বাচন করুন',
+        variant: 'destructive',
       });
       return;
     }
@@ -259,8 +299,7 @@ const AddVoters = () => {
               Collector: 'Admin'
             };
 
-            // Clean up voter data
-            Object.keys(voterData).forEach(key => {
+            Object.keys(voterData).forEach((key) => {
               if (voterData[key as keyof VoterData] === '' || voterData[key as keyof VoterData] === undefined) {
                 delete voterData[key as keyof VoterData];
               }
@@ -273,7 +312,7 @@ const AddVoters = () => {
 
           queryClient.invalidateQueries({ queryKey: ['voters'] });
           toast({
-            title: "সফল",
+            title: 'সফল',
             description: `${validData.length} জন ভোটার যোগ করা হয়েছে`,
           });
           setIsBulkUploadOpen(false);
@@ -281,17 +320,17 @@ const AddVoters = () => {
         },
         error: () => {
           toast({
-            title: "ত্রুটি",
-            description: "CSV ফাইল পড়তে সমস্যা হয়েছে",
-            variant: "destructive",
+            title: 'ত্রুটি',
+            description: 'CSV ফাইল পড়তে সমস্যা হয়েছে',
+            variant: 'destructive',
           });
-        }
+        },
       });
     } catch (error: any) {
       toast({
-        title: "আপলোড ত্রুটি",
-        description: error.message || "CSV ফাইল প্রক্রিয়া করতে সমস্যা হয়েছে",
-        variant: "destructive",
+        title: 'আপলোড ত্রুটি',
+        description: error.message || 'CSV ফাইল প্রক্রিয়া করতে সমস্যা হয়েছে',
+        variant: 'destructive',
       });
     } finally {
       setIsUploadingBulk(false);
@@ -299,7 +338,15 @@ const AddVoters = () => {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleColumnToggle = (column: string) => {
+    setSelectedColumns((prev) =>
+      prev.includes(column)
+        ? prev.filter((c) => c !== column)
+        : [...prev, column]
+    );
   };
 
   if (showSuccess) {
@@ -310,9 +357,7 @@ const AddVoters = () => {
             <CardContent className="p-8 text-center">
               <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-gray-900 mb-2">ভোটার সফলভাবে যোগ হয়েছে!</h2>
-              <p className="text-gray-600 mb-6">
-                {formData['Voter Name']} ভোটার ডাটাবেজে যোগ করা হয়েছে।
-              </p>
+              <p className="text-gray-600 mb-6">{formData['Voter Name']} ভোটার ডাটাবেজে যোগ করা হয়েছে।</p>
               <div className="space-y-3">
                 <Button
                   onClick={resetForm}
@@ -356,49 +401,94 @@ const AddVoters = () => {
                 <p className="text-sm text-gray-600 hidden sm:block">ভোটারের তথ্য প্রবেশ করান ডাটাবেজে যোগ করতে</p>
               </div>
             </div>
-            <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Upload className="w-4 h-4" />
-                  বাল্ক আপলোড CSV
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>বাল্ক ভোটার আপলোড</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="csvFile">CSV ফাইল নির্বাচন করুন</Label>
-                    <Input
-                      id="csvFile"
-                      type="file"
-                      accept=".csv"
-                      onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
-                      className="mt-1"
-                    />
+            <div className="flex gap-2">
+              <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Upload className="w-4 h-4" />
+                    বাল্ক আপলোড CSV
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>বাল্ক ভোটার আপলোড</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="csvFile">CSV ফাইল নির্বাচন করুন</Label>
+                      <Input
+                        id="csvFile"
+                        type="file"
+                        accept=".csv"
+                        onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <p>CSV-তে এই হেডার থাকতে হবে:</p>
+                      <p className="font-mono text-xs bg-gray-100 p-2 rounded mt-1">
+                        Voter Name,Age,Gender,Phone,Will Vote,Priority Level,...
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleBulkUpload}
+                        disabled={!csvFile || isUploadingBulk}
+                        className="bg-green-600 hover:bg-green-700 transition-colors duration-200"
+                      >
+                        {isUploadingBulk ? 'আপলোড হচ্ছে...' : 'ভোটার আপলোড করুন'}
+                      </Button>
+                      <Button variant="outline" onClick={() => setIsBulkUploadOpen(false)}>
+                        বাতিল
+                      </Button>
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600">
-                    <p>CSV-তে এই হেডার থাকতে হবে:</p>
-                    <p className="font-mono text-xs bg-gray-100 p-2 rounded mt-1">
-                      Voter Name,Age,Gender,Phone,Will Vote,Priority Level,...
-                    </p>
+                </DialogContent>
+              </Dialog>
+              <Dialog open={isColumnSettingsOpen} onOpenChange={setIsColumnSettingsOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Settings className="w-4 h-4" />
+                    কলাম সেটিংস
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>ফর্ম কলাম নির্বাচন করুন</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-600">ফর্মে কোন কলামগুলো দেখাতে চান তা নির্বাচন করুন:</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {availableColumns.map((column) => (
+                        <div key={column.key} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={column.key}
+                            checked={selectedColumns.includes(column.key)}
+                            onCheckedChange={() => handleColumnToggle(column.key)}
+                            disabled={column.key === 'Voter Name'} // Disable for required field
+                          />
+                          <Label htmlFor={column.key}>{column.label}</Label>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => setIsColumnSettingsOpen(false)}
+                        className="bg-green-600 hover:bg-green-700 transition-colors duration-200"
+                      >
+                        সংরক্ষণ করুন
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsColumnSettingsOpen(false)}
+                      >
+                        বাতিল
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleBulkUpload}
-                      disabled={!csvFile || isUploadingBulk}
-                      className="bg-green-600 hover:bg-green-700 transition-colors duration-200"
-                    >
-                      {isUploadingBulk ? 'আপলোড হচ্ছে...' : 'ভোটার আপলোড করুন'}
-                    </Button>
-                    <Button variant="outline" onClick={() => setIsBulkUploadOpen(false)}>
-                      বাতিল
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
@@ -412,6 +502,7 @@ const AddVoters = () => {
               </CardHeader>
               <CardContent className="p-4 sm:p-6 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Always include Voter Name */}
                   <div>
                     <Label htmlFor="voterName" className="text-sm font-medium">
                       ভোটারের নাম <span className="text-red-500">*</span>
@@ -426,196 +517,352 @@ const AddVoters = () => {
                     />
                   </div>
 
-                  <div>
-                    <Label htmlFor="houseName" className="text-sm font-medium">বাড়ির নাম</Label>
-                    <Input
-                      id="houseName"
-                      value={formData['House Name']}
-                      onChange={(e) => handleInputChange('House Name', e.target.value)}
-                      placeholder="বাড়ি/পারিবারিক নাম"
-                      className="mt-1"
-                    />
-                  </div>
+                  {selectedColumns.includes('House Name') && (
+                    <div>
+                      <Label htmlFor="houseName" className="text-sm font-medium">বাড়ির নাম</Label>
+                      <Input
+                        id="houseName"
+                        value={formData['House Name']}
+                        onChange={(e) => handleInputChange('House Name', e.target.value)}
+                        placeholder="বাড়ি/পারিবারিক নাম"
+                        className="mt-1"
+                      />
+                    </div>
+                  )}
 
-                  <div>
-                    <Label htmlFor="fatherHusband" className="text-sm font-medium">পিতা/স্বামীর নাম</Label>
-                    <Input
-                      id="fatherHusband"
-                      value={formData['FatherOrHusband']}
-                      onChange={(e) => handleInputChange('FatherOrHusband', e.target.value)}
-                      placeholder="পিতা বা স্বামীর নাম"
-                      className="mt-1"
-                    />
-                  </div>
+                  {selectedColumns.includes('FatherOrHusband') && (
+                    <div>
+                      <Label htmlFor="fatherHusband" className="text-sm font-medium">পিতা/স্বামীর নাম</Label>
+                      <Input
+                        id="fatherHusband"
+                        value={formData.FatherOrHusband}
+                        onChange={(e) => handleInputChange('FatherOrHusband', e.target.value)}
+                        placeholder="পিতা বা স্বামীর নাম"
+                        className="mt-1"
+                      />
+                    </div>
+                  )}
 
-                  <div>
-                    <Label htmlFor="age" className="text-sm font-medium">বয়স</Label>
-                    <Input
-                      id="age"
-                      type="number"
-                      min="0"
-                      max="120"
-                      value={formData.Age}
-                      onChange={(e) => handleInputChange('Age', e.target.value)}
-                      placeholder="বছরের হিসাবে বয়স"
-                      className="mt-1"
-                    />
-                  </div>
+                  {selectedColumns.includes('Age') && (
+                    <div>
+                      <Label htmlFor="age" className="text-sm font-medium">বয়স</Label>
+                      <Input
+                        id="age"
+                        type="number"
+                        min="0"
+                        max="120"
+                        value={formData.Age}
+                        onChange={(e) => handleInputChange('Age', e.target.value)}
+                        placeholder="বছরের হিসাবে বয়স"
+                        className="mt-1"
+                      />
+                    </div>
+                  )}
 
-                  <div>
-                    <Label htmlFor="gender" className="text-sm font-medium">লিঙ্গ</Label>
-                    <Select value={formData.Gender} onValueChange={(value) => handleInputChange('Gender', value)}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="লিঙ্গ নির্বাচন করুন" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Male">পুরুষ</SelectItem>
-                        <SelectItem value="Female">মহিলা</SelectItem>
-                        <SelectItem value="Other">অন্যান্য</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {selectedColumns.includes('Gender') && (
+                    <div>
+                      <Label htmlFor="gender" className="text-sm font-medium">লিঙ্গ</Label>
+                      <Select value={formData.Gender} onValueChange={(value) => handleInputChange('Gender', value)}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="লিঙ্গ নির্বাচন করুন" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Male">পুরুষ</SelectItem>
+                          <SelectItem value="Female">মহিলা</SelectItem>
+                          <SelectItem value="Other">অন্যান্য</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-                  <div>
-                    <Label htmlFor="maritalStatus" className="text-sm font-medium">বৈবাহিক অবস্থা</Label>
-                    <Select value={formData['Marital Status']} onValueChange={(value) => handleInputChange('Marital Status', value)}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="অবস্থা নির্বাচন করুন" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Married">বিবাহিত</SelectItem>
-                        <SelectItem value="Unmarried">অবিবাহিত</SelectItem>
-                        <SelectItem value="Widowed">বিধবা</SelectItem>
-                        <SelectItem value="Divorced">তালাকপ্রাপ্ত</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {selectedColumns.includes('Marital Status') && (
+                    <div>
+                      <Label htmlFor="maritalStatus" className="text-sm font-medium">বৈবাহিক অবস্থা</Label>
+                      <Select value={formData['Marital Status']} onValueChange={(value) => handleInputChange('Marital Status', value)}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="অবস্থা নির্বাচন করুন" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Married">বিবাহিত</SelectItem>
+                          <SelectItem value="Unmarried">অবিবাহিত</SelectItem>
+                          <SelectItem value="Widowed">বিধবা</SelectItem>
+                          <SelectItem value="Divorced">তালাকপ্রাপ্ত</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {selectedColumns.includes('Student') && (
+                    <div>
+                      <Label htmlFor="student" className="text-sm font-medium">ছাত্র/ছাত্রী</Label>
+                      <Select value={formData.Student} onValueChange={(value) => handleInputChange('Student', value)}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="ছাত্র/ছাত্রী কিনা?" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                          <SelectItem value="No">না</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {selectedColumns.includes('Occupation') && (
+                    <div>
+                      <Label htmlFor="occupation" className="text-sm font-medium">পেশা</Label>
+                      <Input
+                        id="occupation"
+                        value={formData.Occupation}
+                        onChange={(e) => handleInputChange('Occupation', e.target.value)}
+                        placeholder="পেশা লিখুন"
+                        className="mt-1"
+                      />
+                    </div>
+                  )}
+
+                  {selectedColumns.includes('Education') && (
+                    <div>
+                      <Label htmlFor="education" className="text-sm font-medium">শিক্ষা</Label>
+                      <Input
+                        id="education"
+                        value={formData.Education}
+                        onChange={(e) => handleInputChange('Education', e.target.value)}
+                        placeholder="শিক্ষাগত যোগ্যতা"
+                        className="mt-1"
+                      />
+                    </div>
+                  )}
+
+                  {selectedColumns.includes('Religion') && (
+                    <div>
+                      <Label htmlFor="religion" className="text-sm font-medium">ধর্ম</Label>
+                      <Input
+                        id="religion"
+                        value={formData.Religion}
+                        onChange={(e) => handleInputChange('Religion', e.target.value)}
+                        placeholder="ধর্ম লিখুন"
+                        className="mt-1"
+                      />
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
             {/* Contact Information */}
-            <Card className="shadow-lg">
-              <CardHeader className="bg-blue-50">
-                <CardTitle className="flex items-center gap-2 text-blue-800 text-base sm:text-lg">
-                  <Phone className="w-5 h-5" />
-                  যোগাযোগ ও পরিচয়
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="phone" className="text-sm font-medium">ফোন</Label>
-                    <Input
-                      id="phone"
-                      value={formData.Phone}
-                      onChange={(e) => handleInputChange('Phone', e.target.value)}
-                      placeholder="ফোন নম্বর"
-                      className="mt-1"
-                    />
-                  </div>
+            {(selectedColumns.includes('Phone') || selectedColumns.includes('WhatsApp') || selectedColumns.includes('NID')) && (
+              <Card className="shadow-lg">
+                <CardHeader className="bg-blue-50">
+                  <CardTitle className="flex items-center gap-2 text-blue-800 text-base sm:text-lg">
+                    <Phone className="w-5 h-5" />
+                    যোগাযোগ ও পরিচয়
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {selectedColumns.includes('Phone') && (
+                      <div>
+                        <Label htmlFor="phone" className="text-sm font-medium">ফোন</Label>
+                        <Input
+                          id="phone"
+                          value={formData.Phone}
+                          onChange={(e) => handleInputChange('Phone', e.target.value)}
+                          placeholder="ফোন নম্বর"
+                          className="mt-1"
+                        />
+                      </div>
+                    )}
 
-                  <div>
-                    <Label htmlFor="whatsapp" className="text-sm font-medium">হোয়াটসঅ্যাপ</Label>
-                    <Select value={formData.WhatsApp} onValueChange={(value) => handleInputChange('WhatsApp', value)}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="হোয়াটসঅ্যাপ আছে?" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Yes">হ্যাঁ</SelectItem>
-                        <SelectItem value="No">না</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    {selectedColumns.includes('WhatsApp') && (
+                      <div>
+                        <Label htmlFor="whatsapp" className="text-sm font-medium">হোয়াটসঅ্যাপ</Label>
+                        <Select value={formData.WhatsApp} onValueChange={(value) => handleInputChange('WhatsApp', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="হোয়াটসঅ্যাপ আছে?" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                            <SelectItem value="No">না</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
 
-                  <div>
-                    <Label htmlFor="nid" className="text-sm font-medium">NID</Label>
-                    <Input
-                      id="nid"
-                      value={formData.NID}
-                      onChange={(e) => handleInputChange('NID', e.target.value)}
-                      placeholder="জাতীয় পরিচয়পত্র নম্বর"
-                      className="mt-1"
-                    />
+                    {selectedColumns.includes('NID') && (
+                      <div>
+                        <Label htmlFor="nid" className="text-sm font-medium">NID</Label>
+                        <Input
+                          id="nid"
+                          value={formData.NID}
+                          onChange={(e) => handleInputChange('NID', e.target.value)}
+                          placeholder="জাতীয় পরিচয়পত্র নম্বর"
+                          className="mt-1"
+                        />
+                      </div>
+                    )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Political Information */}
-            <Card className="shadow-lg">
-              <CardHeader className="bg-orange-50">
-                <CardTitle className="flex items-center gap-2 text-orange-800 text-base sm:text-lg">
-                  <Vote className="w-5 h-5" />
-                  রাজনৈতিক তথ্য
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="isVoter" className="text-sm font-medium">ভোটার কিনা</Label>
-                    <Select value={formData['Is Voter']} onValueChange={(value) => handleInputChange('Is Voter', value)}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="নিবন্ধিত ভোটার?" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Yes">হ্যাঁ</SelectItem>
-                        <SelectItem value="No">না</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+            {(selectedColumns.includes('Is Voter') || selectedColumns.includes('Will Vote') || selectedColumns.includes('Voted Before') || selectedColumns.includes('Vote Probability (%)') || selectedColumns.includes('Political Support') || selectedColumns.includes('Priority Level') || selectedColumns.includes('Has Disability') || selectedColumns.includes('Is Migrated')) && (
+              <Card className="shadow-lg">
+                <CardHeader className="bg-orange-50">
+                  <CardTitle className="flex items-center gap-2 text-orange-800 text-base sm:text-lg">
+                    <Vote className="w-5 h-5" />
+                    রাজনৈতিক তথ্য
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {selectedColumns.includes('Is Voter') && (
+                      <div>
+                        <Label htmlFor="isVoter" className="text-sm font-medium">ভোটার কিনা</Label>
+                        <Select value={formData['Is Voter']} onValueChange={(value) => handleInputChange('Is Voter', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="নিবন্ধিত ভোটার?" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                            <SelectItem value="No">না</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
 
-                  <div>
-                    <Label htmlFor="willVote" className="text-sm font-medium">ভোট দেবেন</Label>
-                    <Select value={formData['Will Vote']} onValueChange={(value) => handleInputChange('Will Vote', value)}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="ভোট দেবেন?" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Yes">হ্যাঁ</SelectItem>
-                        <SelectItem value="No">না</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    {selectedColumns.includes('Will Vote') && (
+                      <div>
+                        <Label htmlFor="willVote" className="text-sm font-medium">ভোট দেবেন</Label>
+                        <Select value={formData['Will Vote']} onValueChange={(value) => handleInputChange('Will Vote', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="ভোট দেবেন?" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                            <SelectItem value="No">না</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
 
-                  <div>
-                    <Label htmlFor="priorityLevel" className="text-sm font-medium">অগ্রাধিকার স্তর</Label>
-                    <Select value={formData['Priority Level']} onValueChange={(value) => handleInputChange('Priority Level', value)}>
-                      <SelectTrigger className="mt-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="High">উচ্চ</SelectItem>
-                        <SelectItem value="Medium">মাঝারি</SelectItem>
-                        <SelectItem value="Low">নিম্ন</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {selectedColumns.includes('Voted Before') && (
+                      <div>
+                        <Label htmlFor="votedBefore" className="text-sm font-medium">আগে ভোট দিয়েছেন</Label>
+                        <Select value={formData['Voted Before']} onValueChange={(value) => handleInputChange('Voted Before', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="আগে ভোট দিয়েছেন?" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                            <SelectItem value="No">না</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {selectedColumns.includes('Vote Probability (%)') && (
+                      <div>
+                        <Label htmlFor="voteProbability" className="text-sm font-medium">ভোট দেওয়ার সম্ভাবনা (%)</Label>
+                        <Input
+                          id="voteProbability"
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={formData['Vote Probability (%)']}
+                          onChange={(e) => handleInputChange('Vote Probability (%)', e.target.value)}
+                          placeholder="0-100"
+                          className="mt-1"
+                        />
+                      </div>
+                    )}
+
+                    {selectedColumns.includes('Political Support') && (
+                      <div>
+                        <Label htmlFor="politicalSupport" className="text-sm font-medium">রাজনৈতিক সমর্থন</Label>
+                        <Input
+                          id="politicalSupport"
+                          value={formData['Political Support']}
+                          onChange={(e) => handleInputChange('Political Support', e.target.value)}
+                          placeholder="রাজনৈতিক দল বা প্রার্থী"
+                          className="mt-1"
+                        />
+                      </div>
+                    )}
+
+                    {selectedColumns.includes('Priority Level') && (
+                      <div>
+                        <Label htmlFor="priorityLevel" className="text-sm font-medium">অগ্রাধিকার স্তর</Label>
+                        <Select value={formData['Priority Level']} onValueChange={(value) => handleInputChange('Priority Level', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="High">উচ্চ</SelectItem>
+                            <SelectItem value="Medium">মাঝারি</SelectItem>
+                            <SelectItem value="Low">নিম্ন</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {selectedColumns.includes('Has Disability') && (
+                      <div>
+                        <Label htmlFor="hasDisability" className="text-sm font-medium">প্রতিবন্ধী কিনা</Label>
+                        <Select value={formData['Has Disability']} onValueChange={(value) => handleInputChange('Has Disability', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="প্রতিবন্ধী কিনা?" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                            <SelectItem value="No">না</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {selectedColumns.includes('Is Migrated') && (
+                      <div>
+                        <Label htmlFor="isMigrated" className="text-sm font-medium">প্রবাসী কিনা</Label>
+                        <Select value={formData['Is Migrated']} onValueChange={(value) => handleInputChange('Is Migrated', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="প্রবাসী কিনা?" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                            <SelectItem value="No">না</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Additional Information */}
-            <Card className="shadow-lg">
-              <CardHeader className="bg-gray-50">
-                <CardTitle className="flex items-center gap-2 text-gray-800 text-base sm:text-lg">
-                  <Info className="w-5 h-5" />
-                  অতিরিক্ত তথ্য
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6 space-y-4">
-                <div>
-                  <Label htmlFor="remarks" className="text-sm font-medium">মন্তব্য</Label>
-                  <Textarea
-                    id="remarks"
-                    value={formData.Remarks}
-                    onChange={(e) => handleInputChange('Remarks', e.target.value)}
-                    placeholder="অতিরিক্ত নোট বা মন্তব্য..."
-                    className="mt-1 min-h-[80px]"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            {selectedColumns.includes('Remarks') && (
+              <Card className="shadow-lg">
+                <CardHeader className="bg-gray-50">
+                  <CardTitle className="flex items-center gap-2 text-gray-800 text-base sm:text-lg">
+                    <Info className="w-5 h-5" />
+                    অতিরিক্ত তথ্য
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6 space-y-4">
+                  <div>
+                    <Label htmlFor="remarks" className="text-sm font-medium">মন্তব্য</Label>
+                    <Textarea
+                      id="remarks"
+                      value={formData.Remarks}
+                      onChange={(e) => handleInputChange('Remarks', e.target.value)}
+                      placeholder="অতিরিক্ত নোট বা মন্তব্য..."
+                      className="mt-1 min-h-[80px]"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Submit Button */}
             <div className="flex justify-end gap-3 bg-white p-4 rounded-lg shadow-sm">
@@ -634,7 +881,7 @@ const AddVoters = () => {
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  "ভোটার যোগ করা হচ্ছে..."
+                  'ভোটার যোগ করা হচ্ছে...'
                 ) : (
                   <>
                     <Save className="w-4 h-4" />
