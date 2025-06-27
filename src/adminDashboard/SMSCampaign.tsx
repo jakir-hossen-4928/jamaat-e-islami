@@ -1,65 +1,66 @@
-
 import { useState, useEffect } from 'react';
-import { collection, query, getDocs, where } from 'firebase/firestore';
+import { useQuery } from '@tanstack/react-query';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { MessageSquare, Users, Phone, Send, Plus, Wallet, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MessageSquare, Users, Send, Filter, DollarSign, Wifi, Loader2 } from 'lucide-react';
+import { VoterData } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { usePageTitle } from '@/lib/usePageTitle';
 
-interface Voter {
-  id: string;
-  'Voter Name': string;
-  Phone?: string;
-  Age?: number;
-  Gender?: string;
-  'Priority Level'?: string;
-  'Political Support'?: string;
-}
-
-interface SMSStatus {
+interface SMSLog {
+  timestamp: string;
   phone: string;
-  status: 'pending' | 'sent' | 'failed';
-  error?: string;
+  status: 'success' | 'failed';
+  message: string;
 }
 
 const SMSCampaign = () => {
-  usePageTitle('এসএমএস ক্যাম্পেইন - জামায়াতে ইসলামী');
-  
-  const [voters, setVoters] = useState<Voter[]>([]);
-  const [selectedVoters, setSelectedVoters] = useState<Voter[]>([]);
-  const [message, setMessage] = useState('');
-  const [filter, setFilter] = useState('all');
-  const [loading, setLoading] = useState(false);
-  const [balance, setBalance] = useState<number>(0);
-  const [smsStatuses, setSmsStatuses] = useState<SMSStatus[]>([]);
-  const [isBalanceLoading, setIsBalanceLoading] = useState(false);
-  const { toast } = useToast();
-
-  // Available placeholders for personalization
-  const placeholders = [
-    { key: '{name}', label: 'নাম', description: 'ভোটারের নাম' },
-    { key: '{age}', label: 'বয়স', description: 'ভোটারের বয়স' },
-    { key: '{gender}', label: 'লিঙ্গ', description: 'ভোটারের লিঙ্গ' },
-    { key: '{priority}', label: 'অগ্রাধিকার', description: 'অগ্রাধিকার স্তর' },
-    { key: '{support}', label: 'সমর্থন', description: 'রাজনৈতিক সমর্থন' },
-  ];
-
-  // Use your API base URL
   const baseUrl = import.meta.env.VITE_API_BASE_URL;
+  const { toast } = useToast();
+  const [message, setMessage] = useState('');
+  const [selectedVoters, setSelectedVoters] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [balance, setBalance] = useState<number | null>(null);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [smsLogs, setSmsLogs] = useState<SMSLog[]>([]);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    willVote: '',
+    priority: '',
+    gender: '',
+    minAge: '',
+    maxAge: '',
+    maritalStatus: '',
+    student: '',
+    whatsapp: '',
+    hasDisability: '',
+    isMigrated: '',
+  });
 
-  useEffect(() => {
-    fetchVoters();
-    fetchBalance();
-  }, []);
+  // Fetch voters, ordered by Last Updated (DESC)
+  const { data: voters = [], isLoading } = useQuery({
+    queryKey: ['voters'],
+    queryFn: async () => {
+      const votersRef = collection(db, 'voters');
+      const q = query(votersRef, orderBy('Last Updated', 'desc'));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as VoterData));
+    },
+  });
 
+  // Fetch SMS balance
   const fetchBalance = async () => {
-    setIsBalanceLoading(true);
+    setIsLoadingBalance(true);
     try {
       const responseBalance = await fetch(`${baseUrl}/getBalance`);
       if (responseBalance.ok) {
@@ -69,88 +70,78 @@ const SMSCampaign = () => {
         throw new Error('Failed to fetch balance');
       }
     } catch (error) {
-      console.error('Error fetching balance:', error);
+      console.error('Balance fetch error:', error);
       toast({
-        title: 'ত্রুটি',
-        description: 'ব্যালেন্স লোড করতে সমস্যা হয়েছে',
+        title: 'ব্যালেন্স লোড ত্রুটি',
+        description: 'SMS ব্যালেন্স লোড করতে সমস্যা হয়েছে',
         variant: 'destructive',
       });
     } finally {
-      setIsBalanceLoading(false);
+      setIsLoadingBalance(false);
     }
   };
 
-  const fetchVoters = async () => {
-    try {
-      const votersRef = collection(db, 'voters');
-      const q = query(votersRef, where('Phone', '!=', ''));
-      const querySnapshot = await getDocs(q);
-      
-      const votersData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Voter[];
+  useEffect(() => {
+    fetchBalance();
+  }, []);
 
-      setVoters(votersData);
-      setSelectedVoters(votersData);
-    } catch (error) {
-      console.error('Error fetching voters:', error);
-      toast({
-        title: 'ত্রুটি',
-        description: 'ভোটারদের তথ্য লোড করতে সমস্যা হয়েছে',
-        variant: 'destructive',
-      });
+  // Filter voters based on search and advanced filters
+  const filteredVoters = voters.filter((voter) => {
+    const matchesSearch =
+      voter['Voter Name']?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      voter.Phone?.includes(searchTerm);
+
+    const matchesWillVote = !filters.willVote || voter['Will Vote'] === filters.willVote;
+    const matchesPriority = !filters.priority || voter['Priority Level'] === filters.priority;
+    const matchesGender = !filters.gender || voter.Gender === filters.gender;
+    const matchesMinAge = !filters.minAge || (voter.Age && voter.Age >= parseInt(filters.minAge));
+    const matchesMaxAge = !filters.maxAge || (voter.Age && voter.Age <= parseInt(filters.maxAge));
+    const matchesMaritalStatus = !filters.maritalStatus || voter['Marital Status'] === filters.maritalStatus;
+    const matchesStudent = !filters.student || voter.Student === filters.student;
+    const matchesWhatsApp = !filters.whatsapp || voter.WhatsApp === filters.whatsapp;
+    const matchesHasDisability = !filters.hasDisability || voter['Has Disability'] === filters.hasDisability;
+    const matchesIsMigrated = !filters.isMigrated || voter['Is Migrated'] === filters.isMigrated;
+
+    return (
+      matchesSearch &&
+      matchesWillVote &&
+      matchesPriority &&
+      matchesGender &&
+      matchesMinAge &&
+      matchesMaxAge &&
+      matchesMaritalStatus &&
+      matchesStudent &&
+      matchesWhatsApp &&
+      matchesHasDisability &&
+      matchesIsMigrated &&
+      voter.Phone
+    );
+  });
+
+  const selectedVoterData = filteredVoters.filter((voter) => selectedVoters.includes(voter.id!));
+  const estimatedCost = selectedVoters.length * 0.35;
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedVoters(filteredVoters.map((v) => v.id!));
+    } else {
+      setSelectedVoters([]);
     }
   };
 
-  const filterVoters = (filterType: string) => {
-    setFilter(filterType);
-    
-    switch (filterType) {
-      case 'high-priority':
-        setSelectedVoters(voters.filter(v => v['Priority Level'] === 'High'));
-        break;
-      case 'supporters':
-        setSelectedVoters(voters.filter(v => v['Political Support']?.toLowerCase().includes('জামায়াত')));
-        break;
-      case 'young':
-        setSelectedVoters(voters.filter(v => v.Age && v.Age < 35));
-        break;
-      default:
-        setSelectedVoters(voters);
+  const handleVoterSelect = (voterId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedVoters([...selectedVoters, voterId]);
+    } else {
+      setSelectedVoters(selectedVoters.filter((id) => id !== voterId));
     }
   };
 
-  const insertPlaceholder = (placeholder: string) => {
-    const textarea = document.getElementById('messageText') as HTMLTextAreaElement;
-    if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const newMessage = message.substring(0, start) + placeholder + message.substring(end);
-      setMessage(newMessage);
-      
-      // Set cursor position after the inserted placeholder
-      setTimeout(() => {
-        textarea.focus();
-        textarea.setSelectionRange(start + placeholder.length, start + placeholder.length);
-      }, 10);
-    }
-  };
-
-  const previewMessage = (voter: Voter) => {
-    return message
-      .replace(/{name}/g, voter['Voter Name'] || '')
-      .replace(/{age}/g, voter.Age?.toString() || '')
-      .replace(/{gender}/g, voter.Gender || '')
-      .replace(/{priority}/g, voter['Priority Level'] || '')
-      .replace(/{support}/g, voter['Political Support'] || '');
-  };
-
-  const sendMessages = async () => {
+  const sendSMS = async () => {
     if (!message.trim()) {
       toast({
         title: 'ত্রুটি',
-        description: 'দয়া করে বার্তা লিখুন',
+        description: 'অনুগ্রহ করে SMS বার্তা লিখুন',
         variant: 'destructive',
       });
       return;
@@ -159,318 +150,481 @@ const SMSCampaign = () => {
     if (selectedVoters.length === 0) {
       toast({
         title: 'ত্রুটি',
-        description: 'কোন ভোটার নির্বাচিত নেই',
+        description: 'অনুগ্রহ করে কমপক্ষে একজন ভোটার নির্বাচন করুন',
         variant: 'destructive',
       });
       return;
     }
 
-    const phoneNumbers = selectedVoters
-      .filter(voter => voter.Phone)
-      .map(voter => voter.Phone as string);
-
-    if (phoneNumbers.length === 0) {
+    if (balance !== null && estimatedCost > balance) {
       toast({
-        title: 'ত্রুটি',
-        description: 'কোন বৈধ ফোন নম্বর পাওয়া যায়নি',
+        title: 'অপর্যাপ্ত ব্যালেন্স',
+        description: `SMS পাঠানোর জন্য ৳${estimatedCost.toFixed(2)} প্রয়োজন, কিন্তু আপনার ব্যালেন্স ৳${balance.toFixed(2)}`,
         variant: 'destructive',
       });
       return;
     }
 
-    setLoading(true);
-    setSmsStatuses(phoneNumbers.map(phone => ({ phone, status: 'pending' })));
+    setIsSending(true);
+    try {
+      const phoneNumbers = selectedVoterData.map((voter) => voter.Phone).filter(Boolean);
+      const newLogs: SMSLog[] = [];
 
-    let sentCount = 0;
-    let failedCount = 0;
+      for (const phone of phoneNumbers) {
+        try {
+          const response = await fetch(`${baseUrl}/sendSMS`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              number: phone,
+              message: message,
+            }),
+          });
 
-    for (let i = 0; i < selectedVoters.length; i++) {
-      const voter = selectedVoters[i];
-      if (!voter.Phone) continue;
+          const log: SMSLog = {
+            timestamp: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }),
+            phone,
+            status: response.ok ? 'success' : 'failed',
+            message: response.ok ? 'SMS sent successfully' : `Failed to send SMS to ${phone}`,
+          };
+          newLogs.push(log);
 
-      try {
-        const personalizedMessage = previewMessage(voter);
-        
-        const response = await fetch(`${baseUrl}/sendSMS`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            number: voter.Phone,
-            message: personalizedMessage
-          }),
-        });
-
-        if (response.ok) {
-          setSmsStatuses(prev => prev.map(status => 
-            status.phone === voter.Phone 
-              ? { ...status, status: 'sent' }
-              : status
-          ));
-          sentCount++;
-        } else {
-          const errorData = await response.json();
-          setSmsStatuses(prev => prev.map(status => 
-            status.phone === voter.Phone 
-              ? { ...status, status: 'failed', error: errorData.message || 'Unknown error' }
-              : status
-          ));
-          failedCount++;
+          if (!response.ok) {
+            throw new Error(`Failed to send SMS to ${phone}`);
+          }
+        } catch (error: any) {
+          newLogs.push({
+            timestamp: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }),
+            phone,
+            status: 'failed',
+            message: error.message || `Failed to send SMS to ${phone}`,
+          });
         }
-      } catch (error) {
-        setSmsStatuses(prev => prev.map(status => 
-          status.phone === voter.Phone 
-            ? { ...status, status: 'failed', error: 'Network error' }
-            : status
-        ));
-        failedCount++;
       }
 
-      // Small delay between requests to avoid overwhelming the API
-      await new Promise(resolve => setTimeout(resolve, 500));
+      setSmsLogs((prev) => [...newLogs, ...prev]);
+      toast({
+        title: 'SMS পাঠানো সম্পন্ন',
+        description: `${phoneNumbers.length} জন ভোটারের কাছে SMS পাঠানোর চেষ্টা করা হয়েছে`,
+      });
+
+      setMessage('');
+      setSelectedVoters([]);
+      fetchBalance();
+    } catch (error: any) {
+      console.error('SMS sending error:', error);
+      toast({
+        title: 'SMS পাঠানো ব্যর্থ',
+        description: error.message || 'SMS পাঠাতে সমস্যা হয়েছে',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSending(false);
     }
-
-    setLoading(false);
-    
-    // Refresh balance after sending
-    await fetchBalance();
-
-    toast({
-      title: 'সম্পন্ন',
-      description: `${sentCount}টি ব্যক্তিগতকৃত এসএমএস সফলভাবে পাঠানো হয়েছে, ${failedCount}টি ব্যর্থ`,
-      variant: sentCount > 0 ? 'default' : 'destructive',
-    });
   };
 
-  const getStatusIcon = (status: 'pending' | 'sent' | 'failed') => {
-    switch (status) {
-      case 'sent':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'failed':
-        return <XCircle className="w-4 h-4 text-red-500" />;
-      default:
-        return <Clock className="w-4 h-4 text-yellow-500" />;
-    }
+  const placeholders = [
+    { key: '{name}', label: 'নাম' },
+    { key: '{phone}', label: 'ফোন' },
+    { key: '{age}', label: 'বয়স' },
+  ];
+
+  const insertPlaceholder = (placeholder: string) => {
+    setMessage((prev) => `${prev}${placeholder} `);
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      willVote: '',
+      priority: '',
+      gender: '',
+      minAge: '',
+      maxAge: '',
+      maritalStatus: '',
+      student: '',
+      whatsapp: '',
+      hasDisability: '',
+      isMigrated: '',
+    });
   };
 
   return (
     <AdminLayout>
-      <div className="min-h-screen bg-gray-50 p-3 sm:p-4 lg:p-6">
-        <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
-          {/* Header */}
-          <Card>
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
-                    <MessageSquare className="w-6 h-6 sm:w-7 sm:h-7 text-green-600" />
-                    এসএমএস ক্যাম্পেইন
-                  </h1>
-                  <p className="text-sm text-gray-600 mt-1">ভোটারদের কাছে ব্যক্তিগতকৃত বার্তা পাঠান</p>
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 rounded-lg shadow-sm">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">SMS ক্যাম্পেইন</h1>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <Card className="shadow-lg border-l-4 border-l-blue-600">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">SMS ব্যালেন্স</p>
+                    <p className="text-lg font-bold text-blue-600">
+                      {isLoadingBalance ? 'লোড হচ্ছে...' : balance !== null ? `৳${balance.toFixed(2)}` : 'N/A'}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={fetchBalance}
+                    disabled={isLoadingBalance}
+                    className="ml-2"
+                  >
+                    <Wifi className="w-4 h-4" />
+                  </Button>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Wallet className="w-4 h-4 text-blue-600" />
-                    <span>ব্যালেন্স: </span>
-                    {isBalanceLoading ? (
-                      <span className="animate-pulse">লোড হচ্ছে...</span>
-                    ) : (
-                      <Badge variant="secondary">{balance} টাকা</Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Users className="w-4 h-4 text-green-600" />
-                    <span>{selectedVoters.length} জন নির্বাচিত</span>
-                  </div>
+              </CardContent>
+            </Card>
+            <div className="flex items-center gap-2 text-sm">
+              <MessageSquare className="w-4 h-4 text-blue-600" />
+              <span>নির্বাচিত: {selectedVoters.length}</span>
+              <Badge variant="outline">খরচ: ৳{estimatedCost.toFixed(2)}</Badge>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          {/* Message Composition */}
+          <Card className="shadow-lg">
+            <CardHeader className="bg-blue-50">
+              <CardTitle className="flex items-center gap-2 text-blue-800 text-base sm:text-lg">
+                <MessageSquare className="w-5 h-5" />
+                বার্তা লিখুন
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6 space-y-4">
+              <Textarea
+                placeholder="আপনার SMS বার্তা এখানে লিখুন..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                rows={6}
+                className="resize-none text-sm border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+              <div>
+                <p className="text-sm font-medium mb-2">প্লেসহোল্ডার ব্যবহার করুন:</p>
+                <div className="flex flex-wrap gap-2">
+                  {placeholders.map((placeholder) => (
+                    <Button
+                      key={placeholder.key}
+                      size="sm"
+                      variant="outline"
+                      onClick={() => insertPlaceholder(placeholder.key)}
+                      className="text-xs border-gray-300 hover:bg-blue-50"
+                    >
+                      {placeholder.label}
+                    </Button>
+                  ))}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-            {/* Message Composition */}
-            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-              {/* Filter Options */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base sm:text-lg">ভোটার ফিল্টার</CardTitle>
+              <div className="flex justify-between items-center text-sm text-gray-600">
+                <span>বার্তার দৈর্ঘ্য: {message.length}/160</span>
+                <span>SMS পার্ট: {Math.ceil(message.length / 160)}</span>
+              </div>
+              <Button
+                onClick={sendSMS}
+                className="w-full bg-green-600 hover:bg-green-700 flex items-center gap-2 transition-colors duration-200"
+                disabled={selectedVoters.length === 0 || !message.trim() || isSending}
+              >
+                <Send className="w-4 h-4" />
+                {isSending ? 'পাঠানো হচ্ছে...' : `SMS পাঠান (${selectedVoters.length} জন)`}
+              </Button>
+              {/* SMS Logs */}
+              <Card className="mt-4 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium">SMS পাঠানোর লগ</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                    <Button
-                      variant={filter === 'all' ? 'default' : 'outline'}
-                      onClick={() => filterVoters('all')}
-                      className="text-xs sm:text-sm h-8 sm:h-9"
-                    >
-                      সকল ({voters.length})
-                    </Button>
-                    <Button
-                      variant={filter === 'high-priority' ? 'default' : 'outline'}
-                      onClick={() => filterVoters('high-priority')}
-                      className="text-xs sm:text-sm h-8 sm:h-9"
-                    >
-                      উচ্চ অগ্রাধিকার
-                    </Button>
-                    <Button
-                      variant={filter === 'supporters' ? 'default' : 'outline'}
-                      onClick={() => filterVoters('supporters')}
-                      className="text-xs sm:text-sm h-8 sm:h-9"
-                    >
-                      সমর্থক
-                    </Button>
-                    <Button
-                      variant={filter === 'young' ? 'default' : 'outline'}
-                      onClick={() => filterVoters('young')}
-                      className="text-xs sm:text-sm h-8 sm:h-9"
-                    >
-                      তরুণ (&lt;৩৫)
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Message Input */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base sm:text-lg">বার্তা লিখুন</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="messageText" className="text-sm font-medium">এসএমএস বার্তা</Label>
-                    <Textarea
-                      id="messageText"
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="আপনার বার্তা লিখুন... ব্যক্তিগতকরণের জন্য প্লেসহোল্ডার ব্যবহার করুন।"
-                      className="mt-1 min-h-[120px] text-sm sm:text-base"
-                    />
-                    <div className="text-xs sm:text-sm text-gray-500 mt-1">
-                      অক্ষর: {message.length}/160
-                    </div>
-                  </div>
-
-                  {/* Placeholder Buttons */}
-                  <div>
-                    <Label className="text-sm font-medium">প্লেসহোল্ডার যোগ করুন:</Label>
-                    <div className="flex flex-wrap gap-1 sm:gap-2 mt-2">
-                      {placeholders.map((placeholder) => (
-                        <Button
-                          key={placeholder.key}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertPlaceholder(placeholder.key)}
-                          className="text-xs h-7 sm:h-8 px-2 sm:px-3"
-                          title={placeholder.description}
-                        >
-                          <Plus className="w-3 h-3 mr-1" />
-                          {placeholder.label}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Send Button */}
-                  <Button
-                    onClick={sendMessages}
-                    disabled={loading || !message.trim() || selectedVoters.length === 0}
-                    className="w-full bg-green-600 hover:bg-green-700 h-10 sm:h-11"
-                  >
-                    {loading ? (
-                      'পাঠানো হচ্ছে...'
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4 mr-2" />
-                        {selectedVoters.length}টি ব্যক্তিগতকৃত এসএমএস পাঠান
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Preview Panel */}
-            <div className="space-y-4 sm:space-y-6">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base sm:text-lg">বার্তার প্রিভিউ</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {message && selectedVoters.length > 0 ? (
-                    <div className="space-y-3">
-                      <div className="bg-gray-50 p-3 rounded-lg">
-                        <p className="text-xs sm:text-sm font-medium text-gray-600 mb-2">নমুনা প্রিভিউ:</p>
-                        <div className="bg-white p-2 sm:p-3 rounded border text-xs sm:text-sm">
-                          {previewMessage(selectedVoters[0])}
-                        </div>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        * প্রতিটি ভোটারের জন্য ব্যক্তিগতকৃত বার্তা তৈরি হবে
-                      </div>
-                    </div>
+                  {smsLogs.length === 0 ? (
+                    <p className="text-sm text-gray-500">কোনো লগ পাওয়া যায়নি</p>
                   ) : (
-                    <div className="text-center py-6 text-gray-500">
-                      <MessageSquare className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-2 opacity-50" />
-                      <p className="text-xs sm:text-sm">বার্তা লিখুন প্রিভিউ দেখতে</p>
+                    <div className="max-h-40 overflow-y-auto space-y-2">
+                      {smsLogs.map((log, index) => (
+                        <div
+                          key={index}
+                          className={`p-2 rounded text-sm ${log.status === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+                            }`}
+                        >
+                          <p className="font-medium">{log.timestamp}</p>
+                          <p>ফোন: {log.phone}</p>
+                          <p>স্ট্যাটাস: {log.status === 'success' ? 'সফল' : 'ব্যর্থ'}</p>
+                          <p>বিস্তারিত: {log.message}</p>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </CardContent>
               </Card>
+            </CardContent>
+          </Card>
 
-              {/* Selected Voters Summary */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base sm:text-lg">নির্বাচিত ভোটার</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>মোট ভোটার:</span>
-                      <Badge variant="secondary">{selectedVoters.length}</Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span>ফোন নম্বর আছে:</span>
-                      <Badge variant="secondary">
-                        {selectedVoters.filter(v => v.Phone).length}
-                      </Badge>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-3">
-                      শুধুমাত্র ফোন নম্বর থাকা ভোটারদের কাছে ব্যক্তিগতকৃত এসএমএস পাঠানো হবে
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* SMS Status */}
-          {smsStatuses.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">এসএমএস স্ট্যাটাস</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {smsStatuses.map((status, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
-                      <span className="font-mono">{status.phone}</span>
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(status.status)}
-                        <span className={
-                          status.status === 'sent' ? 'text-green-600' :
-                          status.status === 'failed' ? 'text-red-600' :
-                          'text-yellow-600'
-                        }>
-                          {status.status === 'sent' ? 'পাঠানো হয়েছে' :
-                           status.status === 'failed' ? 'ব্যর্থ' : 'অপেক্ষমাণ'}
-                        </span>
+          {/* Voter Selection */}
+          <Card className="shadow-lg">
+            <CardHeader className="bg-green-50">
+              <CardTitle className="flex items-center justify-between text-base sm:text-lg">
+                <div className="flex items-center gap-2 text-green-800">
+                  <Users className="w-5 h-5" />
+                  ভোটার নির্বাচন
+                </div>
+                <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline" className="flex items-center gap-2 text-xs">
+                      <Filter className="w-4 h-4" />
+                      ফিল্টার
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="w-full max-w-[95vw] sm:max-w-lg p-4 sm:p-6">
+                    <DialogHeader>
+                      <DialogTitle className="text-lg sm:text-xl">অ্যাডভান্সড ফিল্টার</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="willVote" className="text-sm font-medium">ভোট দেবেন?</Label>
+                        <Select
+                          value={filters.willVote}
+                          onValueChange={(value) => setFilters({ ...filters, willVote: value })}
+                        >
+                          <SelectTrigger id="willVote" className="mt-1">
+                            <SelectValue placeholder="সবাই" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">সবাই</SelectItem>
+                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                            <SelectItem value="No">না</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="priority" className="text-sm font-medium">অগ্রাধিকার</Label>
+                        <Select
+                          value={filters.priority}
+                          onValueChange={(value) => setFilters({ ...filters, priority: value })}
+                        >
+                          <SelectTrigger id="priority" className="mt-1">
+                            <SelectValue placeholder="সবাই" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">সবাই</SelectItem>
+                            <SelectItem value="High">উচ্চ</SelectItem>
+                            <SelectItem value="Medium">মাঝারি</SelectItem>
+                            <SelectItem value="Low">নিম্ন</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="gender" className="text-sm font-medium">লিঙ্গ</Label>
+                        <Select
+                          value={filters.gender}
+                          onValueChange={(value) => setFilters({ ...filters, gender: value })}
+                        >
+                          <SelectTrigger id="gender" className="mt-1">
+                            <SelectValue placeholder="সবাই" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">সবাই</SelectItem>
+                            <SelectItem value="Male">পুরুষ</SelectItem>
+                            <SelectItem value="Female">মহিলা</SelectItem>
+                            <SelectItem value="Other">অন্যান্য</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="maritalStatus" className="text-sm font-medium">বৈবাহিক অবস্থা</Label>
+                        <Select
+                          value={filters.maritalStatus}
+                          onValueChange={(value) => setFilters({ ...filters, maritalStatus: value })}
+                        >
+                          <SelectTrigger id="maritalStatus" className="mt-1">
+                            <SelectValue placeholder="সবাই" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">সবাই</SelectItem>
+                            <SelectItem value="Married">বিবাহিত</SelectItem>
+                            <SelectItem value="Unmarried">অবিবাহিত</SelectItem>
+                            <SelectItem value="Widowed">বিধবা</SelectItem>
+                            <SelectItem value="Divorced">তালাকপ্রাপ্ত</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="student" className="text-sm font-medium">ছাত্র/ছাত্রী</Label>
+                        <Select
+                          value={filters.student}
+                          onValueChange={(value) => setFilters({ ...filters, student: value })}
+                        >
+                          <SelectTrigger id="student" className="mt-1">
+                            <SelectValue placeholder="সবাই" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">সবাই</SelectItem>
+                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                            <SelectItem value="No">না</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="whatsapp" className="text-sm font-medium">হোয়াটসঅ্যাপ</Label>
+                        <Select
+                          value={filters.whatsapp}
+                          onValueChange={(value) => setFilters({ ...filters, whatsapp: value })}
+                        >
+                          <SelectTrigger id="whatsapp" className="mt-1">
+                            <SelectValue placeholder="সবাই" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">সবাই</SelectItem>
+                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                            <SelectItem value="No">না</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="hasDisability" className="text-sm font-medium">প্রতিবন্ধী কিনা</Label>
+                        <Select
+                          value={filters.hasDisability}
+                          onValueChange={(value) => setFilters({ ...filters, hasDisability: value })}
+                        >
+                          <SelectTrigger id="hasDisability" className="mt-1">
+                            <SelectValue placeholder="সবাই" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">সবাই</SelectItem>
+                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                            <SelectItem value="No">না</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="isMigrated" className="text-sm font-medium">প্রবাসী কিনা</Label>
+                        <Select
+                          value={filters.isMigrated}
+                          onValueChange={(value) => setFilters({ ...filters, isMigrated: value })}
+                        >
+                          <SelectTrigger id="isMigrated" className="mt-1">
+                            <SelectValue placeholder="সবাই" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">সবাই</SelectItem>
+                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                            <SelectItem value="No">না</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="minAge" className="text-sm font-medium">সর্বনিম্ন বয়স</Label>
+                        <Input
+                          id="minAge"
+                          type="number"
+                          placeholder="বয়স"
+                          value={filters.minAge}
+                          onChange={(e) => setFilters({ ...filters, minAge: e.target.value })}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="maxAge" className="text-sm font-medium">সর্বোচ্চ বয়স</Label>
+                        <Input
+                          id="maxAge"
+                          type="number"
+                          placeholder="বয়স"
+                          value={filters.maxAge}
+                          onChange={(e) => setFilters({ ...filters, maxAge: e.target.value })}
+                          className="mt-1"
+                        />
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        onClick={() => {
+                          setIsFilterOpen(false);
+                        }}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        ফিল্টার প্রয়োগ
+                      </Button>
+                      <Button variant="outline" onClick={resetFilters}>
+                        ফিল্টার রিসেট
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6 space-y-4">
+              <Input
+                placeholder="নাম বা ফোন দিয়ে খুঁজুন..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="text-sm border-gray-300 focus:border-green-500 focus:ring-green-500"
+              />
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={selectedVoters.length === filteredVoters.length && filteredVoters.length > 0}
+                  onCheckedChange={handleSelectAll}
+                />
+                <span className="text-sm font-medium">সবাই নির্বাচন করুন ({filteredVoters.length})</span>
+              </div>
+              <div className="max-h-[400px] overflow-y-auto space-y-2">
+                {isLoading ? (
+                  <div className="flex justify-center items-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin text-green-600" />
+                  </div>
+                ) : filteredVoters.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center">কোনো ভোটার পাওয়া যায়নি</p>
+                ) : (
+                  filteredVoters.map((voter) => (
+                    <div
+                      key={voter.id}
+                      className="flex items-center gap-2 p-3 rounded-lg hover:bg-gray-50 transition-colors duration-200 border-b border-gray-200"
+                    >
+                      <Checkbox
+                        checked={selectedVoters.includes(voter.id!)}
+                        onCheckedChange={(checked) => handleVoterSelect(voter.id!, checked as boolean)}
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{voter['Voter Name']}</p>
+                        <p className="text-xs text-gray-600">{voter.Phone || 'N/A'}</p>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          <Badge
+                            variant={voter['Will Vote'] === 'Yes' ? 'default' : 'secondary'}
+                            className="text-xs"
+                          >
+                            {voter['Will Vote'] === 'Yes' ? 'ভোট দেবেন' : voter['Will Vote'] === 'No' ? 'ভোট দেবেন না' : 'N/A'}
+                          </Badge>
+                          <Badge
+                            variant={
+                              voter['Priority Level'] === 'High'
+                                ? 'destructive'
+                                : voter['Priority Level'] === 'Medium'
+                                  ? 'default'
+                                  : 'secondary'
+                            }
+                            className="text-xs"
+                          >
+                            {voter['Priority Level'] === 'High'
+                              ? 'উচ্চ'
+                              : voter['Priority Level'] === 'Medium'
+                                ? 'মাঝারি'
+                                : voter['Priority Level'] === 'Low'
+                                  ? 'নিম্ন'
+                                  : 'N/A'}
+                          </Badge>
+                          {voter.Gender && (
+                            <Badge variant="outline" className="text-xs">
+                              {voter.Gender === 'Male' ? 'পুরুষ' : voter.Gender === 'Female' ? 'মহিলা' : 'অন্যান্য'}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </AdminLayout>

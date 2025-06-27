@@ -14,7 +14,7 @@ const Analytics = () => {
       const votersRef = collection(db, 'voters');
       const snapshot = await getDocs(votersRef);
       const voters = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoterData));
-      
+
       // Age distribution
       const ageGroups = {
         '18-30': 0,
@@ -22,34 +22,34 @@ const Analytics = () => {
         '46-60': 0,
         '60+': 0
       };
-      
+
       // Gender distribution
       const genderDistribution = {
         Male: 0,
         Female: 0,
         Other: 0
       };
-      
+
       // Priority distribution
       const priorityDistribution = {
         High: 0,
         Medium: 0,
         Low: 0
       };
-      
+
       // Vote intention
       const voteIntention = {
         Yes: 0,
         No: 0,
         Undecided: 0
       };
-      
+
       // Education levels
       const educationLevels: { [key: string]: number } = {};
-      
+
       // Occupation categories
       const occupations: { [key: string]: number } = {};
-      
+
       voters.forEach(voter => {
         // Age grouping
         if (voter.Age) {
@@ -58,33 +58,33 @@ const Analytics = () => {
           else if (voter.Age >= 46 && voter.Age <= 60) ageGroups['46-60']++;
           else if (voter.Age > 60) ageGroups['60+']++;
         }
-        
+
         // Gender
         if (voter.Gender) {
           genderDistribution[voter.Gender]++;
         }
-        
+
         // Priority
         if (voter['Priority Level']) {
           priorityDistribution[voter['Priority Level']]++;
         }
-        
+
         // Vote intention
         if (voter['Will Vote'] === 'Yes') voteIntention.Yes++;
         else if (voter['Will Vote'] === 'No') voteIntention.No++;
         else voteIntention.Undecided++;
-        
+
         // Education
         if (voter.Education) {
           educationLevels[voter.Education] = (educationLevels[voter.Education] || 0) + 1;
         }
-        
+
         // Occupation
         if (voter.Occupation) {
           occupations[voter.Occupation] = (occupations[voter.Occupation] || 0) + 1;
         }
       });
-      
+
       return {
         totalVoters: voters.length,
         ageGroups: Object.entries(ageGroups).map(([name, value]) => ({ name, value })),
@@ -100,7 +100,7 @@ const Analytics = () => {
     }
   });
 
-  
+
   const COLORS = ['#059669', '#DC2626', '#D97706', '#7C3AED', '#2563EB', '#DB2777'];
 
   if (isLoading) {
