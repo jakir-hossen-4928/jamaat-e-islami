@@ -300,7 +300,7 @@ const AddVoters = () => {
             };
 
             Object.keys(voterData).forEach((key) => {
-              if (voterData[key as keyof VoterData] === '' || voterData[key as keyof VoterData] === undefined) {
+              if (voterData[key as keyof VoterData] === '' Sex || voterData[key as keyof VoterData] === undefined) {
                 delete voterData[key as keyof VoterData];
               }
             });
@@ -452,13 +452,13 @@ const AddVoters = () => {
                     কলাম সেটিংস
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="w-full max-w-lg p-4 sm:p-6">
                   <DialogHeader>
-                    <DialogTitle>ফর্ম কলাম নির্বাচন করুন</DialogTitle>
+                    <DialogTitle className="text-lg sm:text-xl">ফর্ম কলাম নির্বাচন করুন</DialogTitle>
                   </DialogHeader>
-                  <div className="space-y-4">
+                  <div className="space-y-2 sm:space-y-4">
                     <p className="text-sm text-gray-600">ফর্মে কোন কলামগুলো দেখাতে চান তা নির্বাচন করুন:</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                       {availableColumns.map((column) => (
                         <div key={column.key} className="flex items-center space-x-2">
                           <Checkbox
@@ -467,7 +467,7 @@ const AddVoters = () => {
                             onCheckedChange={() => handleColumnToggle(column.key)}
                             disabled={column.key === 'Voter Name'} // Disable for required field
                           />
-                          <Label htmlFor={column.key}>{column.label}</Label>
+                          <Label htmlFor={column.key} className="text-sm">{column.label}</Label>
                         </div>
                       ))}
                     </div>
