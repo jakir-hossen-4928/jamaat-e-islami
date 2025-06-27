@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +13,13 @@ import { MessageSquare, Users, Send, Filter, DollarSign, Wifi } from 'lucide-rea
 import { VoterData } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
+interface SMSLog {
+  timestamp: string;
+  phone: string;
+  status: 'success' | 'failed';
+  message: string;
+}
+
 const SMSCampaign = () => {
   const baseUrl = import.meta.env.VITE_API_BASE_URL;
   const [message, setMessage] = useState('');
@@ -22,6 +28,7 @@ const SMSCampaign = () => {
   const [balance, setBalance] = useState<number | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [smsLogs, setSmsLogs] = useState<SMSLog[]>([]);
   const [filters, setFilters] = useState({
     willVote: '',
     priority: '',
@@ -32,11 +39,13 @@ const SMSCampaign = () => {
   const [showFilters, setShowFilters] = useState(false);
   const { toast } = useToast();
 
+  // Fetch voters, ordered by Last Updated (DESC)
   const { data: voters = [], isLoading } = useQuery({
     queryKey: ['voters'],
     queryFn: async () => {
       const votersRef = collection(db, 'voters');
-      const snapshot = await getDocs(votersRef);
+      const q = query(votersRef, orderBy('Last Updated', 'desc')); // Use Firestore index
+      const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoterData));
     }
   });
@@ -46,7 +55,6 @@ const SMSCampaign = () => {
     setIsLoadingBalance(true);
     try {
       const responseBalance = await fetch(`${baseUrl}/getBalance`);
-
       if (responseBalance.ok) {
         const data = await responseBalance.json();
         setBalance(data.balance || 0);
@@ -64,7 +72,6 @@ const SMSCampaign = () => {
       setIsLoadingBalance(false);
     }
   };
-
 
   useEffect(() => {
     fetchBalance();
@@ -134,27 +141,46 @@ const SMSCampaign = () => {
     setIsSending(true);
     try {
       const phoneNumbers = selectedVoterData.map(voter => voter.Phone).filter(Boolean);
+      const newLogs: SMSLog[] = [];
 
       for (const phone of phoneNumbers) {
-        const response = await fetch(`${baseUrl}/sendSMS`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            phone: phone,
-            message: message
-          }),
-        });
+        try {
+          const response = await fetch(`${baseUrl}/sendSMS`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              number: phone, // Match backend API parameter
+              message: message
+            }),
+          });
 
-        if (!response.ok) {
-          throw new Error(`Failed to send SMS to ${phone}`);
+          const log: SMSLog = {
+            timestamp: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }),
+            phone,
+            status: response.ok ? 'success' : 'failed',
+            message: response.ok ? 'SMS sent successfully' : `Failed to send SMS to ${phone}`
+          };
+          newLogs.push(log);
+
+          if (!response.ok) {
+            throw new Error(`Failed to send SMS to ${phone}`);
+          }
+        } catch (error: any) {
+          newLogs.push({
+            timestamp: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }),
+            phone,
+            status: 'failed',
+            message: error.message || `Failed to send SMS to ${phone}`
+          });
         }
       }
 
+      setSmsLogs(prev => [...newLogs, ...prev]); // Prepend new logs
       toast({
         title: "SMS পাঠানো সম্পন্ন",
-        description: `${selectedVoters.length} জন ভোটারের কাছে SMS সফলভাবে পাঠানো হয়েছে`,
+        description: `${phoneNumbers.length} জন ভোটারের কাছে SMS পাঠানোর চেষ্টা করা হয়েছে`,
       });
 
       // Reset form and refresh balance
@@ -269,6 +295,34 @@ const SMSCampaign = () => {
                 <Send className="w-4 h-4 mr-2" />
                 {isSending ? 'পাঠানো হচ্ছে...' : `SMS পাঠান (${selectedVoters.length} জন)`}
               </Button>
+
+              {/* SMS Logs Section */}
+              <Card className="mt-4">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium">SMS পাঠানোর লগ</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {smsLogs.length === 0 ? (
+                    <p className="text-sm text-gray-500">কোনো লগ পাওয়া যায়নি</p>
+                  ) : (
+                    <div className="max-h-40 overflow-y-auto space-y-2">
+                      {smsLogs.map((log, index) => (
+                        <div
+                          key={index}
+                          className={`p-2 rounded text-sm ${
+                            log.status === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+                          }`}
+                        >
+                          <p className="font-medium">{log.timestamp}</p>
+                          <p>ফোন: {log.phone}</p>
+                          <p>স্ট্যাটাস: {log.status === 'success' ? 'সফল' : 'ব্যর্থ'}</p>
+                          <p>বিস্তারিত: {log.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </CardContent>
           </Card>
 
