@@ -269,7 +269,7 @@ const AdvancedPDFGenerator: React.FC<PDFGeneratorProps> = ({ voters, title = '�
               <Checkbox
                 id="includeHeader"
                 checked={includeHeader}
-                onCheckedChange={setIncludeHeader}
+                onCheckedChange={(checked) => setIncludeHeader(checked === true)}
               />
               <Label htmlFor="includeHeader" className="text-sm">হেডার অন্তর্ভুক্ত করুন</Label>
             </div>
@@ -278,7 +278,7 @@ const AdvancedPDFGenerator: React.FC<PDFGeneratorProps> = ({ voters, title = '�
               <Checkbox
                 id="includeFooter"
                 checked={includeFooter}
-                onCheckedChange={setIncludeFooter}
+                onCheckedChange={(checked) => setIncludeFooter(checked === true)}
               />
               <Label htmlFor="includeFooter" className="text-sm">ফুটার অন্তর্ভুক্ত করুন</Label>
             </div>

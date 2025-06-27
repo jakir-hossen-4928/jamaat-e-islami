@@ -261,7 +261,7 @@ const AllVoters = () => {
               />
             </div>
             <div className="flex gap-2 flex-wrap">
-              <AdvancedPDFGenerator />
+              <AdvancedPDFGenerator voters={voters} />
 
               <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
                 <DialogTrigger asChild>
