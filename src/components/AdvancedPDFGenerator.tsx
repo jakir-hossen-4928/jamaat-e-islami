@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,24 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Download, FileText, Settings, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { VoterData } from '@/lib/types';
 import html2pdf from 'html2pdf.js';
-
-interface VoterData {
-  id: string;
-  'Voter Name': string;
-  Phone?: string;
-  Age?: number;
-  Gender?: string;
-  'Priority Level'?: string;
-  'Political Support'?: string;
-  'Is Voter'?: string;
-  'Will Vote'?: string;
-  Occupation?: string;
-  Education?: string;
-  Address?: string;
-  NID?: string;
-  Remarks?: string;
-}
 
 interface PDFGeneratorProps {
   voters: VoterData[];
