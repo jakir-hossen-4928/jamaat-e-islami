@@ -201,7 +201,7 @@ const SMSCampaign = () => {
                       onClick={() => filterVoters('young')}
                       className="text-xs sm:text-sm h-8 sm:h-9"
                     >
-                      তরুণ (৩৫>)
+                      তরুণ (&lt;৩৫)
                     </Button>
                   </div>
                 </CardContent>
