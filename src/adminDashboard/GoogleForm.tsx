@@ -1,6 +1,7 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Form } from 'lucide-react';
+import { Loader2, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const GoogleForm = () => {
@@ -28,7 +29,7 @@ const GoogleForm = () => {
     <Card className="w-full max-w-4xl mx-auto shadow-lg">
       <CardHeader className="bg-green-50">
         <CardTitle className="flex items-center gap-2 text-green-800 text-base sm:text-lg">
-          <Form className="w-5 h-5" />
+          <FileText className="w-5 h-5" />
           ভোটার যোগ ফর্ম
         </CardTitle>
       </CardHeader>
@@ -60,3 +61,4 @@ const GoogleForm = () => {
 };
 
 export default GoogleForm;
+
