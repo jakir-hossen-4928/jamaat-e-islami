@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { FileText, Download, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { collection, getDocs } from 'firebase/firestore';
@@ -25,10 +24,10 @@ const AdvancedPDFGenerator = () => {
     'Age': true,
     'Gender': true,
     'Phone': true,
-    'NID': false,
     'Will Vote': true,
     'Vote Probability (%)': true,
     'Priority Level': true,
+    'NID': false,
     'Political Support': false,
     'Education': false,
     'Occupation': false,
@@ -41,8 +40,8 @@ const AdvancedPDFGenerator = () => {
     'Has Disability': false,
     'Is Migrated': false,
     'Remarks': false,
-    'Collector': true,
-    'Collection Date': true,
+    'Collector': false,
+    'Collection Date': false,
     'Last Updated': false
   });
 
@@ -54,7 +53,16 @@ const AdvancedPDFGenerator = () => {
   ];
 
   const handleFieldToggle = (field: string) => {
-    setSelectedFields(prev => ({ ...prev, [field]: !prev[field] }));
+    const selectedCount = Object.values(selectedFields).filter(Boolean).length;
+    if (selectedFields[field] || selectedCount < 9) {
+      setSelectedFields(prev => ({ ...prev, [field]: !prev[field] }));
+    } else {
+      toast({
+        title: "সীমা অতিক্রম",
+        description: "আপনি সর্বাধিক ৯টি কলাম নির্বাচন করতে পারেন।",
+        variant: "destructive",
+      });
+    }
   };
 
   const generatePDF = async () => {
@@ -148,9 +156,7 @@ const AdvancedPDFGenerator = () => {
             <h3 style="margin: 0 0 10px 0; color: #374151; font-size: 14px; font-weight: bold;">রিপোর্ট বিবরণ</h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; font-size: 11px;">
               <div><strong>তৈরিকারী:</strong> ${userProfile?.displayName || 'অজানা'} (${userProfile?.role?.toUpperCase() || 'USER'})</div>
-              <div><strong>ইমেইল:</strong> ${userProfile?.email || 'mdjakirkhan4928@gmail.com'}</div>
               <div><strong>নির্বাচিত ফিল্ড:</strong> ${selectedFieldsList.length}টি</div>
-              <div><strong>ডেটা সোর্স:</strong> Firebase Firestore Database</div>
             </div>
           </div>
 
@@ -170,7 +176,7 @@ const AdvancedPDFGenerator = () => {
                     <td style="border: 1px solid #e2e8f0; padding: 6px; font-size: 9px; text-align: center; font-weight: bold; color: #374151;">${index + 1}</td>
                     ${selectedFieldsList.map(field => {
                       let value = voter[field as keyof VoterData] || '-';
-                      let cellStyle = 'border: 1px solid #e2e8f0; padding: 6px; font-size: 9px; word-wrap: break-word; max-width: 100px;';
+                      let cellStyle = 'border: 1px solid #e2e8f0; padding: 6px; font-size: 9px; word-wrap: break-word; max-width: 80px;';
                       
                       // Special formatting for certain fields
                       if (field === 'Priority Level') {
@@ -199,47 +205,21 @@ const AdvancedPDFGenerator = () => {
             </table>
           </div>
 
-          <!-- Developer Information -->
-          <div style="background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin: 0 0 15px 0; font-size: 14px; font-weight: bold; text-align: center;">সিস্টেম ডেভেলপার তথ্য</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; font-size: 11px;">
-              <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 6px;">
-                <div style="font-weight: bold; margin-bottom: 5px;">প্রধান ডেভেলপার</div>
-                <div>মোঃ জাকির খান</div>
-                <div>ফুল স্ট্যাক ডেভেলপার</div>
-              </div>
-              <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 6px;">
-                <div style="font-weight: bold; margin-bottom: 5px;">যোগাযোগ</div>
-                <div>📧 mdjakirkhan4928@gmail.com</div>
-                <div>📱 WhatsApp: 01647470849</div>
-              </div>
-              <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 6px;">
-                <div style="font-weight: bold; margin-bottom: 5px;">প্রযুক্তি স্ট্যাক</div>
-                <div>⚛️ React.js + TypeScript</div>
-                <div>🔥 Firebase Database</div>
-                <div>🎨 Tailwind CSS</div>
-              </div>
-              <div style="background: rgba(255,255,255,0.1); padding: 12px; border-radius: 6px;">
-                <div style="font-weight: bold; margin-bottom: 5px;">সিস্টেম বৈশিষ্ট্য</div>
-                <div>🔒 সিকিউর অথেন্টিকেশন</div>
-                <div>📱 মোবাইল রেসপন্সিভ</div>
-                <div>☁️ ক্লাউড স্টোরেজ</div>
-              </div>
-            </div>
-          </div>
-
           <!-- Professional Footer -->
           <div style="margin-top: 25px; padding: 20px; text-align: center; background: #f8fafc; border-radius: 8px; border-top: 3px solid #16a34a;">
             <div style="margin-bottom: 10px;">
               <strong style="color: #16a34a; font-size: 12px;">বাংলাদেশ জামায়াতে ইসলামী - কাকৈর খোলা, চৌদ্দগ্রাম শাখা</strong>
             </div>
             <div style="font-size: 10px; color: #64748b; line-height: 1.6;">
-              <div>📍 কাকৈর খোলা, চৌদ্দগ্রাম, কুমিল্লা | 📧 mdjakirkhan4928@gmail.com | 📱 01647470849</div>
+              <div>📍 কাকৈর খোলা, চৌদ্দগ্রাম, কুমিল্লা | 📱 01647470849</div>
               <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0;">
                 <strong>গোপনীয়তা নোটিস:</strong> এই রিপোর্টটি গোপনীয় এবং শুধুমাত্র অনুমোদিত ব্যক্তিদের জন্য। অনুমতি ছাড়া কোনো তথ্য ব্যবহার বা বিতরণ করা যাবে না।
               </div>
               <div style="margin-top: 5px; font-size: 9px;">
                 © ${new Date().getFullYear()} জামায়াতে ইসলামী বাংলাদেশ। সকল অধিকার সংরক্ষিত। | সিস্টেম ভার্সন: 2.1.0 | রিপোর্ট জেনারেটেড: ${formatDate} ${formatTime}
+              </div>
+              <div style="margin-top: 5px; font-size: 9px; font-weight: bold;">
+                Powered by Jakir Hossen
               </div>
             </div>
           </div>
@@ -321,7 +301,7 @@ const AdvancedPDFGenerator = () => {
       
       toast({
         title: "✅ PDF সফলভাবে তৈরি হয়েছে",
-        description: `${voters.length} জন ভোটারের তথ্য প্রফেশনাল PDF রিপোর্টে এক্সপোর্ট করা হয়েছে। ডেভেলপার তথ্য অন্তর্ভুক্ত।`,
+        description: `${voters.length} জন ভোটারের তথ্য প্রফেশনাল PDF রিপোর্টে এক্সপোর্ট করা হয়েছে।`,
       });
       
       setIsOpen(false);
@@ -359,7 +339,7 @@ const AdvancedPDFGenerator = () => {
         
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm sm:text-lg">যে ফিল্ডগুলি অন্তর্ভুক্ত করতে চান তা নির্বাচন করুন</CardTitle>
+            <CardTitle className="text-sm sm:text-lg">যে ফিল্ডগুলি অন্তর্ভুক্ত করতে চান তা নির্বাচন করুন (সর্বাধিক ৯টি)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 max-h-60 overflow-y-auto pr-2">
@@ -384,7 +364,6 @@ const AdvancedPDFGenerator = () => {
           <ul className="text-xs text-blue-700 space-y-1">
             <li>• প্রফেশনাল হেডার ও ফুটার ডিজাইন</li>
             <li>• নির্বাহী সারসংক্ষেপ ও পরিসংখ্যান</li>
-            <li>• ডেভেলপার তথ্য ও যোগাযোগ বিবরণ</li>
             <li>• মোবাইল-বান্ধব ও প্রিন্ট-অপ্টিমাইজড</li>
             <li>• নেতৃত্বের জন্য উপযুক্ত ফরম্যাট</li>
           </ul>
