@@ -1,16 +1,15 @@
-
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDywOV9x9n2OaxG7qGHuv-VPgm0BtbUFIk",
-  authDomain: "jamaat-e-islami-fd884.firebaseapp.com",
-  projectId: "jamaat-e-islami-fd884",
-  storageBucket: "jamaat-e-islami-fd884.firebasestorage.app",
-  messagingSenderId: "376583898750",
-  appId: "1:376583898750:web:17c4e55eed0cc8e6f0fa2f",
-  measurementId: "G-PJJCJL06GL"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);

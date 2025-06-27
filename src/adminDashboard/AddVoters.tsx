@@ -16,8 +16,10 @@ import { VoterData } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import Papa from 'papaparse';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 const AddVoters = () => {
+  usePageTitle('বাংলাদেশ জামায়াতে ইসলামী');
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -25,7 +27,7 @@ const AddVoters = () => {
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isUploadingBulk, setIsUploadingBulk] = useState(false);
-  
+
   const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
@@ -114,7 +116,7 @@ const AddVoters = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData['Voter Name'].trim()) {
       toast({
         title: "ত্রুটি",
@@ -150,9 +152,9 @@ const AddVoters = () => {
         'Is Migrated': formData['Is Migrated'] || undefined,
         Remarks: formData.Remarks || undefined,
       };
-      
+
       addSingleVoterMutation.mutate(voterData);
-      
+
     } catch (error: any) {
       toast({
         title: "ত্রুটি",
@@ -180,10 +182,10 @@ const AddVoters = () => {
         header: true,
         complete: async (results) => {
           const validData = results.data.filter((row: any) => row['Voter Name'] && row['Voter Name'].trim() !== '');
-          
+
           const batch = writeBatch(db);
           const votersRef = collection(db, 'voters');
-          
+
           validData.forEach((voter: any, index) => {
             const docRef = doc(votersRef);
             batch.set(docRef, {
@@ -194,9 +196,9 @@ const AddVoters = () => {
               Collector: 'Admin'
             });
           });
-          
+
           await batch.commit();
-          
+
           queryClient.invalidateQueries({ queryKey: ['voters'] });
           toast({
             title: "সফল",
@@ -240,14 +242,14 @@ const AddVoters = () => {
                 {formData['Voter Name']} ভোটার ডাটাবেজে যোগ করা হয়েছে।
               </p>
               <div className="space-y-3">
-                <Button 
+                <Button
                   onClick={resetForm}
                   className="w-full bg-green-600 hover:bg-green-700 transition-colors duration-200"
                 >
                   আরো ভোটার যোগ করুন
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => navigate('/admin/voters')}
                   className="w-full"
                 >
@@ -268,9 +270,9 @@ const AddVoters = () => {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white p-4 rounded-lg shadow-sm gap-4">
             <div className="flex items-center gap-3">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => navigate('/admin/voters')}
                 className="flex items-center gap-2 transition-colors duration-200"
               >
@@ -311,8 +313,8 @@ const AddVoters = () => {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={handleBulkUpload} 
+                    <Button
+                      onClick={handleBulkUpload}
                       disabled={!csvFile || isUploadingBulk}
                       className="bg-green-600 hover:bg-green-700 transition-colors duration-200"
                     >
@@ -351,7 +353,7 @@ const AddVoters = () => {
                       className="mt-1"
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="houseName" className="text-sm font-medium">বাড়ির নাম</Label>
                     <Input
@@ -362,7 +364,7 @@ const AddVoters = () => {
                       className="mt-1"
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="fatherHusband" className="text-sm font-medium">পিতা/স্বামীর নাম</Label>
                     <Input
@@ -373,7 +375,7 @@ const AddVoters = () => {
                       className="mt-1"
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="age" className="text-sm font-medium">বয়স</Label>
                     <Input
@@ -387,7 +389,7 @@ const AddVoters = () => {
                       className="mt-1"
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="gender" className="text-sm font-medium">লিঙ্গ</Label>
                     <Select value={formData.Gender} onValueChange={(value) => handleInputChange('Gender', value)}>
@@ -401,7 +403,7 @@ const AddVoters = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="maritalStatus" className="text-sm font-medium">বৈবাহিক অবস্থা</Label>
                     <Select value={formData['Marital Status']} onValueChange={(value) => handleInputChange('Marital Status', value)}>
@@ -440,7 +442,7 @@ const AddVoters = () => {
                       className="mt-1"
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="whatsapp" className="text-sm font-medium">হোয়াটসঅ্যাপ</Label>
                     <Select value={formData.WhatsApp} onValueChange={(value) => handleInputChange('WhatsApp', value)}>
@@ -453,7 +455,7 @@ const AddVoters = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="nid" className="text-sm font-medium">NID</Label>
                     <Input
@@ -490,7 +492,7 @@ const AddVoters = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="willVote" className="text-sm font-medium">ভোট দেবেন</Label>
                     <Select value={formData['Will Vote']} onValueChange={(value) => handleInputChange('Will Vote', value)}>
@@ -503,7 +505,7 @@ const AddVoters = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="priorityLevel" className="text-sm font-medium">অগ্রাধিকার স্তর</Label>
                     <Select value={formData['Priority Level']} onValueChange={(value) => handleInputChange('Priority Level', value)}>
@@ -545,18 +547,18 @@ const AddVoters = () => {
 
             {/* Submit Button */}
             <div className="flex justify-end gap-3 bg-white p-4 rounded-lg shadow-sm">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => navigate('/admin/voters')} 
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate('/admin/voters')}
                 disabled={isLoading}
                 className="transition-colors duration-200"
               >
                 বাতিল
               </Button>
-              <Button 
-                type="submit" 
-                className="bg-green-600 hover:bg-green-700 flex items-center gap-2 transition-colors duration-200" 
+              <Button
+                type="submit"
+                className="bg-green-600 hover:bg-green-700 flex items-center gap-2 transition-colors duration-200"
                 disabled={isLoading}
               >
                 {isLoading ? (

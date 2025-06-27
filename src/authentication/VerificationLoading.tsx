@@ -17,7 +17,14 @@ const VerificationLoading = () => {
   ];
 
   useEffect(() => {
-    if (!userProfile?.isVerified) {
+    if (!userProfile || !userProfile.approved) {
+      navigate('/pending-verification');
+      return;
+    }
+  }, [navigate, userProfile]);
+
+  useEffect(() => {
+    if (!userProfile || !userProfile.approved) {
       navigate('/pending-verification');
       return;
     }
@@ -30,7 +37,7 @@ const VerificationLoading = () => {
         navigate('/admin/dashboard');
       }
     }, steps[step].duration);
-
+    // Cleanup timer on component unmount or step change
     return () => clearTimeout(timer);
   }, [step, navigate, userProfile]);
 
@@ -41,9 +48,9 @@ const VerificationLoading = () => {
       <Card className="w-full max-w-md shadow-xl">
         <CardContent className="p-8 text-center">
           <div className="mb-6">
-            <img 
-              src="https://i.ibb.co/6Rt79ScS/bangladesh-jamaat-e-islami-seeklogo.png" 
-              alt="Logo" 
+            <img
+              src="https://i.ibb.co/6Rt79ScS/bangladesh-jamaat-e-islami-seeklogo.png"
+              alt="Logo"
               className="w-16 h-16 mx-auto mb-4"
             />
             <h1 className="text-2xl font-bold text-gray-900 mb-2">স্বাগতম</h1>
@@ -53,9 +60,8 @@ const VerificationLoading = () => {
           <div className="mb-8">
             <div className="flex justify-center mb-4">
               <div className="relative">
-                <CurrentIcon className={`w-12 h-12 ${
-                  step === steps.length - 1 ? 'text-green-600' : 'text-blue-600'
-                } animate-pulse`} />
+                <CurrentIcon className={`w-12 h-12 ${step === steps.length - 1 ? 'text-green-600' : 'text-blue-600'
+                  } animate-pulse`} />
                 {step === steps.length - 1 && (
                   <div className="absolute inset-0 rounded-full bg-green-100 animate-ping"></div>
                 )}
@@ -65,7 +71,7 @@ const VerificationLoading = () => {
 
             {/* Progress bar */}
             <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
-              <div 
+              <div
                 className="bg-gradient-to-r from-green-600 to-blue-600 h-2 rounded-full transition-all duration-500"
                 style={{ width: `${((step + 1) / steps.length) * 100}%` }}
               ></div>
@@ -81,8 +87,8 @@ const VerificationLoading = () => {
             </p>
             <p className="text-sm text-gray-600 mb-2">
               <strong>ভূমিকা:</strong> {
-                userProfile?.role === 'admin' ? 'অ্যাডমিন' : 
-                userProfile?.role === 'moderator' ? 'মডারেটর' : 'ব্যবহারকারী'
+                userProfile?.role === 'admin' ? 'অ্যাডমিন' :
+                  userProfile?.role === 'moderator' ? 'মডারেটর' : 'ব্যবহারকারী'
               }
             </p>
             <p className="text-sm text-gray-600">

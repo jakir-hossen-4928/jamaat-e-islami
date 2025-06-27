@@ -15,6 +15,7 @@ import { VoterData } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 const SMSCampaign = () => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL;
   const [message, setMessage] = useState('');
   const [selectedVoters, setSelectedVoters] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,9 +45,10 @@ const SMSCampaign = () => {
   const fetchBalance = async () => {
     setIsLoadingBalance(true);
     try {
-      const response = await fetch('https://jammat-e-islami.vercel.app/getBalance');
-      if (response.ok) {
-        const data = await response.json();
+      const responseBalance = await fetch(`${baseUrl}/getBalance`);
+
+      if (responseBalance.ok) {
+        const data = await responseBalance.json();
         setBalance(data.balance || 0);
       } else {
         throw new Error('Failed to fetch balance');
@@ -63,22 +65,23 @@ const SMSCampaign = () => {
     }
   };
 
+
   useEffect(() => {
     fetchBalance();
   }, []);
 
   const filteredVoters = voters.filter(voter => {
     const matchesSearch = voter['Voter Name']?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         voter.Phone?.includes(searchTerm);
-    
+      voter.Phone?.includes(searchTerm);
+
     const matchesWillVote = !filters.willVote || voter['Will Vote'] === filters.willVote;
     const matchesPriority = !filters.priority || voter['Priority Level'] === filters.priority;
     const matchesGender = !filters.gender || voter.Gender === filters.gender;
     const matchesMinAge = !filters.minAge || (voter.Age && voter.Age >= parseInt(filters.minAge));
     const matchesMaxAge = !filters.maxAge || (voter.Age && voter.Age <= parseInt(filters.maxAge));
-    
-    return matchesSearch && matchesWillVote && matchesPriority && matchesGender && 
-           matchesMinAge && matchesMaxAge && voter.Phone;
+
+    return matchesSearch && matchesWillVote && matchesPriority && matchesGender &&
+      matchesMinAge && matchesMaxAge && voter.Phone;
   });
 
   const selectedVoterData = filteredVoters.filter(voter => selectedVoters.includes(voter.id!));
@@ -131,9 +134,9 @@ const SMSCampaign = () => {
     setIsSending(true);
     try {
       const phoneNumbers = selectedVoterData.map(voter => voter.Phone).filter(Boolean);
-      
+
       for (const phone of phoneNumbers) {
-        const response = await fetch('https://jammat-e-islami.vercel.app/sendSMS', {
+        const response = await fetch(`${baseUrl}/sendSMS`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -158,7 +161,7 @@ const SMSCampaign = () => {
       setMessage('');
       setSelectedVoters([]);
       fetchBalance();
-      
+
     } catch (error: any) {
       console.error('SMS sending error:', error);
       toast({
@@ -209,7 +212,7 @@ const SMSCampaign = () => {
                 </div>
               </CardContent>
             </Card>
-            
+
             <div className="flex items-center space-x-2 text-sm">
               <MessageSquare className="w-4 h-4 text-blue-600" />
               <span className="text-gray-600">নির্বাচিত: {selectedVoters.length}</span>
@@ -235,7 +238,7 @@ const SMSCampaign = () => {
                 rows={6}
                 className="resize-none text-sm"
               />
-              
+
               <div>
                 <p className="text-sm font-medium mb-2">প্লেসহোল্ডার ব্যবহার করুন:</p>
                 <div className="flex flex-wrap gap-2">
@@ -301,40 +304,40 @@ const SMSCampaign = () => {
                   <select
                     className="p-2 border rounded text-sm"
                     value={filters.willVote}
-                    onChange={(e) => setFilters({...filters, willVote: e.target.value})}
+                    onChange={(e) => setFilters({ ...filters, willVote: e.target.value })}
                   >
                     <option value="">ভোট দেবেন?</option>
                     <option value="Yes">হ্যাঁ</option>
                     <option value="No">না</option>
                   </select>
-                  
+
                   <select
                     className="p-2 border rounded text-sm"
                     value={filters.priority}
-                    onChange={(e) => setFilters({...filters, priority: e.target.value})}
+                    onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
                   >
                     <option value="">অগ্রাধিকার</option>
                     <option value="High">উচ্চ</option>
                     <option value="Medium">মাঝারি</option>
                     <option value="Low">নিম্ন</option>
                   </select>
-                  
+
                   <select
                     className="p-2 border rounded text-sm"
                     value={filters.gender}
-                    onChange={(e) => setFilters({...filters, gender: e.target.value})}
+                    onChange={(e) => setFilters({ ...filters, gender: e.target.value })}
                   >
                     <option value="">লিঙ্গ</option>
                     <option value="Male">পুরুষ</option>
                     <option value="Female">মহিলা</option>
                   </select>
-                  
+
                   <div className="flex space-x-2">
                     <Input
                       placeholder="সর্বনিম্ন বয়স"
                       type="number"
                       value={filters.minAge}
-                      onChange={(e) => setFilters({...filters, minAge: e.target.value})}
+                      onChange={(e) => setFilters({ ...filters, minAge: e.target.value })}
                       className="text-sm"
                     />
                   </div>
@@ -368,10 +371,10 @@ const SMSCampaign = () => {
                           </Badge>
                           <Badge variant={
                             voter['Priority Level'] === 'High' ? 'destructive' :
-                            voter['Priority Level'] === 'Medium' ? 'default' : 'secondary'
+                              voter['Priority Level'] === 'Medium' ? 'default' : 'secondary'
                           } className="text-xs">
                             {voter['Priority Level'] === 'High' ? 'উচ্চ' :
-                             voter['Priority Level'] === 'Medium' ? 'মাঝারি' : 'নিম্ন'}
+                              voter['Priority Level'] === 'Medium' ? 'মাঝারি' : 'নিম্ন'}
                           </Badge>
                         </div>
                       </div>

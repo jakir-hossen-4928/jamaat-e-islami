@@ -29,33 +29,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   const login = async (email: string, password: string) => {
     const result = await signInWithEmailAndPassword(auth, email, password);
-    
+
     // Fetch user profile to check approval status
     const userDoc = await getDoc(doc(db, 'users', result.user.uid));
     if (userDoc.exists()) {
       const profile = userDoc.data() as User;
-      
+
       // Navigate based on role and approval status
       if (!profile.approved) {
         // Will be handled by ProtectedRoute
         return;
       }
-      
+
       // Navigate to appropriate dashboard
       if (profile.role === 'admin') {
-        window.location.href = '/admin/dashboard';
+        navigate('/admin/dashboard');
       } else {
-        window.location.href = '/dashboard';
+        navigate('/dashboard');
       }
     }
   };
 
   const register = async (email: string, password: string, displayName: string) => {
     const result = await createUserWithEmailAndPassword(auth, email, password);
-    
+
     // Create user profile in Firestore
     const userProfile: User = {
       uid: result.user.uid,
@@ -76,7 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      
+
       if (user) {
         // Fetch user profile from Firestore
         const userDoc = await getDoc(doc(db, 'users', user.uid));
@@ -86,7 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setUserProfile(null);
       }
-      
+
       setLoading(false);
     });
 
