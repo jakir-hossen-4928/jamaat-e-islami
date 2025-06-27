@@ -15,10 +15,13 @@ import { Edit, Trash2, Search, Eye, Settings, Plus } from 'lucide-react';
 import { VoterData } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { usePageTitle } from '@/lib/usePageTitle';
 import AdvancedPDFGenerator from '@/components/AdvancedPDFGenerator';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 
 const AllVoters = () => {
+  usePageTitle('সকল ভোটার - ডাটাবেজ');
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedVoter, setSelectedVoter] = useState<VoterData | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -178,59 +181,59 @@ const AllVoters = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-2 sm:p-4">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-          <Card className="shadow-lg border-l-4 border-l-green-600">
-            <CardContent className="p-3 sm:p-4">
+      <div className="space-y-3 p-2 sm:p-4 lg:p-6">
+        {/* Mobile-First Stats Cards */}
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+          <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-green-600">
+            <CardContent className="p-2 sm:p-3 lg:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm text-gray-600">মোট ভোটার</p>
-                  <p className="text-lg sm:text-2xl font-bold text-green-600">{stats.totalVoters}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">মোট ভোটার</p>
+                  <p className="text-base sm:text-lg lg:text-2xl font-bold text-green-600">{stats.totalVoters}</p>
                 </div>
-                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-100 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
                   <Eye className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-lg border-l-4 border-l-red-600">
-            <CardContent className="p-3 sm:p-4">
+          <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-red-600">
+            <CardContent className="p-2 sm:p-3 lg:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm text-gray-600">উচ্চ অগ্রাধিকার</p>
-                  <p className="text-lg sm:text-2xl font-bold text-red-600">{stats.highPriorityCount}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">উচ্চ অগ্রাধিকার</p>
+                  <p className="text-base sm:text-lg lg:text-2xl font-bold text-red-600">{stats.highPriorityCount}</p>
                 </div>
-                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-red-100 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
                   <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-lg border-l-4 border-l-blue-600">
-            <CardContent className="p-3 sm:p-4">
+          <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-blue-600">
+            <CardContent className="p-2 sm:p-3 lg:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm text-gray-600">ভোট দেবেন</p>
-                  <p className="text-lg sm:text-2xl font-bold text-blue-600">{stats.willVoteCount}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">ভোট দেবেন</p>
+                  <p className="text-base sm:text-lg lg:text-2xl font-bold text-blue-600">{stats.willVoteCount}</p>
                 </div>
-                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
                   <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-lg border-l-4 border-l-purple-600">
-            <CardContent className="p-3 sm:p-4">
+          <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-purple-600">
+            <CardContent className="p-2 sm:p-3 lg:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs sm:text-sm text-gray-600">ছাত্র</p>
-                  <p className="text-lg sm:text-2xl font-bold text-purple-600">{stats.studentCount}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">ছাত্র</p>
+                  <p className="text-base sm:text-lg lg:text-2xl font-bold text-purple-600">{stats.studentCount}</p>
                 </div>
-                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
                   <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600" />
                 </div>
               </div>
@@ -238,174 +241,179 @@ const AllVoters = () => {
           </Card>
         </div>
 
-        {/* Controls */}
-        <Card className="shadow-lg">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base sm:text-lg flex items-center justify-between">
-              <span>ভোটার ব্যবস্থাপনা</span>
-              <Badge variant="outline" className="bg-green-50 text-green-700">
-                পৃষ্ঠা {currentPage} এর {totalPages} • মোট {stats.totalVoters}
+        {/* Mobile-Optimized Controls */}
+        <Card className="shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2 sm:pb-4">
+            <CardTitle className="text-sm sm:text-base lg:text-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <span className="truncate">ভোটার ব্যবস্থাপনা</span>
+              <Badge variant="outline" className="bg-green-50 text-green-700 text-xs w-fit">
+                পৃষ্ঠা {currentPage}/{totalPages} • মোট {stats.totalVoters}
               </Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-4">
-              <div className="flex gap-2 items-center">
-                <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                <Input
-                  placeholder="নাম, ফোন বা NID দিয়ে খুঁজুন..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="text-sm"
-                />
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <AdvancedPDFGenerator />
+          <CardContent className="space-y-3">
+            <div className="flex gap-2 items-center">
+              <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <Input
+                placeholder="নাম, ফোন বা NID দিয়ে খুঁজুন..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="text-sm focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <AdvancedPDFGenerator />
 
-                <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex items-center gap-1 text-xs hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300">
-                      <Settings className="w-3 h-3" />
-                      কলাম
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>টেবিল কলাম সেটিংস</DialogTitle>
-                    </DialogHeader>
-                    <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto">
-                      {allColumns.map((column) => (
-                        <div key={column} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={column}
-                            checked={visibleColumns[column]}
-                            onCheckedChange={() => handleColumnToggle(column)}
-                          />
-                          <Label htmlFor={column} className="text-sm cursor-pointer">
-                            {column}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
+              <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="flex items-center gap-1 text-xs hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors">
+                    <Settings className="w-3 h-3" />
+                    কলাম
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-xs sm:max-w-md mx-2">
+                  <DialogHeader>
+                    <DialogTitle className="text-sm sm:text-base">টেবিল কলাম সেটিংস</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-2">
+                    {allColumns.map((column) => (
+                      <div key={column} className="flex items-center space-x-2 py-1">
+                        <Checkbox
+                          id={column}
+                          checked={visibleColumns[column]}
+                          onCheckedChange={() => handleColumnToggle(column)}
+                        />
+                        <Label htmlFor={column} className="text-xs sm:text-sm cursor-pointer flex-1">
+                          {column}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </CardContent>
         </Card>
 
-        {/* Voters Table */}
-        <Card className="shadow-lg">
+        {/* Mobile-Optimized Table */}
+        <Card className="shadow-md hover:shadow-lg transition-shadow">
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-green-50">
-                    {allColumns.filter(col => visibleColumns[col]).map((column) => (
-                      <TableHead key={column} className="text-xs sm:text-sm whitespace-nowrap font-semibold">
-                        {column}
+            <div className="overflow-x-auto -mx-2 sm:mx-0">
+              <div style={{ minWidth: '600px' }}>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-green-50">
+                      {allColumns.filter(col => visibleColumns[col]).map((column) => (
+                        <TableHead key={column} className="text-xs font-semibold px-2 py-3 whitespace-nowrap">
+                          {column}
+                        </TableHead>
+                      ))}
+                      <TableHead className="text-xs font-semibold px-2 py-3 whitespace-nowrap sticky right-0 bg-green-50">
+                        কার্যক্রম
                       </TableHead>
-                    ))}
-                    <TableHead className="text-xs sm:text-sm font-semibold">কার্যক্রম</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={Object.values(visibleColumns).filter(Boolean).length + 1} className="text-center py-8 text-sm text-gray-500">
-                        লোড হচ্ছে...
-                      </TableCell>
                     </TableRow>
-                  ) : paginatedVoters.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={Object.values(visibleColumns).filter(Boolean).length + 1} className="text-center py-8 text-sm text-gray-500">
-                        {searchTerm ? `"${searchTerm}" খুঁজে পাওয়া যায়নি` : 'কোন ভোটার পাওয়া যায়নি'}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginatedVoters.map((voter) => (
-                      <TableRow key={voter.id} className="hover:bg-gray-50 transition-colors">
-                        {allColumns.filter(col => visibleColumns[col]).map((column) => (
-                          <TableCell key={column} className="text-xs sm:text-sm">
-                            {column === 'Priority Level' ? (
-                              <Badge variant={
-                                getFieldValue(voter, column) === 'High' ? 'destructive' :
-                                  getFieldValue(voter, column) === 'Medium' ? 'default' : 'secondary'
-                              } className="text-xs shadow-sm">
-                                {getFieldValue(voter, column) === 'High' ? 'উচ্চ' : 
-                                 getFieldValue(voter, column) === 'Medium' ? 'মাঝারি' : 'নিম্ন'}
-                              </Badge>
-                            ) : column === 'Vote Probability (%)' ? (
-                              <div className="flex items-center gap-1">
-                                <span className="font-medium">{getFieldValue(voter, column) || 0}%</span>
-                                {(() => {
-                                  const value = getFieldValue(voter, column);
-                                  const numValue = typeof value === 'string' ? parseInt(value) : value;
-                                  return (numValue && numValue >= 80) && (
-                                    <Badge variant="default" className="bg-green-600 text-xs">উচ্চ</Badge>
-                                  );
-                                })()}
-                              </div>
-                            ) : column === 'Will Vote' || column === 'Is Voter' || column === 'Student' || column === 'WhatsApp' || column === 'Has Disability' || column === 'Is Migrated' || column === 'Voted Before' ? (
-                              <span className={getFieldValue(voter, column) === 'Yes' ? 'text-green-600 font-medium' : 'text-red-500'}>
-                                {getFieldValue(voter, column) === 'Yes' ? '✓ হ্যাঁ' : getFieldValue(voter, column) === 'No' ? '✗ না' : '-'}
-                              </span>
-                            ) : (
-                              <span className={column === 'Voter Name' ? 'font-medium text-gray-900' : ''}>
-                                {getFieldValue(voter, column)}
-                              </span>
-                            )}
-                          </TableCell>
-                        ))}
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleView(voter)}
-                              className="h-7 w-7 p-0 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300"
-                              title="বিস্তারিত দেখুন"
-                            >
-                              <Eye className="w-3 h-3" />
-                            </Button>
-                            {canEdit && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleEdit(voter)}
-                                className="h-7 w-7 p-0 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
-                                title="সম্পাদনা করুন"
-                              >
-                                <Edit className="w-3 h-3" />
-                              </Button>
-                            )}
-                            {canDelete && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-red-600 h-7 w-7 p-0 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-                                onClick={() => handleDelete(voter.id!)}
-                                title="মুছে ফেলুন"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            )}
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={Object.values(visibleColumns).filter(Boolean).length + 1} className="text-center py-8 text-sm text-gray-500">
+                          <div className="flex items-center justify-center gap-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                            লোড হচ্ছে...
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : paginatedVoters.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={Object.values(visibleColumns).filter(Boolean).length + 1} className="text-center py-8 text-sm text-gray-500">
+                          {searchTerm ? `"${searchTerm}" খুঁজে পাওয়া যায়নি` : 'কোন ভোটার পাওয়া যায়নি'}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      paginatedVoters.map((voter) => (
+                        <TableRow key={voter.id} className="hover:bg-gray-50 transition-colors">
+                          {allColumns.filter(col => visibleColumns[col]).map((column) => (
+                            <TableCell key={column} className="text-xs px-2 py-3">
+                              {column === 'Priority Level' ? (
+                                <Badge variant={
+                                  getFieldValue(voter, column) === 'High' ? 'destructive' :
+                                    getFieldValue(voter, column) === 'Medium' ? 'default' : 'secondary'
+                                } className="text-xs">
+                                  {getFieldValue(voter, column) === 'High' ? 'উচ্চ' : 
+                                   getFieldValue(voter, column) === 'Medium' ? 'মাঝারি' : 'নিম্ন'}
+                                </Badge>
+                              ) : column === 'Vote Probability (%)' ? (
+                                <div className="flex items-center gap-1">
+                                  <span className="font-medium text-xs">{getFieldValue(voter, column) || 0}%</span>
+                                  {(() => {
+                                    const value = getFieldValue(voter, column);
+                                    const numValue = typeof value === 'string' ? parseInt(value) : value;
+                                    return (numValue && numValue >= 80) && (
+                                      <Badge variant="default" className="bg-green-600 text-xs px-1 py-0">উচ্চ</Badge>
+                                    );
+                                  })()}
+                                </div>
+                              ) : column === 'Will Vote' || column === 'Is Voter' || column === 'Student' || column === 'WhatsApp' || column === 'Has Disability' || column === 'Is Migrated' || column === 'Voted Before' ? (
+                                <span className={`text-xs ${getFieldValue(voter, column) === 'Yes' ? 'text-green-600 font-medium' : 'text-red-500'}`}>
+                                  {getFieldValue(voter, column) === 'Yes' ? '✓ হ্যাঁ' : getFieldValue(voter, column) === 'No' ? '✗ না' : '-'}
+                                </span>
+                              ) : (
+                                <span className={`text-xs ${column === 'Voter Name' ? 'font-medium text-gray-900' : ''} truncate block max-w-24`} title={getFieldValue(voter, column)?.toString()}>
+                                  {getFieldValue(voter, column)}
+                                </span>
+                              )}
+                            </TableCell>
+                          ))}
+                          <TableCell className="sticky right-0 bg-white px-2 py-3">
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleView(voter)}
+                                className="h-6 w-6 p-0 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors"
+                                title="বিস্তারিত দেখুন"
+                              >
+                                <Eye className="w-3 h-3" />
+                              </Button>
+                              {canEdit && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEdit(voter)}
+                                  className="h-6 w-6 p-0 hover:bg-green-50 hover:text-green-700 hover:border-green-300 transition-colors"
+                                  title="সম্পাদনা করুন"
+                                >
+                                  <Edit className="w-3 h-3" />
+                                </Button>
+                              )}
+                              {canDelete && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-600 h-6 w-6 p-0 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors"
+                                  onClick={() => handleDelete(voter.id!)}
+                                  title="মুছে ফেলুন"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Pagination */}
+        {/* Mobile-Optimized Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-center">
+          <div className="flex justify-center px-2">
             <Pagination>
-              <PaginationContent>
+              <PaginationContent className="gap-1">
                 <PaginationItem>
                   <PaginationPrevious
                     onClick={() => handlePageChange(currentPage - 1)}
@@ -413,18 +421,28 @@ const AllVoters = () => {
                       pointerEvents: currentPage === 1 ? 'none' : 'auto',
                       opacity: currentPage === 1 ? 0.5 : 1
                     }}
-                    className="hover:bg-green-50 hover:text-green-700"
+                    className="hover:bg-green-50 hover:text-green-700 text-xs px-2 py-1"
                   />
                 </PaginationItem>
                 
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  const pageNum = Math.max(1, Math.min(totalPages, currentPage - 2 + i));
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
                   return (
                     <PaginationItem key={pageNum}>
                       <PaginationLink
                         onClick={() => handlePageChange(pageNum)}
                         isActive={pageNum === currentPage}
-                        className={pageNum === currentPage ? 'bg-green-600 text-white hover:bg-green-700' : 'hover:bg-green-50 hover:text-green-700'}
+                        className={`text-xs px-2 py-1 ${pageNum === currentPage ? 'bg-green-600 text-white hover:bg-green-700' : 'hover:bg-green-50 hover:text-green-700'}`}
                       >
                         {pageNum}
                       </PaginationLink>
@@ -439,7 +457,7 @@ const AllVoters = () => {
                       pointerEvents: currentPage === totalPages ? 'none' : 'auto',
                       opacity: currentPage === totalPages ? 0.5 : 1
                     }}
-                    className="hover:bg-green-50 hover:text-green-700"
+                    className="hover:bg-green-50 hover:text-green-700 text-xs px-2 py-1"
                   />
                 </PaginationItem>
               </PaginationContent>
@@ -447,56 +465,39 @@ const AllVoters = () => {
           </div>
         )}
 
-        {/* View Dialog */}
+        {/* Mobile-Optimized View Dialog */}
         <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-xs sm:max-w-lg md:max-w-2xl mx-2 max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>ভোটার বিস্তারিত তথ্য</DialogTitle>
+              <DialogTitle className="text-sm sm:text-base">ভোটার বিস্তারিত তথ্য</DialogTitle>
             </DialogHeader>
             {selectedVoter && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">ID</label>
-                  <p className="font-semibold">{selectedVoter.ID}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">নাম</label>
-                  <p className="font-semibold">{selectedVoter['Voter Name']}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">বাড়ির নাম</label>
-                  <p className="font-semibold">{selectedVoter['House Name'] || 'N/A'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">পিতা/স্বামী</label>
-                  <p className="font-semibold">{selectedVoter.FatherOrHusband || 'N/A'}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">বয়স</label>
-                  <p className="font-semibold">{selectedVoter.Age}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">লিঙ্গ</label>
-                  <p className="font-semibold">{selectedVoter.Gender}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">ফোন</label>
-                  <p className="font-semibold">{selectedVoter.Phone}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">NID</label>
-                  <p className="font-semibold">{selectedVoter.NID}</p>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {[
+                  { label: 'ID', value: selectedVoter.ID },
+                  { label: 'নাম', value: selectedVoter['Voter Name'] },
+                  { label: 'বাড়ির নাম', value: selectedVoter['House Name'] },
+                  { label: 'পিতা/স্বামী', value: selectedVoter.FatherOrHusband },
+                  { label: 'বয়স', value: selectedVoter.Age },
+                  { label: 'লিঙ্গ', value: selectedVoter.Gender },
+                  { label: 'ফোন', value: selectedVoter.Phone },
+                  { label: 'NID', value: selectedVoter.NID }
+                ].map((item, index) => (
+                  <div key={index} className="border-b pb-2">
+                    <label className="text-xs sm:text-sm font-medium text-gray-500 block">{item.label}</label>
+                    <p className="font-semibold text-sm sm:text-base break-words">{item.value || 'N/A'}</p>
+                  </div>
+                ))}
               </div>
             )}
           </DialogContent>
         </Dialog>
 
-        {/* Edit Dialog */}
+        {/* Mobile-Optimized Edit Dialog */}
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-xs sm:max-w-lg md:max-w-2xl mx-2 max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>ভোটার তথ্য সম্পাদনা</DialogTitle>
+              <DialogTitle className="text-sm sm:text-base">ভোটার তথ্য সম্পাদনা</DialogTitle>
             </DialogHeader>
             {selectedVoter && (
               <VoterEditForm 
@@ -529,35 +530,38 @@ const VoterEditForm = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">নাম *</label>
+          <label className="block text-xs sm:text-sm font-medium mb-1">নাম *</label>
           <Input
             value={formData['Voter Name']}
             onChange={(e) => setFormData({...formData, 'Voter Name': e.target.value})}
             required
+            className="text-sm focus:ring-2 focus:ring-green-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">ফোন</label>
+          <label className="block text-xs sm:text-sm font-medium mb-1">ফোন</label>
           <Input
             value={formData.Phone || ''}
             onChange={(e) => setFormData({...formData, Phone: e.target.value})}
+            className="text-sm focus:ring-2 focus:ring-green-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">বয়স</label>
+          <label className="block text-xs sm:text-sm font-medium mb-1">বয়স</label>
           <Input
             type="number"
             value={formData.Age || ''}
             onChange={(e) => setFormData({...formData, Age: parseInt(e.target.value) || undefined})}
+            className="text-sm focus:ring-2 focus:ring-green-500"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">ভোট দেবেন</label>
+          <label className="block text-xs sm:text-sm font-medium mb-1">ভোট দেবেন</label>
           <select
-            className="w-full p-2 border rounded-md hover:border-green-300 focus:border-green-500"
+            className="w-full p-2 border rounded-md hover:border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-500 text-sm"
             value={formData['Will Vote'] || ''}
             onChange={(e) => setFormData({...formData, 'Will Vote': e.target.value as 'Yes' | 'No'})}
           >
@@ -567,9 +571,9 @@ const VoterEditForm = ({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">অগ্রাধিকার</label>
+          <label className="block text-xs sm:text-sm font-medium mb-1">অগ্রাধিকার</label>
           <select
-            className="w-full p-2 border rounded-md hover:border-green-300 focus:border-green-500"
+            className="w-full p-2 border rounded-md hover:border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-500 text-sm"
             value={formData['Priority Level'] || ''}
             onChange={(e) => setFormData({...formData, 'Priority Level': e.target.value as 'Low' | 'Medium' | 'High'})}
           >
@@ -580,32 +584,33 @@ const VoterEditForm = ({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">ভোট সম্ভাবনা (%)</label>
+          <label className="block text-xs sm:text-sm font-medium mb-1">ভোট সম্ভাবনা (%)</label>
           <Input
             type="number"
             min="0"
             max="100"
             value={formData['Vote Probability (%)'] || ''}
             onChange={(e) => setFormData({...formData, 'Vote Probability (%)': parseInt(e.target.value) || undefined})}
+            className="text-sm focus:ring-2 focus:ring-green-500"
           />
         </div>
       </div>
       
       <div>
-        <label className="block text-sm font-medium mb-1">মন্তব্য</label>
+        <label className="block text-xs sm:text-sm font-medium mb-1">মন্তব্য</label>
         <textarea
-          className="w-full p-2 border rounded-md hover:border-green-300 focus:border-green-500"
+          className="w-full p-2 border rounded-md hover:border-green-300 focus:border-green-500 focus:ring-2 focus:ring-green-500 text-sm"
           rows={3}
           value={formData.Remarks || ''}
           onChange={(e) => setFormData({...formData, Remarks: e.target.value})}
         />
       </div>
 
-      <div className="flex justify-end space-x-4">
+      <div className="flex justify-end space-x-2 pt-4">
         <Button 
           type="submit" 
           disabled={isLoading}
-          className="bg-green-600 hover:bg-green-700 text-white"
+          className="bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 transition-colors"
         >
           {isLoading ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
         </Button>
