@@ -72,7 +72,7 @@ const Hero = () => {
       y: 0,
       opacity: 1,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         stiffness: 100,
         damping: 12
       }
@@ -96,7 +96,7 @@ const Hero = () => {
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ 
-            type: "spring", 
+            type: "spring" as const, 
             stiffness: 260, 
             damping: 20,
             delay: 0.5 
@@ -280,21 +280,23 @@ const Hero = () => {
       </motion.div>
 
       {/* Custom Swiper Styles */}
-      <style jsx>{`
-        .swiper-pagination-bullet-custom {
-          width: 12px;
-          height: 12px;
-          background: rgba(255, 255, 255, 0.5);
-          border-radius: 50%;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-        
-        .swiper-pagination-bullet-active-custom {
-          background: #16a34a;
-          transform: scale(1.25);
-        }
-      `}</style>
+      <style>
+        {`
+          .swiper-pagination-bullet-custom {
+            width: 12px;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+          }
+          
+          .swiper-pagination-bullet-active-custom {
+            background: #16a34a;
+            transform: scale(1.25);
+          }
+        `}
+      </style>
     </div>
   );
 };
