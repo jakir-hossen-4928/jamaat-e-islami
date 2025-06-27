@@ -4,7 +4,7 @@ export interface VoterData {
   ID: string;
   'House Name'?: string;
   'Voter Name': string;
-  FatherOrHusband?: string; // Use FatherOrHusband instead of 'Father/Husband'
+  FatherOrHusband?: string; 
   Age?: number;
   Gender?: 'Male' | 'Female' | 'Other';
   'Marital Status'?: 'Married' | 'Unmarried' | 'Widowed' | 'Divorced';
