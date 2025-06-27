@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, addDoc, writeBatch, doc } from 'firebase/firestore';
@@ -11,12 +10,41 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ArrowLeft, Save, User, Phone, MapPin, Vote, Info, CheckCircle, Upload } from 'lucide-react';
-import { VoterData } from '@/lib/types';
+import { ArrowLeft, Save, User, Phone, Vote, Info, CheckCircle, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import Papa from 'papaparse';
 import { usePageTitle } from '@/lib/usePageTitle';
+
+// Define VoterData type to ensure type safety
+interface VoterData {
+  'Voter Name': string;
+  'House Name'?: string;
+  'FatherOrHusband'?: string;
+  Age?: number;
+  Gender?: 'Male' | 'Female' | 'Other';
+  'Marital Status'?: 'Married' | 'Unmarried' | 'Widowed' | 'Divorced';
+  Student?: 'Yes' | 'No';
+  Occupation?: string;
+  Education?: string;
+  Religion?: string;
+  Phone?: string;
+  WhatsApp?: 'Yes' | 'No';
+  NID?: string;
+  'Is Voter'?: 'Yes' | 'No';
+  'Will Vote'?: 'Yes' | 'No';
+  'Voted Before'?: 'Yes' | 'No';
+  'Vote Probability (%)'?: number;
+  'Political Support'?: string;
+  'Priority Level': 'Low' | 'Medium' | 'High';
+  'Has Disability'?: 'Yes' | 'No';
+  'Is Migrated'?: 'Yes' | 'No';
+  Remarks?: string;
+  ID: string;
+  'Collection Date': string;
+  'Last Updated': string;
+  Collector: string;
+}
 
 const AddVoters = () => {
   usePageTitle('বাংলাদেশ জামায়াতে ইসলামী');
@@ -57,14 +85,49 @@ const AddVoters = () => {
 
   const addSingleVoterMutation = useMutation({
     mutationFn: async (voter: Partial<VoterData>) => {
-      const votersRef = collection(db, 'voters');
-      await addDoc(votersRef, {
-        ...voter,
-        ID: Date.now().toString(),
-        'Collection Date': new Date().toISOString(),
-        'Last Updated': new Date().toISOString(),
-        Collector: 'Admin'
-      });
+      try {
+        // Validate required fields
+        if (!voter['Voter Name']?.trim()) {
+          throw new Error('ভোটারের নাম আবশ্যক');
+        }
+
+        const votersRef = collection(db, 'voters');
+        const voterData: VoterData = {
+          ...voter,
+          ID: Date.now().toString(),
+          'Collection Date': new Date().toISOString(),
+          'Last Updated': new Date().toISOString(),
+          Collector: 'Admin'
+        } as VoterData;
+
+        // Ensure numeric fields are properly formatted
+        if (voter.Age) voterData.Age = parseInt(voter.Age.toString());
+        if (voter['Vote Probability (%)']) voterData['Vote Probability (%)'] = parseInt(voter['Vote Probability (%)'].toString());
+
+        // Remove undefined or empty string fields to avoid Firestore issues
+        Object.keys(voterData).forEach(key => {
+          if (voterData[key as keyof VoterData] === '' || voterData[key as keyof VoterData] === undefined) {
+            delete voterData[key as keyof VoterData];
+          }
+        });
+
+        // Add voter to Firestore
+        const docRef = await addDoc(votersRef, voterData);
+        return docRef.id;
+      } catch (error: any) {
+        console.error('Error adding voter:', error);
+        let errorMessage = 'ভোটার যোগ করতে সমস্যা হয়েছে';
+        if (error.code === 'permission-denied') {
+          errorMessage = 'অনুমতি অস্বীকৃত: দয়া করে আপনার অ্যাক্সেস অনুমতি পরীক্ষা করুন।';
+        } else if (error.code === 'invalid-argument') {
+          errorMessage = 'অবৈধ তথ্য প্রদান করা হয়েছে। দয়া করে ফর্মটি সঠিকভাবে পূরণ করুন।';
+        } else if (error.code === 'unavailable') {
+          errorMessage = 'ডাটাবেস সংযোগে সমস্যা। অনুগ্রহ করে পরে আবার চেষ্টা করুন।';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        throw new Error(errorMessage);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voters'] });
@@ -77,10 +140,11 @@ const AddVoters = () => {
         resetForm();
       }, 3000);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Mutation error:', error);
       toast({
         title: "ত্রুটি",
-        description: "ভোটার যোগ করতে সমস্যা হয়েছে",
+        description: error.message || "ভোটার যোগ করতে সমস্যা হয়েছে",
         variant: "destructive",
       });
     }
@@ -153,8 +217,7 @@ const AddVoters = () => {
         Remarks: formData.Remarks || undefined,
       };
 
-      addSingleVoterMutation.mutate(voterData);
-
+      await addSingleVoterMutation.mutateAsync(voterData);
     } catch (error: any) {
       toast({
         title: "ত্রুটি",
@@ -188,13 +251,22 @@ const AddVoters = () => {
 
           validData.forEach((voter: any, index) => {
             const docRef = doc(votersRef);
-            batch.set(docRef, {
+            const voterData: VoterData = {
               ...voter,
               ID: (Date.now() + index).toString(),
               'Collection Date': new Date().toISOString(),
               'Last Updated': new Date().toISOString(),
               Collector: 'Admin'
+            };
+
+            // Clean up voter data
+            Object.keys(voterData).forEach(key => {
+              if (voterData[key as keyof VoterData] === '' || voterData[key as keyof VoterData] === undefined) {
+                delete voterData[key as keyof VoterData];
+              }
             });
+
+            batch.set(docRef, voterData);
           });
 
           await batch.commit();
