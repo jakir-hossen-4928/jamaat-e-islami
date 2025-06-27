@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs } from 'firebase/firestore';
@@ -8,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Download, FileText, FileSpreadsheet, BarChart3 } from 'lucide-react';
+import { Download, FileText, FileSpreadsheet, BarChart3, Settings, Eye, ChevronDown, ChevronUp } from 'lucide-react';
 import { VoterData } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { usePageTitle } from '@/lib/usePageTitle';
@@ -24,6 +23,8 @@ const DataHub = () => {
     'Age',
     'Gender'
   ]);
+  const [showFieldSelector, setShowFieldSelector] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const { toast } = useToast();
 
   const { data: voters = [], isLoading } = useQuery({
@@ -285,15 +286,17 @@ const DataHub = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-2 sm:p-4 lg:p-6">
+      <div className="space-y-3 sm:space-y-4 p-2 sm:p-4 lg:p-6">
         {/* Mobile-First Header */}
         <div className="flex flex-col space-y-2">
-          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">📊 ডেটা হাব</h1>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-600">
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
+              📊 ডেটা হাব
+            </h1>
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
               <div className="flex items-center gap-1">
-                <BarChart3 className="w-4 h-4" />
-                <span>মোট ভোটার: <strong>{stats.total}</strong></span>
+                <span>মোট ভোটার: <strong className="text-green-600">{stats.total}</strong></span>
               </div>
               {isLoading && (
                 <div className="flex items-center gap-1">
@@ -306,24 +309,26 @@ const DataHub = () => {
         </div>
 
         {/* Mobile-Optimized Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
           {[
-            { label: 'মোট ভোটার', value: stats.total, color: 'green', icon: '👥' },
-            { label: 'ভোট দেবেন', value: stats.willVote, color: 'blue', icon: '✅' },
-            { label: 'উচ্চ অগ্রাধিকার', value: stats.highPriority, color: 'red', icon: '🔥' },
-            { label: 'ছাত্র', value: stats.students, color: 'purple', icon: '🎓' }
+            { label: 'মোট ভোটার', value: stats.total, color: 'green', icon: '👥', bgColor: 'bg-green-50', textColor: 'text-green-700' },
+            { label: 'ভোট দেবেন', value: stats.willVote, color: 'blue', icon: '✅', bgColor: 'bg-blue-50', textColor: 'text-blue-700' },
+            { label: 'উচ্চ অগ্রাধিকার', value: stats.highPriority, color: 'red', icon: '🔥', bgColor: 'bg-red-50', textColor: 'text-red-700' },
+            { label: 'ছাত্র', value: stats.students, color: 'purple', icon: '🎓', bgColor: 'bg-purple-50', textColor: 'text-purple-700' }
           ].map((stat, index) => (
-            <Card key={index} className="shadow-md hover:shadow-lg transition-shadow">
+            <Card key={index} className="shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm text-gray-600 truncate">{stat.label}</p>
-                    <p className={`text-lg sm:text-xl lg:text-2xl font-bold text-${stat.color}-600`}>
-                      {stat.value}
-                    </p>
-                  </div>
-                  <div className="text-lg sm:text-xl flex-shrink-0 ml-2">
-                    {stat.icon}
+                <div className={`${stat.bgColor} rounded-lg p-2 sm:p-3`}>
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-gray-600 truncate">{stat.label}</p>
+                      <p className={`text-lg sm:text-xl lg:text-2xl font-bold ${stat.textColor}`}>
+                        {stat.value}
+                      </p>
+                    </div>
+                    <div className="text-lg sm:text-xl flex-shrink-0 ml-2">
+                      {stat.icon}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -331,37 +336,84 @@ const DataHub = () => {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-          {/* Mobile-Optimized Field Selection */}
-          <div className="lg:col-span-2">
-            <Card className="shadow-md hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="text-sm sm:text-base lg:text-lg flex items-center gap-2">
-                  <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
-                  ফিল্ড নির্বাচন করুন
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 max-h-60 overflow-y-auto pr-2">
+        {/* Mobile-First Action Panel */}
+        <Card className="shadow-md">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                এক্সপোর্ট কন্ট্রোল প্যানেল
+              </CardTitle>
+              <Badge className="bg-green-100 text-green-800 text-xs w-fit">
+                {selectedFields.length} ফিল্ড নির্বাচিত
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Quick Selection */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedFields(['Voter Name', 'Phone', 'Age', 'Gender'])}
+                className="text-xs hover:bg-green-50 hover:border-green-300"
+              >
+                🎯 মূল তথ্য
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedFields(['Voter Name', 'Phone', 'NID', 'Will Vote'])}
+                className="text-xs hover:bg-blue-50 hover:border-blue-300"
+              >
+                🗳️ ভোটিং তথ্য
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedFields(availableFields)}
+                className="text-xs hover:bg-purple-50 hover:border-purple-300"
+              >
+                📋 সব তথ্য
+              </Button>
+            </div>
+
+            {/* Field Selector Toggle */}
+            <Button
+              variant="ghost"
+              onClick={() => setShowFieldSelector(!showFieldSelector)}
+              className="w-full justify-between text-sm hover:bg-gray-50"
+            >
+              <span className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                ফিল্ড নির্বাচন করুন
+              </span>
+              {showFieldSelector ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+
+            {/* Collapsible Field Selector */}
+            {showFieldSelector && (
+              <div className="border rounded-lg p-3 bg-gray-50">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
                   {availableFields.map(field => (
                     <div key={field} className="flex items-center space-x-2 py-1">
                       <Checkbox
                         checked={selectedFields.includes(field)}
                         onCheckedChange={() => handleFieldToggle(field)}
+                        className="flex-shrink-0"
                       />
-                      <label className="text-xs sm:text-sm cursor-pointer flex-1 truncate" title={field}>
+                      <label className="text-xs cursor-pointer flex-1 truncate" title={field}>
                         {field}
                       </label>
                     </div>
                   ))}
                 </div>
-                
-                <div className="flex flex-col sm:flex-row justify-between gap-2 mt-4 sm:mt-6">
+                <div className="flex flex-col sm:flex-row justify-between gap-2 mt-3 pt-3 border-t">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setSelectedFields(availableFields)}
-                    className="text-xs sm:text-sm hover:bg-green-50 hover:text-green-700 hover:border-green-300 transition-colors"
+                    className="text-xs hover:bg-green-50"
                   >
                     সব নির্বাচন
                   </Button>
@@ -369,74 +421,58 @@ const DataHub = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => setSelectedFields([])}
-                    className="text-xs sm:text-sm hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors"
+                    className="text-xs hover:bg-red-50"
                   >
                     সব বাতিল
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Mobile-Optimized Export Options */}
-          <Card className="shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <CardTitle className="text-sm sm:text-base lg:text-lg flex items-center gap-2">
-                <Download className="w-4 h-4 sm:w-5 sm:h-5" />
-                এক্সপোর্ট অপশন
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 sm:space-y-4">
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <p className="text-xs sm:text-sm text-gray-600 mb-2">
-                  📋 নির্বাচিত ফিল্ড: <strong>{selectedFields.length}</strong>
-                </p>
-                <div className="text-xs text-gray-500">
-                  {selectedFields.length > 0 ? 
-                    selectedFields.slice(0, 3).join(', ') + (selectedFields.length > 3 ? '...' : '') 
-                    : 'কোনো ফিল্ড নির্বাচিত নয়'
-                  }
-                </div>
               </div>
+            )}
 
+            {/* Export Buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Button
                 onClick={exportToCSV}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 disabled={isLoading || selectedFields.length === 0}
                 size="sm"
               >
                 <FileSpreadsheet className="w-4 h-4 mr-2" />
-                <span className="text-xs sm:text-sm">CSV এ ডাউনলোড</span>
+                <span className="text-xs sm:text-sm">CSV ডাউনলোড</span>
               </Button>
 
               <Button
                 onClick={exportToPDF}
-                className="w-full bg-red-600 hover:bg-red-700 text-white transition-colors"
+                className="w-full bg-red-600 hover:bg-red-700 text-white"
                 disabled={isLoading || selectedFields.length === 0}
                 size="sm"
               >
                 <FileText className="w-4 h-4 mr-2" />
-                <span className="text-xs sm:text-sm">PDF এ ডাউনলোড</span>
+                <span className="text-xs sm:text-sm">PDF ডাউনলোড</span>
               </Button>
+            </div>
 
-              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                <h4 className="font-semibold text-blue-800 text-xs sm:text-sm mb-2">💡 ফাইল তথ্য:</h4>
-                <ul className="text-xs text-blue-700 space-y-1">
-                  <li>• CSV: এক্সেল/স্প্রেডশিটে খোলা যায়</li>
-                  <li>• PDF: প্রিন্ট ও শেয়ারের জন্য উপযুক্ত</li>
-                  <li>• ডেভেলপার তথ্য অন্তর্ভুক্ত</li>
-                  <li>• প্রফেশনাল ফরম্যাট</li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            {/* Preview Toggle */}
+            <Button
+              variant="outline"
+              onClick={() => setShowPreview(!showPreview)}
+              className="w-full justify-between hover:bg-blue-50"
+              disabled={selectedFields.length === 0}
+            >
+              <span className="flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                ডেটা প্রিভিউ
+              </span>
+              {showPreview ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Mobile-Optimized Preview */}
-        {selectedFields.length > 0 && (
-          <Card className="shadow-md hover:shadow-lg transition-shadow">
+        {showPreview && selectedFields.length > 0 && (
+          <Card className="shadow-md">
             <CardHeader>
-              <CardTitle className="text-sm sm:text-base lg:text-lg flex items-center justify-between">
+              <CardTitle className="text-sm sm:text-base flex items-center justify-between">
                 <span>📋 ডেটা প্রিভিউ (প্রথম ১০ রেকর্ড)</span>
                 <Badge className="bg-green-100 text-green-800 text-xs">
                   {selectedFields.length} ফিল্ড
@@ -445,13 +481,15 @@ const DataHub = () => {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto -mx-2 sm:mx-0">
-                <div style={{ minWidth: '400px' }}>
+                <div style={{ minWidth: `${Math.max(400, selectedFields.length * 120)}px` }}>
                   <table className="w-full text-xs border-collapse border border-gray-300">
                     <thead>
-                      <tr className="bg-gray-50">
-                        <th className="border border-gray-300 p-2 text-left font-semibold">ক্রম</th>
+                      <tr className="bg-green-50">
+                        <th className="border border-gray-300 p-2 text-left font-semibold text-green-800 sticky left-0 bg-green-50 z-10">
+                          ক্রম
+                        </th>
                         {selectedFields.map(field => (
-                          <th key={field} className="border border-gray-300 p-2 text-left font-semibold whitespace-nowrap">
+                          <th key={field} className="border border-gray-300 p-2 text-left font-semibold whitespace-nowrap text-green-800">
                             {field}
                           </th>
                         ))}
@@ -460,9 +498,11 @@ const DataHub = () => {
                     <tbody>
                       {voters.slice(0, 10).map((voter, index) => (
                         <tr key={index} className="hover:bg-gray-50">
-                          <td className="border border-gray-300 p-2 text-center font-semibold">{index + 1}</td>
+                          <td className="border border-gray-300 p-2 text-center font-semibold sticky left-0 bg-white z-10">
+                            {index + 1}
+                          </td>
                           {selectedFields.map(field => (
-                            <td key={field} className="border border-gray-300 p-2 truncate max-w-24" title={voter[field as keyof VoterData]?.toString()}>
+                            <td key={field} className="border border-gray-300 p-2 truncate max-w-32" title={voter[field as keyof VoterData]?.toString()}>
                               {voter[field as keyof VoterData] || '-'}
                             </td>
                           ))}
@@ -473,13 +513,38 @@ const DataHub = () => {
                 </div>
               </div>
               {voters.length > 10 && (
-                <p className="text-center text-gray-600 mt-4 text-xs sm:text-sm">
+                <p className="text-center text-gray-600 mt-3 text-xs sm:text-sm">
                   আরও <strong>{voters.length - 10}</strong> টি রেকর্ড রয়েছে...
                 </p>
               )}
             </CardContent>
           </Card>
         )}
+
+        {/* Mobile Info Card */}
+        <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+          <h4 className="font-semibold text-blue-800 text-sm mb-2 flex items-center gap-2">
+            💡 ব্যবহারের নির্দেশনা
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-blue-700">
+            <div>
+              <strong>📱 মোবাইলে:</strong>
+              <ul className="mt-1 list-disc list-inside space-y-1">
+                <li>টাচ করে ফিল্ড নির্বাচন করুন</li>
+                <li>দ্রুত সিলেকশন বোতাম ব্যবহার করুন</li>
+                <li>প্রিভিউ টেবিল স্ক্রোল করুন</li>
+              </ul>
+            </div>
+            <div>
+              <strong>💻 ডেস্কটপে:</strong>
+              <ul className="mt-1 list-disc list-inside space-y-1">
+                <li>একাধিক ফিল্ড একসাথে নির্বাচন</li>
+                <li>বড় প্রিভিউ টেবিল দেখুন</li>
+                <li>দ্রুত এক্সপোর্ট করুন</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </AdminLayout>
   );
