@@ -41,7 +41,8 @@ const SMSCampaignNew = () => {
   const [isBalanceLoading, setIsBalanceLoading] = useState(false);
   const { toast } = useToast();
 
-  const baseUrl = import.meta.env.VITE_SMS_API_BASE_URL;
+  // Use your API base URL
+  const baseUrl = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
     fetchVoters();

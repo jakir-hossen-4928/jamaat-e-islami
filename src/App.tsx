@@ -20,6 +20,7 @@ import AllVoters from "./adminDashboard/AllVoters";
 import AddVoters from "./adminDashboard/AddVoters";
 import Analytics from "./adminDashboard/Analytics";
 import SMSCampaign from "./adminDashboard/SMSCampaign";
+import SMSCampaignNew from "./adminDashboard/SMSCampaignNew";
 import DataHub from "./adminDashboard/DataHub";
 import GoogleForm from "./adminDashboard/GoogleForm";
 import UserVerify from "./adminDashboard/usersverify/UserVerify";
@@ -50,6 +51,12 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
+              <Route path="/admin" element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } />
+              
               <Route path="/admin/dashboard" element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminDashboard />
@@ -62,13 +69,17 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              <Route path="/admin/add-voters" element={
+              <Route path="/admin/add-voter" element={
                 <ProtectedRoute>
                   <AddVoters />
                 </ProtectedRoute>
               } />
-
               
+              <Route path="/admin/bulk-upload" element={
+                <ProtectedRoute>
+                  <AddVoters />
+                </ProtectedRoute>
+              } />
               
               <Route path="/admin/google-form" element={
                 <ProtectedRoute>
@@ -82,9 +93,15 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              <Route path="/admin/sms" element={
+              <Route path="/admin/sms-campaign" element={
                 <ProtectedRoute requiredRole="moderator">
                   <SMSCampaign />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/admin/sms-campaign-new" element={
+                <ProtectedRoute requiredRole="moderator">
+                  <SMSCampaignNew />
                 </ProtectedRoute>
               } />
               
@@ -94,7 +111,7 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              <Route path="/admin/users" element={
+              <Route path="/admin/verify-users" element={
                 <ProtectedRoute requiredRole="admin">
                   <UserVerify />
                 </ProtectedRoute>
