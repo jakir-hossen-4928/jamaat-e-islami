@@ -9,13 +9,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, UserCheck, UserX, Edit } from 'lucide-react';
-import { User } from '@/lib/types';
+import { Search, UserCheck, UserX, Edit, Users, Shield, Clock, User } from 'lucide-react';
+import { User as UserType } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { usePageTitle } from '@/lib/usePageTitle';
 
 const UserVerify = () => {
+  usePageTitle('ব্যবহারকারী যাচাই - অ্যাডমিন প্যানেল');
+  
   const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -26,12 +29,12 @@ const UserVerify = () => {
     queryFn: async () => {
       const usersRef = collection(db, 'users');
       const snapshot = await getDocs(usersRef);
-      return snapshot.docs.map(doc => ({ ...doc.data() } as User));
+      return snapshot.docs.map(doc => ({ ...doc.data() } as UserType));
     }
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: async ({ userId, updates }: { userId: string; updates: Partial<User> }) => {
+    mutationFn: async ({ userId, updates }: { userId: string; updates: Partial<UserType> }) => {
       await updateDoc(doc(db, 'users', userId), updates);
     },
     onSuccess: () => {
@@ -98,10 +101,10 @@ const UserVerify = () => {
   if (userProfile?.role !== 'admin') {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center h-64">
+        <div className="flex items-center justify-center h-64 p-4">
           <div className="text-center">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">অ্যাক্সেস অস্বীকৃত</h2>
-            <p className="text-gray-600">এই পৃষ্ঠায় প্রবেশের জন্য আপনার অ্যাডমিন অনুমতি প্রয়োজন।</p>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">অ্যাক্সেস অস্বীকৃত</h2>
+            <p className="text-sm sm:text-base text-gray-600">এই পৃষ্ঠায় প্রবেশের জন্য আপনার অ্যাডমিন অনুমতি প্রয়োজন।</p>
           </div>
         </div>
       </AdminLayout>
@@ -110,190 +113,302 @@ const UserVerify = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-2 sm:p-4">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-          <Card className="shadow-lg border-l-4 border-l-blue-600">
-            <CardContent className="p-3 sm:p-4">
+      <div className="space-y-3 sm:space-y-4 p-2 sm:p-4 lg:p-6">
+        {/* Mobile-First Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+          <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-blue-600">
+            <CardContent className="p-2 sm:p-3 lg:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">মোট ইউজার</h3>
-                  <p className="text-2xl font-bold text-blue-600">{users.length}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">মোট ইউজার</p>
+                  <p className="text-base sm:text-lg lg:text-2xl font-bold text-blue-600">{users.length}</p>
                 </div>
-                <UserCheck className="w-6 h-6 text-blue-600" />
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+                  <Users className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="shadow-lg border-l-4 border-l-green-600">
-            <CardContent className="p-3 sm:p-4">
+          <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-green-600">
+            <CardContent className="p-2 sm:p-3 lg:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">অনুমোদিত</h3>
-                  <p className="text-2xl font-bold text-green-600">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">অনুমোদিত</p>
+                  <p className="text-base sm:text-lg lg:text-2xl font-bold text-green-600">
                     {users.filter(u => u.approved).length}
                   </p>
                 </div>
-                <UserCheck className="w-6 h-6 text-green-600" />
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+                  <UserCheck className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="shadow-lg border-l-4 border-l-yellow-600">
-            <CardContent className="p-3 sm:p-4">
+          <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-yellow-600">
+            <CardContent className="p-2 sm:p-3 lg:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">অপেক্ষমাণ</h3>
-                  <p className="text-2xl font-bold text-yellow-600">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">অপেক্ষমাণ</p>
+                  <p className="text-base sm:text-lg lg:text-2xl font-bold text-yellow-600">
                     {users.filter(u => !u.approved).length}
                   </p>
                 </div>
-                <UserX className="w-6 h-6 text-yellow-600" />
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="shadow-lg border-l-4 border-l-red-600">
-            <CardContent className="p-3 sm:p-4">
+          <Card className="shadow-md hover:shadow-lg transition-shadow border-l-4 border-l-red-600">
+            <CardContent className="p-2 sm:p-3 lg:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">অ্যাডমিন</h3>
-                  <p className="text-2xl font-bold text-red-600">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">অ্যাডমিন</p>
+                  <p className="text-base sm:text-lg lg:text-2xl font-bold text-red-600">
                     {users.filter(u => u.role === 'admin').length}
                   </p>
                 </div>
-                <UserCheck className="w-6 h-6 text-red-600" />
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+                  <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Search and Controls */}
-        <Card className="shadow-lg">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base sm:text-lg flex items-center justify-between">
-              <span>ব্যবহারকারী ব্যবস্থাপনা</span>
-              <Badge variant="outline" className="bg-blue-50 text-blue-700">
+        {/* Mobile-Optimized Search and Controls */}
+        <Card className="shadow-md hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-2 sm:pb-4">
+            <CardTitle className="text-sm sm:text-base lg:text-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <span className="truncate">ব্যবহারকারী ব্যবস্থাপনা</span>
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs w-fit">
                 {filteredUsers.length} জন ব্যবহারকারী
               </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-3">
               <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
               <Input
                 placeholder="নাম বা ইমেইল দিয়ে খুঁজুন..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="text-sm"
+                className="text-sm focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </CardContent>
         </Card>
 
-        {/* Users Table */}
-        <Card className="shadow-lg">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-blue-50">
-                    <TableHead className="text-xs sm:text-sm font-semibold">নাম</TableHead>
-                    <TableHead className="text-xs sm:text-sm font-semibold">ইমেইল</TableHead>
-                    <TableHead className="text-xs sm:text-sm font-semibold">ভূমিকা</TableHead>
-                    <TableHead className="text-xs sm:text-sm font-semibold">অবস্থা</TableHead>
-                    <TableHead className="text-xs sm:text-sm font-semibold">যোগদান</TableHead>
-                    <TableHead className="text-xs sm:text-sm font-semibold">কার্যক্রম</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
-                        <div className="flex items-center justify-center space-x-2">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                          <span>লোড হচ্ছে...</span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ) : filteredUsers.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-500">
-                        কোন ব্যবহারকারী পাওয়া যায়নি
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredUsers.map((user) => (
-                      <TableRow key={user.uid} className="hover:bg-gray-50 transition-colors">
-                        <TableCell className="text-xs sm:text-sm font-medium">
-                          {user.displayName || 'নাম নেই'}
-                        </TableCell>
-                        <TableCell className="text-xs sm:text-sm">
-                          {user.email}
-                        </TableCell>
-                        <TableCell>
-                          <Select 
-                            value={user.role} 
-                            onValueChange={(value: 'admin' | 'moderator' | 'user') => 
-                              handleRoleChange(user.uid, value)
-                            }
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue>
-                                <Badge className={getRoleBadgeColor(user.role)}>
-                                  {user.role === 'admin' ? 'অ্যাডমিন' : 
-                                   user.role === 'moderator' ? 'মডারেটর' : 'ব্যবহারকারী'}
-                                </Badge>
-                              </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="user">ব্যবহারকারী</SelectItem>
-                              <SelectItem value="moderator">মডারেটর</SelectItem>
-                              <SelectItem value="admin">অ্যাডমিন</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getApprovalBadgeColor(user.approved)}>
-                            {user.approved ? 'অনুমোদিত' : 'অপেক্ষমাণ'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs sm:text-sm">
-                          {new Date(user.createdAt).toLocaleDateString('bn-BD')}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            {!user.approved && (
-                              <Button
-                                size="sm"
-                                onClick={() => handleApproveUser(user.uid)}
-                                className="h-7 px-2 bg-green-600 hover:bg-green-700 text-white"
-                                title="অনুমোদন করুন"
-                              >
-                                <UserCheck className="w-3 h-3" />
-                              </Button>
-                            )}
-                            {user.approved && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleRejectUser(user.uid)}
-                                className="h-7 px-2 text-red-600 hover:bg-red-50 hover:text-red-700"
-                                title="অনুমোদন বাতিল করুন"
-                              >
-                                <UserX className="w-3 h-3" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
+        {/* Mobile-Optimized Users Display */}
+        <div className="space-y-3">
+          {/* Desktop Table View */}
+          <div className="hidden lg:block">
+            <Card className="shadow-md hover:shadow-lg transition-shadow">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-blue-50">
+                        <TableHead className="text-sm font-semibold">নাম</TableHead>
+                        <TableHead className="text-sm font-semibold">ইমেইল</TableHead>
+                        <TableHead className="text-sm font-semibold">ভূমিকা</TableHead>
+                        <TableHead className="text-sm font-semibold">অবস্থা</TableHead>
+                        <TableHead className="text-sm font-semibold">যোগদান</TableHead>
+                        <TableHead className="text-sm font-semibold">কার্যক্রম</TableHead>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8">
+                            <div className="flex items-center justify-center space-x-2">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                              <span className="text-sm">লোড হচ্ছে...</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : filteredUsers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-sm text-gray-500">
+                            {searchTerm ? `"${searchTerm}" খুঁজে পাওয়া যায়নি` : 'কোন ব্যবহারকারী পাওয়া যায়নি'}
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredUsers.map((user) => (
+                          <TableRow key={user.uid} className="hover:bg-gray-50 transition-colors">
+                            <TableCell className="text-sm font-medium">
+                              {user.displayName || 'নাম নেই'}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {user.email}
+                            </TableCell>
+                            <TableCell>
+                              <Select 
+                                value={user.role} 
+                                onValueChange={(value: 'admin' | 'moderator' | 'user') => 
+                                  handleRoleChange(user.uid, value)
+                                }
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue>
+                                    <Badge className={getRoleBadgeColor(user.role)}>
+                                      {user.role === 'admin' ? 'অ্যাডমিন' : 
+                                       user.role === 'moderator' ? 'মডারেটর' : 'ব্যবহারকারী'}
+                                    </Badge>
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="user">ব্যবহারকারী</SelectItem>
+                                  <SelectItem value="moderator">মডারেটর</SelectItem>
+                                  <SelectItem value="admin">অ্যাডমিন</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getApprovalBadgeColor(user.approved)}>
+                                {user.approved ? 'অনুমোদিত' : 'অপেক্ষমাণ'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {new Date(user.createdAt).toLocaleDateString('bn-BD')}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                {!user.approved && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleApproveUser(user.uid)}
+                                    className="h-7 px-2 bg-green-600 hover:bg-green-700 text-white"
+                                    title="অনুমোদন করুন"
+                                  >
+                                    <UserCheck className="w-3 h-3" />
+                                  </Button>
+                                )}
+                                {user.approved && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleRejectUser(user.uid)}
+                                    className="h-7 px-2 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                    title="অনুমোদন বাতিল করুন"
+                                  >
+                                    <UserX className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="lg:hidden space-y-3">
+            {isLoading ? (
+              <Card className="shadow-md">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span className="text-sm">লোড হচ্ছে...</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : filteredUsers.length === 0 ? (
+              <Card className="shadow-md">
+                <CardContent className="p-4 text-center text-sm text-gray-500">
+                  {searchTerm ? `"${searchTerm}" খুঁজে পাওয়া যায়নি` : 'কোন ব্যবহারকারী পাওয়া যায়নি'}
+                </CardContent>
+              </Card>
+            ) : (
+              filteredUsers.map((user) => (
+                <Card key={user.uid} className="shadow-md hover:shadow-lg transition-shadow">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="space-y-3">
+                      {/* User Info */}
+                      <div className="flex items-start justify-between">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate">
+                            {user.displayName || 'নাম নেই'}
+                          </h3>
+                          <p className="text-xs sm:text-sm text-gray-600 truncate">{user.email}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            যোগদান: {new Date(user.createdAt).toLocaleDateString('bn-BD')}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <User className="w-4 h-4 text-gray-400" />
+                        </div>
+                      </div>
+
+                      {/* Status and Role */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge className={getApprovalBadgeColor(user.approved)}>
+                          {user.approved ? 'অনুমোদিত' : 'অপেক্ষমাণ'}
+                        </Badge>
+                        <Badge className={getRoleBadgeColor(user.role)}>
+                          {user.role === 'admin' ? 'অ্যাডমিন' : 
+                           user.role === 'moderator' ? 'মডারেটর' : 'ব্যবহারকারী'}
+                        </Badge>
+                      </div>
+
+                      {/* Role Selection */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">ভূমিকা পরিবর্তন:</label>
+                        <Select 
+                          value={user.role} 
+                          onValueChange={(value: 'admin' | 'moderator' | 'user') => 
+                            handleRoleChange(user.uid, value)
+                          }
+                        >
+                          <SelectTrigger className="w-full h-8 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user">ব্যবহারকারী</SelectItem>
+                            <SelectItem value="moderator">মডারেটর</SelectItem>
+                            <SelectItem value="admin">অ্যাডমিন</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2 pt-2">
+                        {!user.approved ? (
+                          <Button
+                            size="sm"
+                            onClick={() => handleApproveUser(user.uid)}
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white h-8 text-xs"
+                          >
+                            <UserCheck className="w-3 h-3 mr-1" />
+                            অনুমোদন করুন
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRejectUser(user.uid)}
+                            className="flex-1 text-red-600 hover:bg-red-50 hover:text-red-700 border-red-300 h-8 text-xs"
+                          >
+                            <UserX className="w-3 h-3 mr-1" />
+                            অনুমোদন বাতিল
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </div>
       </div>
     </AdminLayout>
   );
