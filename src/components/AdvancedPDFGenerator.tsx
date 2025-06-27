@@ -110,6 +110,11 @@ const AdvancedPDFGenerator: React.FC<PDFGeneratorProps> = ({ voters, title = '�
                 <p style="margin: 2px 0 0 0;">পৃষ্ঠা: <span class="pageNumber"></span></p>
               </div>
             </div>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb; text-align: center;">
+              <p style="margin: 0; font-size: 10px; color: #9ca3af;">
+                Powered by <strong>Jakir Hossen</strong> | Contact: 01647470849
+              </p>
+            </div>
           </footer>
         ` : ''}
       </div>
