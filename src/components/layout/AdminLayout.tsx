@@ -35,6 +35,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { icon: Home, label: 'ড্যাশবোর্ড', path: '/admin/dashboard' },
     { icon: Users, label: 'সকল ভোটার', path: '/admin/voters' },
     { icon: Plus, label: 'ভোটার যোগ করুন', path: '/admin/add-voters' },
+    { icon: Form, label: 'গুগল ফর্ম', path: '/admin/google-form' },
     { icon: BarChart3, label: 'বিশ্লেষণ', path: '/admin/analytics' },
     { icon: MessageSquare, label: 'SMS ক্যাম্পেইন', path: '/admin/sms' },
     { icon: Database, label: 'ডেটা হাব', path: '/admin/data-hub' },
