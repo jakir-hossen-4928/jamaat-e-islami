@@ -21,7 +21,7 @@ const SuperAdminDashboard = () => {
       ]);
       
       const voters = votersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoterData));
-      const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+      const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as User));
       
       return {
         totalVoters: voters.length,
