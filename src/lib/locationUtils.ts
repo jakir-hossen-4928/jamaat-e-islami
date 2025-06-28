@@ -1,4 +1,3 @@
-
 import { Division, District, Upazila, Union } from './types';
 
 // Cache for loaded data
@@ -73,6 +72,13 @@ export const getUnionsByUpazila = async (upazilaId: string): Promise<Union[]> =>
   return data.unions.filter(union => union.upazilla_id === upazilaId);
 };
 
+// Add missing export for villages (placeholder implementation)
+export const getVillagesByUnion = async (unionId: string): Promise<any[]> => {
+  // Placeholder implementation - return empty array for now
+  // This can be expanded when village data is available
+  return [];
+};
+
 // Get name by ID for any location type
 export const getLocationNameById = async (type: 'division' | 'district' | 'upazila' | 'union', id: string): Promise<string> => {
   const data = await loadLocationData();
@@ -123,7 +129,7 @@ export const getFullLocationHierarchy = async (locationIds: {
     union: '',
     division_en: '',
     district_en: '',
-    upazila_en: '',
+    upazila_en: '' ,
     union_en: ''
   };
 

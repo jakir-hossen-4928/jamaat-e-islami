@@ -1,4 +1,3 @@
-
 export interface VoterData {
   id?: string; // Firestore Document ID
   ID: string;
@@ -17,11 +16,13 @@ export interface VoterData {
   // Contact Info
   Phone?: string;
   NID?: string;
+  WhatsApp?: 'Yes' | 'No';
 
   // Voting Info
   'Will Vote'?: 'Yes' | 'No';
   'Voted Before'?: 'Yes' | 'No';
   'Vote Probability (%)'?: number; // Should be a number between 10 and 100
+  'Priority Level'?: 'High' | 'Medium' | 'Low';
 
   'Political Support'?: string;
 

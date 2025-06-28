@@ -43,7 +43,14 @@ const LocationDemo = () => {
     
     // Get full hierarchy for display
     const hierarchy = await getFullLocationHierarchy(locationIds);
-    setLocationHierarchy(hierarchy);
+    setLocationHierarchy({
+      division: hierarchy.division,
+      district: hierarchy.district,
+      upazila: hierarchy.upazila,
+      union: hierarchy.union,
+      ward: '', // Placeholder for ward
+      village: '' // Placeholder for village
+    });
   };
 
   return (
