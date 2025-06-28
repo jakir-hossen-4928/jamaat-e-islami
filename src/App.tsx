@@ -27,6 +27,8 @@ import UserVerify from "./adminDashboard/usersverify/UserVerify";
 import PDFPreview from "./adminDashboard/PDFPreview";
 import LocationDemo from "./pages/LocationDemo";
 import DashboardRouter from "./components/DashboardRouter";
+import LocationManagement from "./adminDashboard/LocationManagement";
+import SystemSettings from "./adminDashboard/SystemSettings";
 
 const queryClient = new QueryClient();
 
@@ -119,6 +121,18 @@ const App = () => (
               <Route path="/admin/verify-users" element={
                 <ProtectedRoute requiredRole="super_admin">
                   <UserVerify />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/admin/location-management" element={
+                <ProtectedRoute requiredRole="super_admin">
+                  <LocationManagement />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/admin/system-settings" element={
+                <ProtectedRoute requiredRole="super_admin">
+                  <SystemSettings />
                 </ProtectedRoute>
               } />
 

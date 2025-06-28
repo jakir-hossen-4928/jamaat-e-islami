@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, getDocs, doc, updateDoc, query, orderBy } from 'firebase/firestore';
@@ -148,7 +149,7 @@ const UserAssignmentDialog = ({
 
     const updates: Partial<User> = {
       role: selectedRole,
-      approved: true, // Approve user when assigning role
+      approved: true, // Auto-approve when super_admin assigns role
       accessScope: {
         division_id: selectedLocation.division_id || undefined,
         district_id: selectedLocation.district_id || undefined,
@@ -362,6 +363,8 @@ const UserManagement = () => {
 
     // Other admins see users in their scope
     return allUsers.filter(user => {
+      if (!user.accessScope || !userProfile.accessScope) return false;
+      
       const userScope = userProfile.accessScope;
       const targetScope = user.accessScope;
 
@@ -382,7 +385,41 @@ const UserManagement = () => {
 
   const permissions = userProfile ? getRolePermissions(userProfile.role) : null;
 
-  // Verify user mutation
+  // Update user mutation - Fixed for super_admin workflow
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ userId, updates }: { userId: string; updates: Partial<User> }) => {
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        ...updates,
+        lastUpdated: new Date().toISOString()
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      
+      // Show appropriate success message based on what was updated
+      if (variables.updates.role) {
+        toast({
+          title: 'সফল',
+          description: 'ব্যবহারকারীর ভূমিকা বরাদ্দ হয়েছে এবং অনুমোদিত হয়েছে',
+        });
+      } else {
+        toast({
+          title: 'সফল',
+          description: 'ব্যবহারকারী আপডেট হয়েছে',
+        });
+      }
+    },
+    onError: () => {
+      toast({
+        title: 'ত্রুটি',
+        description: 'আপডেট করতে সমস্যা হয়েছে',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Simple verify user mutation for basic approval
   const verifyUserMutation = useMutation({
     mutationFn: async ({ userId, approved }: { userId: string; approved: boolean }) => {
       const userRef = doc(db, 'users', userId);
@@ -403,31 +440,6 @@ const UserManagement = () => {
       toast({
         title: 'ত্রুটি',
         description: 'যাচাই করতে সমস্যা হয়েছে',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // Update user mutation
-  const updateUserMutation = useMutation({
-    mutationFn: async ({ userId, updates }: { userId: string; updates: Partial<User> }) => {
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
-        ...updates,
-        lastUpdated: new Date().toISOString()
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast({
-        title: 'সফল',
-        description: 'ব্যবহারকারী আপডেট হয়েছে',
-      });
-    },
-    onError: () => {
-      toast({
-        title: 'ত্রুটি',
-        description: 'আপডেট করতে সমস্যা হয়েছে',
         variant: 'destructive',
       });
     },
@@ -515,7 +527,7 @@ const UserManagement = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {/* Show role assignment dialog for all users if current user can assign roles */}
+                      {/* Role assignment for super_admin or users without roles */}
                       {permissions.canAssignRoles.length > 0 && (
                         <UserAssignmentDialog
                           user={user}
@@ -524,8 +536,8 @@ const UserManagement = () => {
                         />
                       )}
 
-                      {/* Show verify/unverify buttons only if user doesn't have an assigned role yet */}
-                      {!user.role && canVerifyRole(userProfile.role, 'village_admin') && (
+                      {/* Basic approval buttons for users without assigned roles */}
+                      {!user.role && userProfile.role === 'super_admin' && (
                         <>
                           {!user.approved && (
                             <Button
