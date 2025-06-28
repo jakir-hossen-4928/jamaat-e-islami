@@ -1,0 +1,18 @@
+
+[
+  { "id": "1", "division_id": "1", "name": "Comilla", "bn_name": "কুমিল্লা", "lat": "23.4682747", "lon": "91.1788135", "url": "www.comilla.gov.bd" },
+  { "id": "2", "division_id": "1", "name": "Feni", "bn_name": "ফেনী", "lat": "23.023231", "lon": "91.3840844", "url": "www.feni.gov.bd" },
+  { "id": "3", "division_id": "1", "name": "Brahmanbaria", "bn_name": "ব্রাহ্মণবাড়িয়া", "lat": "23.9570904", "lon": "91.1119286", "url": "www.brahmanbaria.gov.bd" },
+  { "id": "4", "division_id": "1", "name": "Rangamati", "bn_name": "রাঙ্গামাটি", "lat": "22.7324", "lon": "92.2985", "url": "www.rangamati.gov.bd" },
+  { "id": "5", "division_id": "1", "name": "Noakhali", "bn_name": "নোয়াখালী", "lat": "22.8696", "lon": "91.0973", "url": "www.noakhali.gov.bd" },
+  { "id": "6", "division_id": "1", "name": "Chandpur", "bn_name": "চাঁদপুর", "lat": "23.2513", "lon": "90.6700", "url": "www.chandpur.gov.bd" },
+  { "id": "7", "division_id": "1", "name": "Lakshmipur", "bn_name": "লক্ষ্মীপুর", "lat": "22.9447", "lon": "90.8282", "url": "www.lakshmipur.gov.bd" },
+  { "id": "8", "division_id": "1", "name": "Chittagong", "bn_name": "চট্টগ্রাম", "lat": "22.3569", "lon": "91.7832", "url": "www.chittagong.gov.bd" },
+  { "id": "9", "division_id": "1", "name": "Coxsbazar", "bn_name": "কক্সবাজার", "lat": "21.4272", "lon": "92.0058", "url": "www.coxsbazar.gov.bd" },
+  { "id": "10", "division_id": "1", "name": "Khagrachhari", "bn_name": "খাগড়াছড়ি", "lat": "23.1322", "lon": "91.9490", "url": "www.khagrachhari.gov.bd" },
+  { "id": "11", "division_id": "1", "name": "Bandarban", "bn_name": "বান্দরবান", "lat": "22.1953", "lon": "92.2183", "url": "www.bandarban.gov.bd" },
+  { "id": "12", "division_id": "6", "name": "Dhaka", "bn_name": "ঢাকা", "lat": "23.7616", "lon": "90.3492", "url": "www.dhaka.gov.bd" },
+  { "id": "13", "division_id": "6", "name": "Faridpur", "bn_name": "ফরিদপুর", "lat": "23.6070", "lon": "89.8429", "url": "www.faridpur.gov.bd" },
+  { "id": "14", "division_id": "6", "name": "Gazipur", "bn_name": "গাজীপুর", "lat": "23.9999", "lon": "90.4203", "url": "www.gazipur.gov.bd" },
+  { "id": "15", "division_id": "6", "name": "Gopalganj", "bn_name": "গোপালগঞ্জ", "lat": "23.0050", "lon": "89.8266", "url": "www.gopalganj.gov.bd" }
+]

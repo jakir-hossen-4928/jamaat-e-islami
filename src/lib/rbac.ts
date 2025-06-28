@@ -9,7 +9,7 @@ export const getRolePermissions = (role: User['role']): RolePermissions => {
         canRead: true,
         canUpdate: true,
         canDelete: true,
-        canAssignRoles: ['division_admin'],
+        canAssignRoles: ['division_admin', 'district_admin', 'upazila_admin', 'union_admin'],
         canVerifyUsers: true,
         canAccessDataHub: true,
         canAccessAllVoters: true,
@@ -21,7 +21,7 @@ export const getRolePermissions = (role: User['role']): RolePermissions => {
         canRead: true,
         canUpdate: true,
         canDelete: true,
-        canAssignRoles: ['district_admin'],
+        canAssignRoles: ['district_admin', 'upazila_admin', 'union_admin'],
         canVerifyUsers: true,
         canAccessDataHub: false,
         canAccessAllVoters: false,
@@ -33,7 +33,7 @@ export const getRolePermissions = (role: User['role']): RolePermissions => {
         canRead: true,
         canUpdate: true,
         canDelete: true,
-        canAssignRoles: ['upazila_admin'],
+        canAssignRoles: ['upazila_admin', 'union_admin'],
         canVerifyUsers: true,
         canAccessDataHub: false,
         canAccessAllVoters: false,
@@ -126,11 +126,48 @@ export const getRoleDisplayName = (role: string): string => {
 
 export const canVerifyRole = (verifierRole: string, roleToVerify: string): boolean => {
   const hierarchy = {
-    super_admin: ['division_admin'],
-    division_admin: ['district_admin'],
-    district_admin: ['upazila_admin'],
+    super_admin: ['division_admin', 'district_admin', 'upazila_admin', 'union_admin'],
+    division_admin: ['district_admin', 'upazila_admin', 'union_admin'],
+    district_admin: ['upazila_admin', 'union_admin'],
     upazila_admin: ['union_admin']
   };
   
   return hierarchy[verifierRole as keyof typeof hierarchy]?.includes(roleToVerify) || false;
+};
+
+export const getLocationBasedUsers = (currentUser: User, allUsers: User[]): User[] => {
+  if (currentUser.role === 'super_admin') {
+    return allUsers;
+  }
+
+  return allUsers.filter(user => {
+    // Users can manage users in their location scope
+    const userScope = currentUser.accessScope;
+    const targetScope = user.accessScope;
+
+    switch (currentUser.role) {
+      case 'division_admin':
+        return targetScope.division_id === userScope.division_id;
+      case 'district_admin':
+        return targetScope.district_id === userScope.district_id;
+      case 'upazila_admin':
+        return targetScope.upazila_id === userScope.upazila_id;
+      case 'union_admin':
+        return targetScope.union_id === userScope.union_id;
+      default:
+        return false;
+    }
+  });
+};
+
+export const canManageUser = (managerUser: User, targetUser: User): boolean => {
+  // Super admin can manage all users
+  if (managerUser.role === 'super_admin') return true;
+
+  // Check if manager can assign the target user's role
+  const permissions = getRolePermissions(managerUser.role);
+  if (!permissions.canAssignRoles.includes(targetUser.role)) return false;
+
+  // Check location scope
+  return canAccessLocation(managerUser, targetUser.accessScope);
 };

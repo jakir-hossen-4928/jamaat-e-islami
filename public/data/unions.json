@@ -1,0 +1,13 @@
+
+[
+  { "id": "1", "upazilla_id": "1", "name": "Subil", "bn_name": "সুবিল", "url": "subilup.comilla.gov.bd" },
+  { "id": "2", "upazilla_id": "1", "name": "North Gunaighor", "bn_name": "উত্তর গুনাইঘর", "url": "gunaighornorthup.comilla.gov.bd" },
+  { "id": "3", "upazilla_id": "1", "name": "South Gunaighor", "bn_name": "দক্ষিণ গুনাইঘর", "url": "gunaighorsouth.comilla.gov.bd" },
+  { "id": "4", "upazilla_id": "1", "name": "Jalalabad", "bn_name": "জালালাবাদ", "url": "jalalabad.comilla.gov.bd" },
+  { "id": "5", "upazilla_id": "1", "name": "Farhadabad", "bn_name": "ফরহাদাবাদ", "url": "farhadabad.comilla.gov.bd" },
+  { "id": "6", "upazilla_id": "1", "name": "Dargah Mahalla", "bn_name": "দরগাহ মহল্লা", "url": "dargahmahalla.comilla.gov.bd" },
+  { "id": "7", "upazilla_id": "2", "name": "Barura", "bn_name": "বরুড়া", "url": "barura.comilla.gov.bd" },
+  { "id": "8", "upazilla_id": "2", "name": "Galimpur", "bn_name": "গালিমপুর", "url": "galimpur.comilla.gov.bd" },
+  { "id": "9", "upazilla_id": "2", "name": "Adra", "bn_name": "আদ্রা", "url": "adra.comilla.gov.bd" },
+  { "id": "10", "upazilla_id": "2", "name": "Shilmuri", "bn_name": "শিলমুড়ি", "url": "shilmuri.comilla.gov.bd" }
+]

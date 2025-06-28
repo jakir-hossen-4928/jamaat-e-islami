@@ -2,16 +2,29 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Plus, FileText, BarChart3 } from 'lucide-react';
+import { Users, Plus, FileText, BarChart3, MapPin } from 'lucide-react';
 import RoleBasedSidebar from '@/components/layout/RoleBasedSidebar';
+import { useAuth } from '@/hooks/useAuth';
 
 const UnionAdminDashboard = () => {
+  const { userProfile } = useAuth();
+
   return (
     <RoleBasedSidebar>
       <div className="space-y-6">
         <div className="bg-gradient-to-r from-orange-600 to-orange-800 rounded-lg p-6 text-white">
           <h1 className="text-2xl lg:text-3xl font-bold">ইউনিয়ন অ্যাডমিন ড্যাশবোর্ড</h1>
           <p className="mt-2 text-orange-100">ইউনিয়ন পর্যায়ে ভোটার ব্যবস্থাপনা</p>
+          {userProfile?.accessScope?.union_name && (
+            <div className="mt-3 flex items-center space-x-2">
+              <MapPin className="w-4 h-4" />
+              <span className="font-medium">
+                এলাকা: {userProfile.accessScope.union_name}
+                {userProfile.accessScope.upazila_name && `, ${userProfile.accessScope.upazila_name}`}
+                {userProfile.accessScope.district_name && `, ${userProfile.accessScope.district_name}`}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

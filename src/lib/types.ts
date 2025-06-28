@@ -1,10 +1,11 @@
 
 export interface VoterData {
-  id?: string; // Add id property for Firestore document ID
+  id?: string; // Firestore Document ID
   ID: string;
-  'House Name'?: string;
+
+  // Personal Info
   'Voter Name': string;
-  FatherOrHusband?: string; 
+  FatherOrHusband?: string;
   Age?: number;
   Gender?: 'Male' | 'Female' | 'Other';
   'Marital Status'?: 'Married' | 'Unmarried' | 'Widowed' | 'Divorced';
@@ -12,33 +13,35 @@ export interface VoterData {
   Occupation?: string;
   Education?: string;
   Religion?: string;
+
+  // Contact Info
   Phone?: string;
-  WhatsApp?: 'Yes' | 'No';
   NID?: string;
-  'Is Voter'?: 'Yes' | 'No';
+
+  // Voting Info
   'Will Vote'?: 'Yes' | 'No';
   'Voted Before'?: 'Yes' | 'No';
-  'Vote Probability (%)'?: number;
+  'Vote Probability (%)'?: number; // Should be a number between 10 and 100
+
   'Political Support'?: string;
-  'Priority Level'?: 'Low' | 'Medium' | 'High';
+
+  // Special Conditions
   'Has Disability'?: 'Yes' | 'No';
   'Is Migrated'?: 'Yes' | 'No';
+
+  // Location (normalized IDs)
+  division_id?: string;
+  district_id?: string;
+  upazila_id?: string;
+  union_id?: string;
+  village?: string; // free text
+
+  // Metadata
+  'House Name'?: string;
   Remarks?: string;
   Collector?: string;
   'Collection Date'?: string;
   'Last Updated'?: string;
-  // Location hierarchy IDs - REQUIRED for location-based filtering
-  division_id: string;
-  district_id: string;
-  upazila_id: string;
-  union_id: string;
-  village_id?: string;
-  // Location names for display
-  division_name?: string;
-  district_name?: string;
-  upazila_name?: string;
-  union_name?: string;
-  village_name?: string;
 }
 
 export interface User {

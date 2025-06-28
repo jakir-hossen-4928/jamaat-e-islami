@@ -1,0 +1,20 @@
+
+[
+  { "id": "1", "district_id": "1", "name": "Debidwar", "bn_name": "দেবিদ্বার", "url": "debidwar.comilla.gov.bd" },
+  { "id": "2", "district_id": "1", "name": "Barura", "bn_name": "বরুড়া", "url": "barura.comilla.gov.bd" },
+  { "id": "3", "district_id": "1", "name": "Brahmanpara", "bn_name": "ব্রাহ্মণপাড়া", "url": "brahmanpara.comilla.gov.bd" },
+  { "id": "4", "district_id": "1", "name": "Chandina", "bn_name": "চান্দিনা", "url": "chandina.comilla.gov.bd" },
+  { "id": "5", "district_id": "1", "name": "Chauddagram", "bn_name": "চৌদ্দগ্রাম", "url": "chauddagram.comilla.gov.bd" },
+  { "id": "6", "district_id": "1", "name": "Daudkandi", "bn_name": "দাউদকান্দি", "url": "daudkandi.comilla.gov.bd" },
+  { "id": "7", "district_id": "1", "name": "Homna", "bn_name": "হোমনা", "url": "homna.comilla.gov.bd" },
+  { "id": "8", "district_id": "1", "name": "Laksam", "bn_name": "লাকসাম", "url": "laksam.comilla.gov.bd" },
+  { "id": "9", "district_id": "1", "name": "Muradnagar", "bn_name": "মুরাদনগর", "url": "muradnagar.comilla.gov.bd" },
+  { "id": "10", "district_id": "1", "name": "Nangalkot", "bn_name": "নাঙ্গলকোট", "url": "nangalkot.comilla.gov.bd" },
+  { "id": "11", "district_id": "1", "name": "Comilla Sadar", "bn_name": "কুমিল্লা সদর", "url": "comillasadar.comilla.gov.bd" },
+  { "id": "12", "district_id": "1", "name": "Meghna", "bn_name": "মেঘনা", "url": "meghna.comilla.gov.bd" },
+  { "id": "13", "district_id": "1", "name": "Monohorgonj", "bn_name": "মনোহরগঞ্জ", "url": "monohorgonj.comilla.gov.bd" },
+  { "id": "14", "district_id": "1", "name": "Sadarsouth", "bn_name": "সদর দক্ষিণ", "url": "sadarsouth.comilla.gov.bd" },
+  { "id": "15", "district_id": "1", "name": "Titas", "bn_name": "তিতাস", "url": "titas.comilla.gov.bd" },
+  { "id": "16", "district_id": "1", "name": "Burichang", "bn_name": "বুড়িচং", "url": "burichang.comilla.gov.bd" },
+  { "id": "17", "district_id": "1", "name": "Lalmai", "bn_name": "লালমাই", "url": "lalmai.comilla.gov.bd" }
+]

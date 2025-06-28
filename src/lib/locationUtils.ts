@@ -1,65 +1,52 @@
-import { Division, District, Upazila, Union, Ward, Village } from './types';
 
-// Sample data structure - you can replace these with your actual JSON data
-const sampleDivisions: Division[] = [
-  { id: "1", name: "Chattagram", bn_name: "চট্টগ্রাম", url: "www.chittagongdiv.gov.bd" },
-  { id: "2", name: "Rajshahi", bn_name: "রাজশাহী", url: "www.rajshahidiv.gov.bd" },
-  { id: "3", name: "Khulna", bn_name: "খুলনা", url: "www.khulnadiv.gov.bd" },
-  { id: "4", name: "Barisal", bn_name: "বরিশাল", url: "www.barisaldiv.gov.bd" },
-  { id: "5", name: "Sylhet", bn_name: "সিলেট", url: "www.sylhetdiv.gov.bd" },
-  { id: "6", name: "Dhaka", bn_name: "ঢাকা", url: "www.dhakadiv.gov.bd" },
-  { id: "7", name: "Rangpur", bn_name: "রংপুর", url: "www.rangpurdiv.gov.bd" },
-  { id: "8", name: "Mymensingh", bn_name: "ময়মনসিংহ", url: "www.mymensinghdiv.gov.bd" }
-];
+import { Division, District, Upazila, Union } from './types';
 
-const sampleDistricts: District[] = [
-  { id: "1", division_id: "1", name: "Comilla", bn_name: "কুমিল্লা", lat: "23.4682747", lon: "91.1788135", url: "www.comilla.gov.bd" },
-  { id: "2", division_id: "1", name: "Feni", bn_name: "ফেনী", lat: "23.023231", lon: "91.3840844", url: "www.feni.gov.bd" },
-  { id: "3", division_id: "1", name: "Brahmanbaria", bn_name: "ব্রাহ্মণবাড়িয়া", lat: "23.9570904", lon: "91.1119286", url: "www.brahmanbaria.gov.bd" }
-];
-
-const sampleUpazilas: Upazila[] = [
-  { id: "1", district_id: "1", name: "Debidwar", bn_name: "দেবিদ্বার", url: "debidwar.comilla.gov.bd" },
-  { id: "2", district_id: "1", name: "Barura", bn_name: "বরুড়া", url: "barura.comilla.gov.bd" },
-  { id: "3", district_id: "1", name: "Brahmanpara", bn_name: "ব্রাহ্মণপাড়া", url: "brahmanpara.comilla.gov.bd" }
-];
-
-const sampleUnions: Union[] = [
-  { id: "1", upazilla_id: "1", name: "Subil", bn_name: "সুবিল", url: "subilup.comilla.gov.bd" },
-  { id: "2", upazilla_id: "1", name: "North Gunaighor", bn_name: "উত্তর গুনাইঘর", url: "gunaighornorthup.comilla.gov.bd" },
-  { id: "3", upazilla_id: "1", name: "South Gunaighor", bn_name: "দক্ষিণ গুনাইঘর", url: "gunaighorsouth.comilla.gov.bd" }
-];
-
-// Cached data to avoid re-reading
+// Cache for loaded data
 let cachedLocationData: {
   divisions: Division[];
   districts: District[];
   upazilas: Upazila[];
   unions: Union[];
-  wards: Ward[];
-  villages: Village[];
 } | null = null;
 
-// Load location data (in production, this would load from JSON files)
+// Load location data from static JSON files
 export const loadLocationData = async () => {
   if (cachedLocationData) {
     return cachedLocationData;
   }
 
-  // In production, you would load from JSON files like:
-  // const divisionsResponse = await fetch('/data/divisions.json');
-  // const divisions = await divisionsResponse.json();
-  
-  cachedLocationData = {
-    divisions: sampleDivisions,
-    districts: sampleDistricts,
-    upazilas: sampleUpazilas,
-    unions: sampleUnions,
-    wards: [], // Add your ward data here
-    villages: [] // Add your village data here
-  };
+  try {
+    const [divisionsResponse, districtsResponse, upazilasResponse, unionsResponse] = await Promise.all([
+      fetch('/data/divisions.json'),
+      fetch('/data/districts.json'),
+      fetch('/data/upazilas.json'),
+      fetch('/data/unions.json')
+    ]);
 
-  return cachedLocationData;
+    const [divisions, districts, upazilas, unions] = await Promise.all([
+      divisionsResponse.json(),
+      districtsResponse.json(),
+      upazilasResponse.json(),
+      unionsResponse.json()
+    ]);
+
+    cachedLocationData = {
+      divisions,
+      districts,
+      upazilas,
+      unions
+    };
+
+    return cachedLocationData;
+  } catch (error) {
+    console.error('Error loading location data:', error);
+    return {
+      divisions: [],
+      districts: [],
+      upazilas: [],
+      unions: []
+    };
+  }
 };
 
 // Get all divisions
@@ -86,14 +73,26 @@ export const getUnionsByUpazila = async (upazilaId: string): Promise<Union[]> =>
   return data.unions.filter(union => union.upazilla_id === upazilaId);
 };
 
-// Get villages by union ID
-export const getVillagesByUnion = async (unionId: string): Promise<Village[]> => {
+// Get name by ID for any location type
+export const getLocationNameById = async (type: 'division' | 'district' | 'upazila' | 'union', id: string): Promise<string> => {
   const data = await loadLocationData();
-  return data.villages.filter(village => village.union_id === unionId);
+  
+  switch (type) {
+    case 'division':
+      return data.divisions.find(item => item.id === id)?.bn_name || '';
+    case 'district':
+      return data.districts.find(item => item.id === id)?.bn_name || '';
+    case 'upazila':
+      return data.upazilas.find(item => item.id === id)?.bn_name || '';
+    case 'union':
+      return data.unions.find(item => item.id === id)?.bn_name || '';
+    default:
+      return '';
+  }
 };
 
-// Get location name by ID
-export const getLocationName = async (type: 'division' | 'district' | 'upazila' | 'union' | 'ward' | 'village', id: string): Promise<string> => {
+// Get English name by ID
+export const getLocationNameByIdEn = async (type: 'division' | 'district' | 'upazila' | 'union', id: string): Promise<string> => {
   const data = await loadLocationData();
   
   switch (type) {
@@ -105,51 +104,58 @@ export const getLocationName = async (type: 'division' | 'district' | 'upazila' 
       return data.upazilas.find(item => item.id === id)?.name || '';
     case 'union':
       return data.unions.find(item => item.id === id)?.name || '';
-    case 'ward':
-      return data.wards.find(item => item.id === id)?.name || '';
-    case 'village':
-      return data.villages.find(item => item.id === id)?.name || '';
     default:
       return '';
   }
 };
 
-// Get full location hierarchy for a given location
+// Get full location hierarchy for display
 export const getFullLocationHierarchy = async (locationIds: {
   division_id?: string;
   district_id?: string;
   upazila_id?: string;
   union_id?: string;
-  ward_id?: string;
-  village_id?: string;
 }) => {
   const hierarchy = {
     division: '',
     district: '',
     upazila: '',
     union: '',
-    ward: '',
-    village: ''
+    division_en: '',
+    district_en: '',
+    upazila_en: '',
+    union_en: ''
   };
 
   if (locationIds.division_id) {
-    hierarchy.division = await getLocationName('division', locationIds.division_id);
+    hierarchy.division = await getLocationNameById('division', locationIds.division_id);
+    hierarchy.division_en = await getLocationNameByIdEn('division', locationIds.division_id);
   }
   if (locationIds.district_id) {
-    hierarchy.district = await getLocationName('district', locationIds.district_id);
+    hierarchy.district = await getLocationNameById('district', locationIds.district_id);
+    hierarchy.district_en = await getLocationNameByIdEn('district', locationIds.district_id);
   }
   if (locationIds.upazila_id) {
-    hierarchy.upazila = await getLocationName('upazila', locationIds.upazila_id);
+    hierarchy.upazila = await getLocationNameById('upazila', locationIds.upazila_id);
+    hierarchy.upazila_en = await getLocationNameByIdEn('upazila', locationIds.upazila_id);
   }
   if (locationIds.union_id) {
-    hierarchy.union = await getLocationName('union', locationIds.union_id);
-  }
-  if (locationIds.ward_id) {
-    hierarchy.ward = await getLocationName('ward', locationIds.ward_id);
-  }
-  if (locationIds.village_id) {
-    hierarchy.village = await getLocationName('village', locationIds.village_id);
+    hierarchy.union = await getLocationNameById('union', locationIds.union_id);
+    hierarchy.union_en = await getLocationNameByIdEn('union', locationIds.union_id);
   }
 
   return hierarchy;
+};
+
+// Filtering utility functions
+export const filterDistrictsByDivision = (districts: District[], divisionId: string): District[] => {
+  return districts.filter(district => district.division_id === divisionId);
+};
+
+export const filterUpazilasByDistrict = (upazilas: Upazila[], districtId: string): Upazila[] => {
+  return upazilas.filter(upazila => upazila.district_id === districtId);
+};
+
+export const filterUnionsByUpazila = (unions: Union[], upazilaId: string): Union[] => {
+  return unions.filter(union => union.upazilla_id === upazilaId);
 };
