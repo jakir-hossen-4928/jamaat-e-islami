@@ -1,4 +1,3 @@
-
 import { User } from './types';
 
 export const ROLE_HIERARCHY = {
@@ -84,9 +83,14 @@ export const ROLE_PERMISSIONS = {
   }
 };
 
-export const hasPermission = (user: User, permission: keyof typeof ROLE_PERMISSIONS.super_admin): boolean => {
+type PermissionKey = 'canManageUsers' | 'canManageRoles' | 'canAccessAllData' | 'canDeleteData' | 'canEditData' | 'canViewReports' | 'canManageCampaigns';
+
+export const hasPermission = (user: User, permission: PermissionKey): boolean => {
   const rolePermissions = ROLE_PERMISSIONS[user.role];
-  return rolePermissions ? rolePermissions[permission] : false;
+  if (!rolePermissions) return false;
+  
+  const permissionValue = rolePermissions[permission];
+  return typeof permissionValue === 'boolean' ? permissionValue : false;
 };
 
 export const canAccessLocation = (user: User, locationIds: {
