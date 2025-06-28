@@ -52,7 +52,7 @@ const UserAssignmentDialog = ({
   currentUserProfile: User;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState(user.role);
+  const [selectedRole, setSelectedRole] = useState<User['role']>(user.role);
   const [locationData, setLocationData] = useState({
     divisions: [] as any[],
     districts: [] as any[],
@@ -127,6 +127,10 @@ const UserAssignmentDialog = ({
     setSelectedLocation(newLocation);
   };
 
+  const handleRoleChange = (value: string) => {
+    setSelectedRole(value as User['role']);
+  };
+
   const handleSubmit = () => {
     const division = locationData.divisions.find(d => d.id === selectedLocation.division_id);
     const district = locationData.districts.find(d => d.id === selectedLocation.district_id);
@@ -135,7 +139,7 @@ const UserAssignmentDialog = ({
     const village = locationData.villages.find(v => v.id === selectedLocation.village_id);
 
     const updates: Partial<User> = {
-      role: selectedRole as User['role'],
+      role: selectedRole,
       accessScope: {
         division_id: selectedLocation.division_id || undefined,
         district_id: selectedLocation.district_id || undefined,
@@ -187,7 +191,7 @@ const UserAssignmentDialog = ({
         <div className="space-y-4">
           <div>
             <Label>ভূমিকা নির্বাচন করুন</Label>
-            <Select value={selectedRole} onValueChange={setSelectedRole}>
+            <Select value={selectedRole} onValueChange={handleRoleChange}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -554,7 +558,7 @@ const UserManagement = () => {
                                 className="h-7 px-2 text-xs"
                               >
                                 <Trash2 className="w-3 h-3 mr-1" />
-                                মুছুন
+                                মুছে ফেলুন
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
