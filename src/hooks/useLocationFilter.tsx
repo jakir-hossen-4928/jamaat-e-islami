@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { VoterData } from '@/lib/types';
 import { canAccessLocation } from '@/lib/rbac';
+import { loadLocationData } from '@/lib/locationUtils';
 
 interface LocationFilter {
   division_id?: string;
@@ -12,15 +13,51 @@ interface LocationFilter {
   village_id?: string;
 }
 
+interface LocationData {
+  divisions: any[];
+  districts: any[];
+  upazilas: any[];
+  unions: any[];
+  villages: any[];
+}
+
 export const useLocationFilter = () => {
   const { userProfile } = useAuth();
-  const [locationFilter, setLocationFilter] = useState<LocationFilter>({});
+  const [selectedLocation, setSelectedLocation] = useState<LocationFilter>({});
+  const [locationData, setLocationData] = useState<LocationData>({
+    divisions: [],
+    districts: [],
+    upazilas: [],
+    unions: [],
+    villages: []
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load location data on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await loadLocationData();
+        setLocationData({
+          ...data,
+          villages: [] // Empty for now, will be populated from villages.json when available
+        });
+      } catch (error) {
+        console.error('Error loading location data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   // Set default filter based on user's access scope
   useEffect(() => {
     if (userProfile && userProfile.role !== 'super_admin') {
       const scope = userProfile.accessScope;
-      setLocationFilter({
+      setSelectedLocation({
         division_id: scope.division_id,
         district_id: scope.district_id,
         upazila_id: scope.upazila_id,
@@ -34,14 +71,14 @@ export const useLocationFilter = () => {
     if (!userProfile) return [];
 
     // Super admin sees all voters if no filter is applied
-    if (userProfile.role === 'super_admin' && Object.keys(locationFilter).length === 0) {
+    if (userProfile.role === 'super_admin' && Object.keys(selectedLocation).length === 0) {
       return voters;
     }
 
     return voters.filter(voter => {
       // For super admin with applied filters
       if (userProfile.role === 'super_admin') {
-        return Object.entries(locationFilter).every(([key, value]) => {
+        return Object.entries(selectedLocation).every(([key, value]) => {
           if (!value) return true;
           return voter[key as keyof VoterData] === value;
         });
@@ -66,8 +103,10 @@ export const useLocationFilter = () => {
   };
 
   return {
-    locationFilter,
-    setLocationFilter,
+    locationData,
+    selectedLocation,
+    setSelectedLocation,
+    isLoading,
     filterVoters,
     canAccessData,
     userProfile

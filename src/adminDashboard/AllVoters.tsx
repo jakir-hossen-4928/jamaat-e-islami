@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
@@ -23,7 +22,6 @@ import AdminLayout from '@/components/layout/AdminLayout';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { VoterData } from '@/lib/types';
 import { useAuth } from '@/hooks/useAuth';
-import { getAccessibleVoters } from '@/lib/rbac';
 import VoterLocationFilter from '@/components/admin/VoterLocationFilter';
 import { useLocationFilter } from '@/hooks/useLocationFilter';
 
@@ -47,40 +45,48 @@ const AllVoters = () => {
     queryFn: async () => {
       if (!userProfile) return [];
       
-      let votersQuery = collection(db, 'voters');
+      let votersQuery;
+      const votersCollection = collection(db, 'voters');
       
       // Apply location-based filtering based on user role and selected location
       if (userProfile.role !== 'super_admin') {
         const userScope = userProfile.accessScope;
         if (userScope.village_id) {
-          votersQuery = query(votersQuery, where('village_id', '==', userScope.village_id));
+          votersQuery = query(votersCollection, where('village_id', '==', userScope.village_id));
         } else if (userScope.union_id) {
-          votersQuery = query(votersQuery, where('union_id', '==', userScope.union_id));
+          votersQuery = query(votersCollection, where('union_id', '==', userScope.union_id));
         } else if (userScope.upazila_id) {
-          votersQuery = query(votersQuery, where('upazila_id', '==', userScope.upazila_id));
+          votersQuery = query(votersCollection, where('upazila_id', '==', userScope.upazila_id));
         } else if (userScope.district_id) {
-          votersQuery = query(votersQuery, where('district_id', '==', userScope.district_id));
+          votersQuery = query(votersCollection, where('district_id', '==', userScope.district_id));
         } else if (userScope.division_id) {
-          votersQuery = query(votersQuery, where('division_id', '==', userScope.division_id));
+          votersQuery = query(votersCollection, where('division_id', '==', userScope.division_id));
+        } else {
+          votersQuery = votersCollection;
         }
       } else {
         // For super admin, apply selected location filters
         if (selectedLocation.village_id) {
-          votersQuery = query(votersQuery, where('village_id', '==', selectedLocation.village_id));
+          votersQuery = query(votersCollection, where('village_id', '==', selectedLocation.village_id));
         } else if (selectedLocation.union_id) {
-          votersQuery = query(votersQuery, where('union_id', '==', selectedLocation.union_id));
+          votersQuery = query(votersCollection, where('union_id', '==', selectedLocation.union_id));
         } else if (selectedLocation.upazila_id) {
-          votersQuery = query(votersQuery, where('upazila_id', '==', selectedLocation.upazila_id));
+          votersQuery = query(votersCollection, where('upazila_id', '==', selectedLocation.upazila_id));
         } else if (selectedLocation.district_id) {
-          votersQuery = query(votersQuery, where('district_id', '==', selectedLocation.district_id));
+          votersQuery = query(votersCollection, where('district_id', '==', selectedLocation.district_id));
         } else if (selectedLocation.division_id) {
-          votersQuery = query(votersQuery, where('division_id', '==', selectedLocation.division_id));
+          votersQuery = query(votersCollection, where('division_id', '==', selectedLocation.division_id));
+        } else {
+          votersQuery = votersCollection;
         }
       }
       
-      votersQuery = query(votersQuery, orderBy('Last Updated', 'desc'));
+      // Add ordering
+      const finalQuery = votersQuery === votersCollection 
+        ? query(votersCollection, orderBy('Last Updated', 'desc'))
+        : query(votersQuery, orderBy('Last Updated', 'desc'));
       
-      const snapshot = await getDocs(votersQuery);
+      const snapshot = await getDocs(finalQuery);
       return snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()

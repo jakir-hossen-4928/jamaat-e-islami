@@ -44,22 +44,28 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
     
     // Clear dependent filters when parent changes
     if (level === 'division_id') {
-      updated.district_id = '';
-      updated.upazila_id = '';
-      updated.union_id = '';
-      updated.village_id = '';
+      updated.district_id = undefined;
+      updated.upazila_id = undefined;
+      updated.union_id = undefined;
+      updated.village_id = undefined;
     } else if (level === 'district_id') {
-      updated.upazila_id = '';
-      updated.union_id = '';
-      updated.village_id = '';
+      updated.upazila_id = undefined;
+      updated.union_id = undefined;
+      updated.village_id = undefined;
     } else if (level === 'upazila_id') {
-      updated.union_id = '';
-      updated.village_id = '';
+      updated.union_id = undefined;
+      updated.village_id = undefined;
     } else if (level === 'union_id') {
-      updated.village_id = '';
+      updated.village_id = undefined;
     }
     
-    updated[level as keyof typeof updated] = value || undefined;
+    // Set the new value, or remove it if it's "all"
+    if (value === 'all') {
+      updated[level as keyof typeof updated] = undefined;
+    } else {
+      updated[level as keyof typeof updated] = value;
+    }
+    
     onLocationChange(updated);
   };
 
@@ -102,7 +108,7 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
           <div>
             <Label>বিভাগ</Label>
             <Select 
-              value={selectedLocation.division_id || ''} 
+              value={selectedLocation.division_id || 'all'} 
               onValueChange={(value) => handleLocationChange('division_id', value)}
               disabled={disabled}
             >
@@ -110,7 +116,7 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
                 <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">সব বিভাগ</SelectItem>
+                <SelectItem value="all">সব বিভাগ</SelectItem>
                 {locationData.divisions.map(division => (
                   <SelectItem key={division.id} value={division.id}>
                     {division.name} ({division.bn_name})
@@ -123,7 +129,7 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
           <div>
             <Label>জেলা</Label>
             <Select 
-              value={selectedLocation.district_id || ''} 
+              value={selectedLocation.district_id || 'all'} 
               onValueChange={(value) => handleLocationChange('district_id', value)}
               disabled={disabled || !selectedLocation.division_id}
             >
@@ -131,7 +137,7 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
                 <SelectValue placeholder="জেলা নির্বাচন করুন" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">সব জেলা</SelectItem>
+                <SelectItem value="all">সব জেলা</SelectItem>
                 {getFilteredDistricts().map(district => (
                   <SelectItem key={district.id} value={district.id}>
                     {district.name} ({district.bn_name})
@@ -144,7 +150,7 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
           <div>
             <Label>উপজেলা</Label>
             <Select 
-              value={selectedLocation.upazila_id || ''} 
+              value={selectedLocation.upazila_id || 'all'} 
               onValueChange={(value) => handleLocationChange('upazila_id', value)}
               disabled={disabled || !selectedLocation.district_id}
             >
@@ -152,7 +158,7 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
                 <SelectValue placeholder="উপজেলা নির্বাচন করুন" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">সব উপজেলা</SelectItem>
+                <SelectItem value="all">সব উপজেলা</SelectItem>
                 {getFilteredUpazilas().map(upazila => (
                   <SelectItem key={upazila.id} value={upazila.id}>
                     {upazila.name} ({upazila.bn_name})
@@ -165,7 +171,7 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
           <div>
             <Label>ইউনিয়ন</Label>
             <Select 
-              value={selectedLocation.union_id || ''} 
+              value={selectedLocation.union_id || 'all'} 
               onValueChange={(value) => handleLocationChange('union_id', value)}
               disabled={disabled || !selectedLocation.upazila_id}
             >
@@ -173,7 +179,7 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
                 <SelectValue placeholder="ইউনিয়ন নির্বাচন করুন" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">সব ইউনিয়ন</SelectItem>
+                <SelectItem value="all">সব ইউনিয়ন</SelectItem>
                 {getFilteredUnions().map(union => (
                   <SelectItem key={union.id} value={union.id}>
                     {union.name} ({union.bn_name})
@@ -186,7 +192,7 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
           <div>
             <Label>গ্রাম</Label>
             <Select 
-              value={selectedLocation.village_id || ''} 
+              value={selectedLocation.village_id || 'all'} 
               onValueChange={(value) => handleLocationChange('village_id', value)}
               disabled={disabled || !selectedLocation.union_id}
             >
@@ -194,7 +200,7 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
                 <SelectValue placeholder="গ্রাম নির্বাচন করুন" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">সব গ্রাম</SelectItem>
+                <SelectItem value="all">সব গ্রাম</SelectItem>
                 {getFilteredVillages().map(village => (
                   <SelectItem key={village.id} value={village.id}>
                     {village.name} ({village.bn_name})
