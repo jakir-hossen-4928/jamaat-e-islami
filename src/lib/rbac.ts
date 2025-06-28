@@ -9,7 +9,7 @@ export const getRolePermissions = (role: User['role']): RolePermissions => {
         canRead: true,
         canUpdate: true,
         canDelete: true,
-        canAssignRoles: ['division_admin', 'district_admin', 'upazila_admin', 'union_admin'],
+        canAssignRoles: ['division_admin', 'district_admin', 'upazila_admin', 'union_admin', 'village_admin'],
         canVerifyUsers: true,
         canAccessDataHub: true,
         canAccessAllVoters: true,
@@ -21,7 +21,7 @@ export const getRolePermissions = (role: User['role']): RolePermissions => {
         canRead: true,
         canUpdate: true,
         canDelete: true,
-        canAssignRoles: ['district_admin', 'upazila_admin', 'union_admin'],
+        canAssignRoles: ['district_admin', 'upazila_admin', 'union_admin', 'village_admin'],
         canVerifyUsers: true,
         canAccessDataHub: false,
         canAccessAllVoters: false,
@@ -33,7 +33,7 @@ export const getRolePermissions = (role: User['role']): RolePermissions => {
         canRead: true,
         canUpdate: true,
         canDelete: true,
-        canAssignRoles: ['upazila_admin', 'union_admin'],
+        canAssignRoles: ['upazila_admin', 'union_admin', 'village_admin'],
         canVerifyUsers: true,
         canAccessDataHub: false,
         canAccessAllVoters: false,
@@ -45,7 +45,7 @@ export const getRolePermissions = (role: User['role']): RolePermissions => {
         canRead: true,
         canUpdate: true,
         canDelete: false,
-        canAssignRoles: ['union_admin'],
+        canAssignRoles: ['union_admin', 'village_admin'],
         canVerifyUsers: true,
         canAccessDataHub: false,
         canAccessAllVoters: false,
@@ -57,11 +57,23 @@ export const getRolePermissions = (role: User['role']): RolePermissions => {
         canRead: true,
         canUpdate: false,
         canDelete: false,
+        canAssignRoles: ['village_admin'],
+        canVerifyUsers: true,
+        canAccessDataHub: false,
+        canAccessAllVoters: false,
+        locationScope: 'union'
+      };
+    case 'village_admin':
+      return {
+        canCreate: true,
+        canRead: true,
+        canUpdate: false,
+        canDelete: false,
         canAssignRoles: [],
         canVerifyUsers: false,
         canAccessDataHub: false,
         canAccessAllVoters: false,
-        locationScope: 'union'
+        locationScope: 'village'
       };
     default:
       return {
@@ -73,7 +85,7 @@ export const getRolePermissions = (role: User['role']): RolePermissions => {
         canVerifyUsers: false,
         canAccessDataHub: false,
         canAccessAllVoters: false,
-        locationScope: 'union'
+        locationScope: 'village'
       };
   }
 };
@@ -83,6 +95,7 @@ export const canAccessLocation = (user: User, targetLocation: {
   district_id?: string;
   upazila_id?: string;
   union_id?: string;
+  village_id?: string;
 }): boolean => {
   if (user.role === 'super_admin') return true;
 
@@ -97,6 +110,8 @@ export const canAccessLocation = (user: User, targetLocation: {
       return targetLocation.upazila_id === userScope.upazila_id;
     case 'union_admin':
       return targetLocation.union_id === userScope.union_id;
+    case 'village_admin':
+      return targetLocation.village_id === userScope.village_id;
     default:
       return false;
   }
@@ -109,7 +124,8 @@ export const getAccessibleVoters = async (user: User, allVoters: any[]) => {
     division_id: voter.division_id,
     district_id: voter.district_id,
     upazila_id: voter.upazila_id,
-    union_id: voter.union_id
+    union_id: voter.union_id,
+    village_id: voter.village_id
   }));
 };
 
@@ -119,17 +135,19 @@ export const getRoleDisplayName = (role: string): string => {
     division_admin: 'বিভাগীয় অ্যাডমিন',
     district_admin: 'জেলা অ্যাডমিন',
     upazila_admin: 'উপজেলা অ্যাডমিন',
-    union_admin: 'ইউনিয়ন অ্যাডমিন'
+    union_admin: 'ইউনিয়ন অ্যাডমিন',
+    village_admin: 'গ্রাম অ্যাডমিন'
   };
   return roleNames[role as keyof typeof roleNames] || 'অজানা';
 };
 
 export const canVerifyRole = (verifierRole: string, roleToVerify: string): boolean => {
   const hierarchy = {
-    super_admin: ['division_admin', 'district_admin', 'upazila_admin', 'union_admin'],
-    division_admin: ['district_admin', 'upazila_admin', 'union_admin'],
-    district_admin: ['upazila_admin', 'union_admin'],
-    upazila_admin: ['union_admin']
+    super_admin: ['division_admin', 'district_admin', 'upazila_admin', 'union_admin', 'village_admin'],
+    division_admin: ['district_admin', 'upazila_admin', 'union_admin', 'village_admin'],
+    district_admin: ['upazila_admin', 'union_admin', 'village_admin'],
+    upazila_admin: ['union_admin', 'village_admin'],
+    union_admin: ['village_admin']
   };
   
   return hierarchy[verifierRole as keyof typeof hierarchy]?.includes(roleToVerify) || false;
@@ -154,6 +172,8 @@ export const getLocationBasedUsers = (currentUser: User, allUsers: User[]): User
         return targetScope.upazila_id === userScope.upazila_id;
       case 'union_admin':
         return targetScope.union_id === userScope.union_id;
+      case 'village_admin':
+        return targetScope.village_id === userScope.village_id;
       default:
         return false;
     }

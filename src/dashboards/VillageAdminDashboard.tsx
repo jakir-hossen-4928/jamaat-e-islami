@@ -14,24 +14,24 @@ const VillageAdminDashboard = () => {
   const { userProfile } = useAuth();
 
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['union-admin-stats', userProfile?.accessScope?.union_id],
+    queryKey: ['village-admin-stats', userProfile?.accessScope?.village_id],
     queryFn: async () => {
-      if (!userProfile?.accessScope?.union_id) return null;
+      if (!userProfile?.accessScope?.village_id) return null;
 
       const votersRef = collection(db, 'voters');
-      const votersQuery = query(votersRef, where('union_id', '==', userProfile.accessScope.union_id));
+      const votersQuery = query(votersRef, where('village_id', '==', userProfile.accessScope.village_id));
       
       const votersSnapshot = await getDocs(votersQuery);
       const voters = votersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoterData));
       
       return {
         totalVoters: voters.length,
-        highPriorityVoters: voters.filter(v => v['Priority Level'] === 'High').length,
         maleVoters: voters.filter(v => v.Gender === 'Male').length,
-        femaleVoters: voters.filter(v => v.Gender === 'Female').length
+        femaleVoters: voters.filter(v => v.Gender === 'Female').length,
+        highProbabilityVoters: voters.filter(v => (v['Vote Probability (%)'] || 0) >= 80).length
       };
     },
-    enabled: !!userProfile?.accessScope?.union_id
+    enabled: !!userProfile?.accessScope?.village_id
   });
 
   if (isLoading) {
@@ -45,9 +45,14 @@ const VillageAdminDashboard = () => {
   return (
     <RoleBasedSidebar>
       <div className="space-y-6">
-        <div className="bg-gradient-to-r from-teal-600 to-teal-800 rounded-lg p-6 text-white">
-          <h1 className="text-2xl lg:text-3xl font-bold">ইউনিয়ন অ্যাডমিন ড্যাশবোর্ড</h1>
-          <p className="mt-2 text-teal-100">আপনার ইউনিয়নের ভোটার ব্যবস্থাপনা</p>
+        <div className="bg-gradient-to-r from-purple-600 to-purple-800 rounded-lg p-6 text-white">
+          <h1 className="text-2xl lg:text-3xl font-bold">গ্রাম অ্যাডমিন ড্যাশবোর্ড</h1>
+          <p className="mt-2 text-purple-100">আপনার গ্রামের ভোটার ব্যবস্থাপনা</p>
+          {userProfile?.accessScope?.village_name && (
+            <p className="text-sm text-purple-200 mt-1">
+              গ্রাম: {userProfile.accessScope.village_name}
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -83,11 +88,11 @@ const VillageAdminDashboard = () => {
 
           <Card className="bg-orange-50 border-orange-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">উচ্চ অগ্রাধিকার</CardTitle>
+              <CardTitle className="text-sm font-medium">উচ্চ সম্ভাবনা</CardTitle>
               <BarChart3 className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-700">{stats?.highPriorityVoters || 0}</div>
+              <div className="text-2xl font-bold text-orange-700">{stats?.highProbabilityVoters || 0}</div>
             </CardContent>
           </Card>
         </div>
@@ -102,21 +107,21 @@ const VillageAdminDashboard = () => {
                 <a href="/admin/add-voter">নতুন ভোটার যোগ করুন</a>
               </Button>
               <Button className="w-full" variant="outline" asChild>
-                <a href="/admin/voters">ইউনিয়নের ভোটার দেখুন</a>
+                <a href="/admin/voters">গ্রামের ভোটার দেখুন</a>
               </Button>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>ইউনিয়ন ব্যবস্থাপনা</CardTitle>
+              <CardTitle>গ্রাম ব্যবস্থাপনা</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button className="w-full" variant="outline">
                 স্থানীয় রিপোর্ট
               </Button>
               <Button className="w-full" variant="outline">
-                ভোটার যোগাযোগ
+                সরাসরি যোগাযোগ
               </Button>
             </CardContent>
           </Card>

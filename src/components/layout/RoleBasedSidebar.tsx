@@ -47,6 +47,7 @@ const RoleBasedSidebar = ({ children }: RoleBasedSidebarProps) => {
       case 'division_admin': return 'বিভাগীয় অ্যাডমিন';
       case 'district_admin': return 'জেলা অ্যাডমিন';
       case 'upazila_admin': return 'উপজেলা অ্যাডমিন';
+      case 'union_admin': return 'ইউনিয়ন অ্যাডমিন';
       case 'village_admin': return 'গ্রাম অ্যাডমিন';
       default: return 'ব্যবহারকারী';
     }
@@ -158,7 +159,13 @@ const RoleBasedSidebar = ({ children }: RoleBasedSidebarProps) => {
             {userProfile.accessScope && (
               <div className="mt-2 text-green-200 text-xs">
                 {userProfile.role !== 'super_admin' && (
-                  <p>এলাকা: {userProfile.accessScope.division_name || 'সব'}</p>
+                  <div>
+                    {userProfile.accessScope.division_name && <p>বিভাগ: {userProfile.accessScope.division_name}</p>}
+                    {userProfile.accessScope.district_name && <p>জেলা: {userProfile.accessScope.district_name}</p>}
+                    {userProfile.accessScope.upazila_name && <p>উপজেলা: {userProfile.accessScope.upazila_name}</p>}
+                    {userProfile.accessScope.union_name && <p>ইউনিয়ন: {userProfile.accessScope.union_name}</p>}
+                    {userProfile.accessScope.village_name && <p>গ্রাম: {userProfile.accessScope.village_name}</p>}
+                  </div>
                 )}
               </div>
             )}

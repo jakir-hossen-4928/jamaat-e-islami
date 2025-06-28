@@ -1,0 +1,183 @@
+
+[
+  {
+    "id": "1",
+    "union_id": "1",
+    "name": "Shibpur",
+    "bn_name": "শিবপুর",
+    "upazila_id": "1",
+    "district_id": "1",
+    "division_id": "1"
+  },
+  {
+    "id": "2",
+    "union_id": "1",
+    "name": "Uttar Gunaighor",
+    "bn_name": "উত্তর গুনাইঘর",
+    "upazila_id": "1",
+    "district_id": "1",
+    "division_id": "1"
+  },
+  {
+    "id": "3",
+    "union_id": "2",
+    "name": "Dakkhin Hatibandha",
+    "bn_name": "দক্ষিণ হাতিবান্ধা",
+    "upazila_id": "2",
+    "district_id": "1",
+    "division_id": "1"
+  },
+  {
+    "id": "4",
+    "union_id": "2",
+    "name": "Mohanpur",
+    "bn_name": "মোহনপুর",
+    "upazila_id": "2",
+    "district_id": "1",
+    "division_id": "1"
+  },
+  {
+    "id": "5",
+    "union_id": "3",
+    "name": "Keraniganj",
+    "bn_name": "কেরানীগঞ্জ",
+    "upazila_id": "3",
+    "district_id": "2",
+    "division_id": "1"
+  },
+  {
+    "id": "6",
+    "union_id": "3",
+    "name": "Bandar",
+    "bn_name": "বন্দর",
+    "upazila_id": "3",
+    "district_id": "2",
+    "division_id": "1"
+  },
+  {
+    "id": "7",
+    "union_id": "4",
+    "name": "Sultanpur",
+    "bn_name": "সুলতানপুর",
+    "upazila_id": "4",
+    "district_id": "3",
+    "division_id": "2"
+  },
+  {
+    "id": "8",
+    "union_id": "4",
+    "name": "Jamalpur",
+    "bn_name": "জামালপুর",
+    "upazila_id": "4",
+    "district_id": "3",
+    "division_id": "2"
+  },
+  {
+    "id": "9",
+    "union_id": "5",
+    "name": "Kishoreganj",
+    "bn_name": "কিশোরগঞ্জ",
+    "upazila_id": "5",
+    "district_id": "4",
+    "division_id": "2"
+  },
+  {
+    "id": "10",
+    "union_id": "5",
+    "name": "Manikganj",
+    "bn_name": "মানিকগঞ্জ",
+    "upazila_id": "5",
+    "district_id": "4",
+    "division_id": "2"
+  },
+  {
+    "id": "11",
+    "union_id": "6",
+    "name": "Cumilla",
+    "bn_name": "কুমিল্লা",
+    "upazila_id": "6",
+    "district_id": "5",
+    "division_id": "3"
+  },
+  {
+    "id": "12",
+    "union_id": "6",
+    "name": "Brahmanbaria",
+    "bn_name": "ব্রাহ্মণবাড়িয়া",
+    "upazila_id": "6",
+    "district_id": "5",
+    "division_id": "3"
+  },
+  {
+    "id": "13",
+    "union_id": "7",
+    "name": "Chandpur",
+    "bn_name": "চাঁদপুর",
+    "upazila_id": "7",
+    "district_id": "6",
+    "division_id": "3"
+  },
+  {
+    "id": "14",
+    "union_id": "7",
+    "name": "Lakshmipur",
+    "bn_name": "লক্ষ্মীপুর",
+    "upazila_id": "7",
+    "district_id": "6",
+    "division_id": "3"
+  },
+  {
+    "id": "15",
+    "union_id": "8",
+    "name": "Rajshahi",
+    "bn_name": "রাজশাহী",
+    "upazila_id": "8",
+    "district_id": "7",
+    "division_id": "4"
+  },
+  {
+    "id": "16",
+    "union_id": "8",
+    "name": "Chapainawabganj",
+    "bn_name": "চাঁপাইনবাবগঞ্জ",
+    "upazila_id": "8",
+    "district_id": "7",
+    "division_id": "4"
+  },
+  {
+    "id": "17",
+    "union_id": "9",
+    "name": "Natore",
+    "bn_name": "নাটোর",
+    "upazila_id": "9",
+    "district_id": "8",
+    "division_id": "4"
+  },
+  {
+    "id": "18",
+    "union_id": "9",
+    "name": "Pabna",
+    "bn_name": "পাবনা",
+    "upazila_id": "9",
+    "district_id": "8",
+    "division_id": "4"
+  },
+  {
+    "id": "19",
+    "union_id": "10",
+    "name": "Rangpur",
+    "bn_name": "রংপুর",
+    "upazila_id": "10",
+    "district_id": "9",
+    "division_id": "5"
+  },
+  {
+    "id": "20",
+    "union_id": "10",
+    "name": "Kurigram",
+    "bn_name": "কুড়িগ্রাম",
+    "upazila_id": "10",
+    "district_id": "9",
+    "division_id": "5"
+  }
+]

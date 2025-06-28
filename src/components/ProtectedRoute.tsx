@@ -5,7 +5,7 @@ import VerificationLoading from '../authentication/VerificationLoading';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'super_admin' | 'division_admin' | 'district_admin' | 'upazila_admin' | 'village_admin';
+  requiredRole?: 'super_admin' | 'division_admin' | 'district_admin' | 'upazila_admin' | 'union_admin' | 'village_admin';
 }
 
 const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {

@@ -1,3 +1,4 @@
+
 export interface VoterData {
   id?: string; // Firestore Document ID
   ID: string;
@@ -16,13 +17,11 @@ export interface VoterData {
   // Contact Info
   Phone?: string;
   NID?: string;
-  WhatsApp?: 'Yes' | 'No';
 
   // Voting Info
   'Will Vote'?: 'Yes' | 'No';
   'Voted Before'?: 'Yes' | 'No';
   'Vote Probability (%)'?: number; // Should be a number between 10 and 100
-  'Priority Level'?: 'High' | 'Medium' | 'Low';
 
   'Political Support'?: string;
 
@@ -35,7 +34,7 @@ export interface VoterData {
   district_id?: string;
   upazila_id?: string;
   union_id?: string;
-  village?: string; // free text
+  village_id?: string; // Added village_id
 
   // Metadata
   'House Name'?: string;
@@ -49,7 +48,7 @@ export interface User {
   uid: string;
   email: string;
   displayName?: string;
-  role: 'super_admin' | 'division_admin' | 'district_admin' | 'upazila_admin' | 'union_admin';
+  role: 'super_admin' | 'division_admin' | 'district_admin' | 'upazila_admin' | 'union_admin' | 'village_admin';
   approved: boolean;
   createdAt: string;
   lastLogin?: string;
@@ -59,11 +58,13 @@ export interface User {
     district_id?: string;
     upazila_id?: string;
     union_id?: string;
+    village_id?: string; // Added village_id
     // Location names for display
     division_name?: string;
     district_name?: string;
     upazila_name?: string;
     union_name?: string;
+    village_name?: string; // Added village_name
   };
   // Assigned by role hierarchy
   assignedBy?: string; // UID of the admin who assigned this role
@@ -85,6 +86,7 @@ export interface SMSCampaign {
     district_id?: string;
     upazila_id?: string;
     union_id?: string;
+    village_id?: string; // Added village_id
   };
 }
 
@@ -136,7 +138,9 @@ export interface Village {
   union_id: string;
   name: string;
   bn_name: string;
-  locality_type: 'village' | 'neighborhood' | 'locality';
+  upazila_id: string;
+  district_id: string;
+  division_id: string;
 }
 
 // Location data structure for JSON files
@@ -159,5 +163,5 @@ export interface RolePermissions {
   canVerifyUsers: boolean;
   canAccessDataHub: boolean;
   canAccessAllVoters: boolean;
-  locationScope: 'all' | 'division' | 'district' | 'upazila' | 'union';
+  locationScope: 'all' | 'division' | 'district' | 'upazila' | 'union' | 'village';
 }

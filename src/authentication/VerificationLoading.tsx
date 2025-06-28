@@ -43,6 +43,18 @@ const VerificationLoading = () => {
 
   const CurrentIcon = steps[step].icon;
 
+  const getRoleDisplayName = (role: string) => {
+    switch (role) {
+      case 'super_admin': return 'সুপার অ্যাডমিন';
+      case 'division_admin': return 'বিভাগীয় অ্যাডমিন';
+      case 'district_admin': return 'জেলা অ্যাডমিন';
+      case 'upazila_admin': return 'উপজেলা অ্যাডমিন';
+      case 'union_admin': return 'ইউনিয়ন অ্যাডমিন';
+      case 'village_admin': return 'গ্রাম অ্যাডমিন';
+      default: return 'অজানা';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md shadow-xl">
@@ -86,13 +98,7 @@ const VerificationLoading = () => {
               <strong>ব্যবহারকারী:</strong> {userProfile?.displayName}
             </p>
             <p className="text-sm text-gray-600 mb-2">
-              <strong>ভূমিকা:</strong> {
-                userProfile?.role === 'super_admin' ? 'সুপার অ্যাডমিন' :
-                userProfile?.role === 'division_admin' ? 'বিভাগীয় অ্যাডমিন' :
-                userProfile?.role === 'district_admin' ? 'জেলা অ্যাডমিন' :
-                userProfile?.role === 'upazila_admin' ? 'উপজেলা অ্যাডমিন' :
-                userProfile?.role === 'union_admin' ? 'ইউনিয়ন অ্যাডমিন' : 'অজানা'
-              }
+              <strong>ভূমিকা:</strong> {userProfile?.role ? getRoleDisplayName(userProfile.role) : 'অজানা'}
             </p>
             <p className="text-sm text-gray-600">
               <strong>স্ট্যাটাস:</strong> <span className="text-green-600">যাচাইকৃত</span>

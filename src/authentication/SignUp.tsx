@@ -8,18 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
-import LocationSelector from '@/components/LocationSelector';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
     displayName: '',
     email: '',
     password: '',
-    confirmPassword: '',
-    division_id: '',
-    district_id: '',
-    upazila_id: '',
-    union_id: ''
+    confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -35,18 +30,6 @@ const SignUp = () => {
     });
   };
 
-  const handleLocationChange = (location: {
-    division_id: string;
-    district_id: string;
-    upazila_id: string;
-    union_id: string;
-  }) => {
-    setFormData(prev => ({
-      ...prev,
-      ...location
-    }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -54,15 +37,6 @@ const SignUp = () => {
       toast({
         title: "ত্রুটি",
         description: "সব ক্ষেত্র পূরণ করুন",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!formData.division_id || !formData.district_id || !formData.upazila_id) {
-      toast({
-        title: "ত্রুটি",
-        description: "অন্তত বিভাগ, জেলা ও উপজেলা নির্বাচন করুন",
         variant: "destructive",
       });
       return;
@@ -127,7 +101,7 @@ const SignUp = () => {
           <CardHeader>
             <CardTitle>রেজিস্ট্রেশন করুন</CardTitle>
             <CardDescription>
-              নতুন অ্যাকাউন্ট তৈরি করুন
+              নতুন অ্যাকাউন্ট তৈরি করুন। অনুমোদনের জন্য অ্যাডমিনের সাথে যোগাযোগ করুন।
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
@@ -155,20 +129,6 @@ const SignUp = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                />
-              </div>
-
-              {/* Location Selection */}
-              <div className="space-y-3 pt-2 border-t">
-                <Label className="text-sm font-medium text-gray-700">এলাকা নির্বাচন করুন</Label>
-                <LocationSelector
-                  onLocationChange={handleLocationChange}
-                  initialValues={{
-                    division_id: formData.division_id,
-                    district_id: formData.district_id,
-                    upazila_id: formData.upazila_id,
-                    union_id: formData.union_id
-                  }}
                 />
               </div>
               
@@ -216,6 +176,12 @@ const SignUp = () => {
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+              </div>
+
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>নোট:</strong> রেজিস্ট্রেশনের পর অ্যাডমিনের কাছ থেকে অনুমোদন ও এলাকা নির্ধারণের জন্য অপেক্ষা করুন।
+                </p>
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
