@@ -4,9 +4,8 @@ import { useAuth } from '@/hooks/useAuth';
 import SuperAdminDashboard from '@/dashboards/SuperAdminDashboard';
 import DivisionAdminDashboard from '@/dashboards/DivisionAdminDashboard';
 import DistrictAdminDashboard from '@/dashboards/DistrictAdminDashboard';
-import WardAdminDashboard from '@/dashboards/WardAdminDashboard';
-import ModeratorDashboard from '@/dashboards/ModeratorDashboard';
-import UserDashboard from '@/dashboards/UserDashboard';
+import UpazilaAdminDashboard from '@/dashboards/UpazilaAdminDashboard';
+import VillageAdminDashboard from '@/dashboards/VillageAdminDashboard';
 
 const DashboardRouter: React.FC = () => {
   const { userProfile } = useAuth();
@@ -39,14 +38,12 @@ const DashboardRouter: React.FC = () => {
       return <DivisionAdminDashboard />;
     case 'district_admin':
       return <DistrictAdminDashboard />;
-    case 'ward_admin':
-      return <WardAdminDashboard />;
-    case 'moderator':
-      return <ModeratorDashboard />;
-    case 'user':
-      return <UserDashboard />;
+    case 'upazila_admin':
+      return <UpazilaAdminDashboard />;
+    case 'village_admin':
+      return <VillageAdminDashboard />;
     default:
-      return <UserDashboard />;
+      return <VillageAdminDashboard />;
   }
 };
 

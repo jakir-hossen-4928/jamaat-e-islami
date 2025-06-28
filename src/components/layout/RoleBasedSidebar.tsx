@@ -46,9 +46,8 @@ const RoleBasedSidebar = ({ children }: RoleBasedSidebarProps) => {
       case 'super_admin': return 'সুপার অ্যাডমিন';
       case 'division_admin': return 'বিভাগীয় অ্যাডমিন';
       case 'district_admin': return 'জেলা অ্যাডমিন';
-      case 'ward_admin': return 'ওয়ার্ড অ্যাডমিন';
-      case 'moderator': return 'মডারেটর';
-      case 'user': return 'ব্যবহারকারী';
+      case 'upazila_admin': return 'উপজেলা অ্যাডমিন';
+      case 'village_admin': return 'গ্রাম অ্যাডমিন';
       default: return 'ব্যবহারকারী';
     }
   };
@@ -74,9 +73,12 @@ const RoleBasedSidebar = ({ children }: RoleBasedSidebarProps) => {
 
     if (userProfile.role === 'super_admin' || userProfile.role === 'division_admin') {
       baseItems.push(
-        { icon: MessageSquare, label: 'SMS ক্যাম্পেইন', path: '/admin/sms-campaign' },
-        { icon: Database, label: 'ডেটা হাব', path: '/admin/data-hub' }
+        { icon: MessageSquare, label: 'SMS ক্যাম্পেইন', path: '/admin/sms-campaign' }
       );
+    }
+
+    if (userProfile.role === 'super_admin') {
+      baseItems.push({ icon: Database, label: 'ডেটা হাব', path: '/admin/data-hub' });
     }
 
     if (permissions.canAssignRoles.length > 0) {
@@ -156,7 +158,7 @@ const RoleBasedSidebar = ({ children }: RoleBasedSidebarProps) => {
             {userProfile.accessScope && (
               <div className="mt-2 text-green-200 text-xs">
                 {userProfile.role !== 'super_admin' && (
-                  <p>এলাকা: {userProfile.accessScope.division_id || 'সব'}</p>
+                  <p>এলাকা: {userProfile.accessScope.division_name || 'সব'}</p>
                 )}
               </div>
             )}

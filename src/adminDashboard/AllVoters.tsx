@@ -620,7 +620,7 @@ const AllVoters = () => {
     return voter[field as keyof VoterData] || '-';
   };
 
-  const canEdit = userProfile?.role === 'super_admin' || userProfile?.role === 'moderator';
+  const canEdit = userProfile?.role === 'super_admin' || userProfile?.role === 'division_admin';
   const canDelete = userProfile?.role === 'super_admin';
 
   return (

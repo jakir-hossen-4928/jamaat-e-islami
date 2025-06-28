@@ -34,16 +34,15 @@ const SuperAdminDashboard = () => {
         totalDistricts: 64,
         totalUpazilas: 495,
         totalUnions: 4500,
-        activeAdmins: users.filter(u => u.role !== 'user' && u.approved).length,
+        activeAdmins: users.filter(u => u.role !== 'village_admin' && u.approved).length,
         pendingApprovals: pendingUsers.length,
         highPriorityVoters: voters.filter(v => v['Priority Level'] === 'High').length,
         roleDistribution: {
           super_admin: users.filter(u => u.role === 'super_admin').length,
           division_admin: users.filter(u => u.role === 'division_admin').length,
           district_admin: users.filter(u => u.role === 'district_admin').length,
-          ward_admin: users.filter(u => u.role === 'ward_admin').length,
-          moderator: users.filter(u => u.role === 'moderator').length,
-          user: users.filter(u => u.role === 'user').length
+          upazila_admin: users.filter(u => u.role === 'upazila_admin').length,
+          village_admin: users.filter(u => u.role === 'village_admin').length
         }
       };
     }
@@ -122,7 +121,7 @@ const SuperAdminDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <div className="text-center">
                 <div className="text-lg font-bold text-red-600">{stats?.roleDistribution?.super_admin || 0}</div>
                 <div className="text-xs text-gray-600">সুপার অ্যাডমিন</div>
@@ -136,16 +135,12 @@ const SuperAdminDashboard = () => {
                 <div className="text-xs text-gray-600">জেলা অ্যাডমিন</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-purple-600">{stats?.roleDistribution?.ward_admin || 0}</div>
-                <div className="text-xs text-gray-600">ওয়ার্ড অ্যাডমিন</div>
+                <div className="text-lg font-bold text-purple-600">{stats?.roleDistribution?.upazila_admin || 0}</div>
+                <div className="text-xs text-gray-600">উপজেলা অ্যাডমিন</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-orange-600">{stats?.roleDistribution?.moderator || 0}</div>
-                <div className="text-xs text-gray-600">মডারেটর</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-gray-600">{stats?.roleDistribution?.user || 0}</div>
-                <div className="text-xs text-gray-600">ব্যবহারকারী</div>
+                <div className="text-lg font-bold text-gray-600">{stats?.roleDistribution?.village_admin || 0}</div>
+                <div className="text-xs text-gray-600">গ্রাম অ্যাডমিন</div>
               </div>
             </div>
           </CardContent>

@@ -90,8 +90,8 @@ const VerificationLoading = () => {
                 userProfile?.role === 'super_admin' ? 'সুপার অ্যাডমিন' :
                 userProfile?.role === 'division_admin' ? 'বিভাগীয় অ্যাডমিন' :
                 userProfile?.role === 'district_admin' ? 'জেলা অ্যাডমিন' :
-                userProfile?.role === 'ward_admin' ? 'ওয়ার্ড অ্যাডমিন' :
-                userProfile?.role === 'moderator' ? 'মডারেটর' : 'ব্যবহারকারী'
+                userProfile?.role === 'upazila_admin' ? 'উপজেলা অ্যাডমিন' :
+                userProfile?.role === 'village_admin' ? 'গ্রাম অ্যাডমিন' : 'অজানা'
               }
             </p>
             <p className="text-sm text-gray-600">
