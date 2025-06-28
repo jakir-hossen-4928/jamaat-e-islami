@@ -82,10 +82,13 @@ const AllVoters = () => {
       }
       
       const snapshot = await getDocs(finalQuery);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as VoterData));
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data
+        } as VoterData;
+      });
     },
     enabled: !!userProfile
   });
