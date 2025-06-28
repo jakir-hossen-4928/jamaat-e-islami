@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -44,7 +45,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     { icon: FileText, label: 'পিডিএফ প্রিভিউ', path: '/admin/pdf-preview' },
 
     { icon: Database, label: 'ডেটা হাব', path: '/admin/data-hub' },
-    ...(userProfile?.role === 'admin' ? [
+    ...(userProfile?.role === 'super_admin' ? [
       { icon: UserCheck, label: 'ব্যবহারকারী যাচাই', path: '/admin/verify-users' }
     ] : [])
   ];
@@ -103,7 +104,10 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
             <p className="text-white text-sm font-medium">{userProfile?.displayName}</p>
             <p className="text-green-200 text-xs">{userProfile?.email}</p>
             <p className="text-green-200 text-xs capitalize">
-              {userProfile?.role === 'admin' ? 'অ্যাডমিন' :
+              {userProfile?.role === 'super_admin' ? 'সুপার অ্যাডমিন' :
+                userProfile?.role === 'division_admin' ? 'বিভাগীয় অ্যাডমিন' :
+                userProfile?.role === 'district_admin' ? 'জেলা অ্যাডমিন' :
+                userProfile?.role === 'ward_admin' ? 'ওয়ার্ড অ্যাডমিন' :
                 userProfile?.role === 'moderator' ? 'মডারেটর' : 'ব্যবহারকারী'}
             </p>
           </div>

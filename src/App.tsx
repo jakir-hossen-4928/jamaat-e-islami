@@ -116,7 +116,7 @@ const App = () => (
               } />
 
               <Route path="/admin/verify-users" element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute requiredRole="super_admin">
                   <UserVerify />
                 </ProtectedRoute>
               } />

@@ -45,8 +45,6 @@ const DashboardRouter: React.FC = () => {
       return <ModeratorDashboard />;
     case 'user':
       return <UserDashboard />;
-    case 'admin': // Legacy admin role - treat as super admin
-      return <SuperAdminDashboard />;
     default:
       return <UserDashboard />;
   }
