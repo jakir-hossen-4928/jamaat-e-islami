@@ -25,6 +25,7 @@ import DataHub from "./adminDashboard/DataHub";
 import GoogleForm from "./adminDashboard/GoogleForm";
 import UserVerify from "./adminDashboard/usersverify/UserVerify";
 import PDFPreview from "./adminDashboard/PDFPreview";
+import LocationDemo from "./pages/LocationDemo";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/pending-verification" element={<PendingVerification />} />
               <Route path="/verification-loading" element={<VerificationLoading />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
+              <Route path="/location-demo" element={<LocationDemo />} />
 
               {/* Protected Routes */}
               <Route path="/dashboard" element={
@@ -81,8 +83,6 @@ const App = () => (
                   <AddVoters />
                 </ProtectedRoute>
               } />
-
-
 
               <Route path="/admin/google-form" element={
                 <ProtectedRoute>
