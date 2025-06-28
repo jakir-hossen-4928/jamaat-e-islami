@@ -72,7 +72,7 @@ const UserVerify = () => {
     });
   };
 
-  const handleRoleChange = (userId: string, newRole: 'admin' | 'moderator' | 'user') => {
+  const handleRoleChange = (userId: string, newRole: UserType['role']) => {
     updateUserMutation.mutate({
       userId,
       updates: { role: newRole }
@@ -81,10 +81,16 @@ const UserVerify = () => {
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
-      case 'admin':
+      case 'super_admin':
         return 'bg-red-100 text-red-800 border-red-200';
-      case 'moderator':
+      case 'division_admin':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'district_admin':
         return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'ward_admin':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'moderator':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'user':
         return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
@@ -98,13 +104,13 @@ const UserVerify = () => {
       : 'bg-yellow-100 text-yellow-800 border-yellow-200';
   };
 
-  if (userProfile?.role !== 'admin') {
+  if (userProfile?.role !== 'super_admin') {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-64 p-4">
           <div className="text-center">
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">অ্যাক্সেস অস্বীকৃত</h2>
-            <p className="text-sm sm:text-base text-gray-600">এই পৃষ্ঠায় প্রবেশের জন্য আপনার অ্যাডমিন অনুমতি প্রয়োজন।</p>
+            <p className="text-sm sm:text-base text-gray-600">এই পৃষ্ঠায় প্রবেশের জন্য আপনার সুপার অ্যাডমিন অনুমতি প্রয়োজন।</p>
           </div>
         </div>
       </AdminLayout>
@@ -168,7 +174,7 @@ const UserVerify = () => {
                 <div className="min-w-0 flex-1">
                   <p className="text-xs sm:text-sm text-gray-600 truncate">অ্যাডমিন</p>
                   <p className="text-base sm:text-lg lg:text-2xl font-bold text-red-600">
-                    {users.filter(u => u.role === 'admin').length}
+                    {users.filter(u => u.role === 'super_admin').length}
                   </p>
                 </div>
                 <div className="w-6 h-6 sm:w-8 sm:h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
@@ -248,14 +254,17 @@ const UserVerify = () => {
                             <TableCell>
                               <Select 
                                 value={user.role} 
-                                onValueChange={(value: 'admin' | 'moderator' | 'user') => 
+                                onValueChange={(value: UserType['role']) => 
                                   handleRoleChange(user.uid, value)
                                 }
                               >
                                 <SelectTrigger className="w-full">
                                   <SelectValue>
                                     <Badge className={getRoleBadgeColor(user.role)}>
-                                      {user.role === 'admin' ? 'অ্যাডমিন' : 
+                                      {user.role === 'super_admin' ? 'সুপার অ্যাডমিন' :
+                                       user.role === 'division_admin' ? 'বিভাগীয় অ্যাডমিন' :
+                                       user.role === 'district_admin' ? 'জেলা অ্যাডমিন' :
+                                       user.role === 'ward_admin' ? 'ওয়ার্ড অ্যাডমিন' :
                                        user.role === 'moderator' ? 'মডারেটর' : 'ব্যবহারকারী'}
                                     </Badge>
                                   </SelectValue>
@@ -263,7 +272,10 @@ const UserVerify = () => {
                                 <SelectContent>
                                   <SelectItem value="user">ব্যবহারকারী</SelectItem>
                                   <SelectItem value="moderator">মডারেটর</SelectItem>
-                                  <SelectItem value="admin">অ্যাডমিন</SelectItem>
+                                  <SelectItem value="ward_admin">ওয়ার্ড অ্যাডমিন</SelectItem>
+                                  <SelectItem value="district_admin">জেলা অ্যাডমিন</SelectItem>
+                                  <SelectItem value="division_admin">বিভাগীয় অ্যাডমিন</SelectItem>
+                                  <SelectItem value="super_admin">সুপার অ্যাডমিন</SelectItem>
                                 </SelectContent>
                               </Select>
                             </TableCell>
@@ -354,7 +366,10 @@ const UserVerify = () => {
                           {user.approved ? 'অনুমোদিত' : 'অপেক্ষমাণ'}
                         </Badge>
                         <Badge className={getRoleBadgeColor(user.role)}>
-                          {user.role === 'admin' ? 'অ্যাডমিন' : 
+                          {user.role === 'super_admin' ? 'সুপার অ্যাডমিন' :
+                           user.role === 'division_admin' ? 'বিভাগীয় অ্যাডমিন' :
+                           user.role === 'district_admin' ? 'জেলা অ্যাডমিন' :
+                           user.role === 'ward_admin' ? 'ওয়ার্ড অ্যাডমিন' :
                            user.role === 'moderator' ? 'মডারেটর' : 'ব্যবহারকারী'}
                         </Badge>
                       </div>
@@ -364,7 +379,7 @@ const UserVerify = () => {
                         <label className="block text-xs font-medium text-gray-700 mb-1">ভূমিকা পরিবর্তন:</label>
                         <Select 
                           value={user.role} 
-                          onValueChange={(value: 'admin' | 'moderator' | 'user') => 
+                          onValueChange={(value: UserType['role']) => 
                             handleRoleChange(user.uid, value)
                           }
                         >
@@ -374,7 +389,10 @@ const UserVerify = () => {
                           <SelectContent>
                             <SelectItem value="user">ব্যবহারকারী</SelectItem>
                             <SelectItem value="moderator">মডারেটর</SelectItem>
-                            <SelectItem value="admin">অ্যাডমিন</SelectItem>
+                            <SelectItem value="ward_admin">ওয়ার্ড অ্যাডমিন</SelectItem>
+                            <SelectItem value="district_admin">জেলা অ্যাডমিন</SelectItem>
+                            <SelectItem value="division_admin">বিভাগীয় অ্যাডমিন</SelectItem>
+                            <SelectItem value="super_admin">সুপার অ্যাডমিন</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

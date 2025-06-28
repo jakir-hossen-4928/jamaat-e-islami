@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Navigate to appropriate dashboard
-      if (profile.role === 'admin') {
+      if (profile.role === 'super_admin') {
         navigate('/admin/dashboard');
       } else {
         navigate('/dashboard');
@@ -65,6 +65,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       role: 'user',
       approved: false,
       createdAt: new Date().toISOString(),
+      accessScope: {} // Initialize with empty access scope
     };
 
     await setDoc(doc(db, 'users', result.user.uid), userProfile);

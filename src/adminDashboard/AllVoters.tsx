@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
@@ -619,8 +620,8 @@ const AllVoters = () => {
     return voter[field as keyof VoterData] || '-';
   };
 
-  const canEdit = userProfile?.role === 'admin' || userProfile?.role === 'moderator';
-  const canDelete = userProfile?.role === 'admin';
+  const canEdit = userProfile?.role === 'super_admin' || userProfile?.role === 'moderator';
+  const canDelete = userProfile?.role === 'super_admin';
 
   return (
     <AdminLayout>

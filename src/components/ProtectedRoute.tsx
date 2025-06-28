@@ -1,9 +1,10 @@
+
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import VerificationLoading from '../authentication/VerificationLoading';
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'admin' | 'moderator' | 'user';
+  requiredRole?: 'super_admin' | 'division_admin' | 'district_admin' | 'ward_admin' | 'moderator' | 'user';
 }
 
 const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
@@ -25,7 +26,7 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   }
 
   // ✅ 4. Role doesn't match
-  if (requiredRole && userProfile.role !== requiredRole && userProfile.role !== 'admin') {
+  if (requiredRole && userProfile.role !== requiredRole && userProfile.role !== 'super_admin') {
     return <Navigate to="/unauthorized" replace />;
   }
 
