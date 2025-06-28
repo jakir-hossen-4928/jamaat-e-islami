@@ -91,7 +91,7 @@ const VerificationLoading = () => {
                 userProfile?.role === 'division_admin' ? 'বিভাগীয় অ্যাডমিন' :
                 userProfile?.role === 'district_admin' ? 'জেলা অ্যাডমিন' :
                 userProfile?.role === 'upazila_admin' ? 'উপজেলা অ্যাডমিন' :
-                userProfile?.role === 'village_admin' ? 'গ্রাম অ্যাডমিন' : 'অজানা'
+                userProfile?.role === 'union_admin' ? 'ইউনিয়ন অ্যাডমিন' : 'অজানা'
               }
             </p>
             <p className="text-sm text-gray-600">

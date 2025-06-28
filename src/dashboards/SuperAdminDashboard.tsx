@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where } from 'firebase/firestore';
@@ -34,7 +33,7 @@ const SuperAdminDashboard = () => {
         totalDistricts: 64,
         totalUpazilas: 495,
         totalUnions: 4500,
-        activeAdmins: users.filter(u => u.role !== 'village_admin' && u.approved).length,
+        activeAdmins: users.filter(u => u.role !== 'union_admin' && u.approved).length,
         pendingApprovals: pendingUsers.length,
         highPriorityVoters: voters.filter(v => v['Priority Level'] === 'High').length,
         roleDistribution: {
@@ -42,7 +41,7 @@ const SuperAdminDashboard = () => {
           division_admin: users.filter(u => u.role === 'division_admin').length,
           district_admin: users.filter(u => u.role === 'district_admin').length,
           upazila_admin: users.filter(u => u.role === 'upazila_admin').length,
-          village_admin: users.filter(u => u.role === 'village_admin').length
+          union_admin: users.filter(u => u.role === 'union_admin').length
         }
       };
     }
@@ -139,8 +138,8 @@ const SuperAdminDashboard = () => {
                 <div className="text-xs text-gray-600">উপজেলা অ্যাডমিন</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-gray-600">{stats?.roleDistribution?.village_admin || 0}</div>
-                <div className="text-xs text-gray-600">গ্রাম অ্যাডমিন</div>
+                <div className="text-lg font-bold text-gray-600">{stats?.roleDistribution?.union_admin || 0}</div>
+                <div className="text-xs text-gray-600">ইউনিয়ন অ্যাডমিন</div>
               </div>
             </div>
           </CardContent>

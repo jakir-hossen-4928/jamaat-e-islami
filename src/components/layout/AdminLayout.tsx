@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -108,7 +107,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                 userProfile?.role === 'division_admin' ? 'বিভাগীয় অ্যাডমিন' :
                 userProfile?.role === 'district_admin' ? 'জেলা অ্যাডমিন' :
                 userProfile?.role === 'upazila_admin' ? 'উপজেলা অ্যাডমিন' :
-                userProfile?.role === 'village_admin' ? 'গ্রাম অ্যাডমিন' : 'ব্যবহারকারী'}
+                userProfile?.role === 'union_admin' ? 'ইউনিয়ন অ্যাডমিন' : 'ব্যবহারকারী'}
             </p>
           </div>
           <Button

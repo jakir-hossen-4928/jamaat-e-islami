@@ -14,12 +14,12 @@ const VillageAdminDashboard = () => {
   const { userProfile } = useAuth();
 
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['village-admin-stats', userProfile?.accessScope?.village_id],
+    queryKey: ['union-admin-stats', userProfile?.accessScope?.union_id],
     queryFn: async () => {
-      if (!userProfile?.accessScope?.village_id) return null;
+      if (!userProfile?.accessScope?.union_id) return null;
 
       const votersRef = collection(db, 'voters');
-      const votersQuery = query(votersRef, where('village_id', '==', userProfile.accessScope.village_id));
+      const votersQuery = query(votersRef, where('union_id', '==', userProfile.accessScope.union_id));
       
       const votersSnapshot = await getDocs(votersQuery);
       const voters = votersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoterData));
@@ -31,7 +31,7 @@ const VillageAdminDashboard = () => {
         femaleVoters: voters.filter(v => v.Gender === 'Female').length
       };
     },
-    enabled: !!userProfile?.accessScope?.village_id
+    enabled: !!userProfile?.accessScope?.union_id
   });
 
   if (isLoading) {
@@ -46,8 +46,8 @@ const VillageAdminDashboard = () => {
     <RoleBasedSidebar>
       <div className="space-y-6">
         <div className="bg-gradient-to-r from-teal-600 to-teal-800 rounded-lg p-6 text-white">
-          <h1 className="text-2xl lg:text-3xl font-bold">গ্রাম অ্যাডমিন ড্যাশবোর্ড</h1>
-          <p className="mt-2 text-teal-100">আপনার গ্রামের ভোটার ব্যবস্থাপনা</p>
+          <h1 className="text-2xl lg:text-3xl font-bold">ইউনিয়ন অ্যাডমিন ড্যাশবোর্ড</h1>
+          <p className="mt-2 text-teal-100">আপনার ইউনিয়নের ভোটার ব্যবস্থাপনা</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -102,14 +102,14 @@ const VillageAdminDashboard = () => {
                 <a href="/admin/add-voter">নতুন ভোটার যোগ করুন</a>
               </Button>
               <Button className="w-full" variant="outline" asChild>
-                <a href="/admin/voters">গ্রামের ভোটার দেখুন</a>
+                <a href="/admin/voters">ইউনিয়নের ভোটার দেখুন</a>
               </Button>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>গ্রাম ব্যবস্থাপনা</CardTitle>
+              <CardTitle>ইউনিয়ন ব্যবস্থাপনা</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button className="w-full" variant="outline">
