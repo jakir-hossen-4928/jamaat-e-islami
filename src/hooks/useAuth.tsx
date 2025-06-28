@@ -54,18 +54,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (email: string, password: string, displayName: string) => {
+  const register = async (
+    email: string, 
+    password: string, 
+    displayName: string,
+    locationScope?: {
+      division_id?: string;
+      district_id?: string;
+      upazila_id?: string;
+      union_id?: string;
+      village_id?: string;
+    }
+  ) => {
     const result = await createUserWithEmailAndPassword(auth, email, password);
 
-    // Create user profile in Firestore
+    // Create user profile in Firestore with location scope
     const userProfile: User = {
       uid: result.user.uid,
       email: email,
       displayName: displayName,
-      role: 'user',
+      role: 'village_admin', // Default role for new users
       approved: false,
       createdAt: new Date().toISOString(),
-      accessScope: {} // Initialize with empty access scope
+      accessScope: locationScope || {} // Initialize with provided location scope
     };
 
     await setDoc(doc(db, 'users', result.user.uid), userProfile);

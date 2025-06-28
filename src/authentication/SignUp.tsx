@@ -1,19 +1,28 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
+import { getDivisions, getDistrictsByDivision, getUpazilasByDistrict, getUnionsByUpazila } from '@/lib/locationUtils';
+import { useQuery } from '@tanstack/react-query';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
     displayName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    division_id: '',
+    district_id: '',
+    upazila_id: '',
+    union_id: '',
+    village_id: ''
   });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -22,10 +31,62 @@ const SignUp = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Load divisions
+  const { data: divisions = [] } = useQuery({
+    queryKey: ['divisions'],
+    queryFn: getDivisions
+  });
+
+  // Load districts based on selected division
+  const { data: districts = [] } = useQuery({
+    queryKey: ['districts', formData.division_id],
+    queryFn: () => getDistrictsByDivision(formData.division_id),
+    enabled: !!formData.division_id
+  });
+
+  // Load upazilas based on selected district
+  const { data: upazilas = [] } = useQuery({
+    queryKey: ['upazilas', formData.district_id],
+    queryFn: () => getUpazilasByDistrict(formData.district_id),
+    enabled: !!formData.district_id
+  });
+
+  // Load unions based on selected upazila
+  const { data: unions = [] } = useQuery({
+    queryKey: ['unions', formData.upazila_id],
+    queryFn: () => getUnionsByUpazila(formData.upazila_id),
+    enabled: !!formData.upazila_id
+  });
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
+    });
+  };
+
+  const handleLocationChange = (field: string, value: string) => {
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      
+      // Reset dependent fields when parent changes
+      if (field === 'division_id') {
+        updated.district_id = '';
+        updated.upazila_id = '';
+        updated.union_id = '';
+        updated.village_id = '';
+      } else if (field === 'district_id') {
+        updated.upazila_id = '';
+        updated.union_id = '';
+        updated.village_id = '';
+      } else if (field === 'upazila_id') {
+        updated.union_id = '';
+        updated.village_id = '';
+      } else if (field === 'union_id') {
+        updated.village_id = '';
+      }
+      
+      return updated;
     });
   };
 
@@ -34,8 +95,17 @@ const SignUp = () => {
     
     if (!formData.displayName || !formData.email || !formData.password) {
       toast({
-        title: "Error",
-        description: "Please fill in all fields",
+        title: "ত্রুটি",
+        description: "সব ক্ষেত্র পূরণ করুন",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.division_id || !formData.district_id || !formData.upazila_id) {
+      toast({
+        title: "ত্রুটি",
+        description: "অন্তত বিভাগ, জেলা ও উপজেলা নির্বাচন করুন",
         variant: "destructive",
       });
       return;
@@ -43,8 +113,8 @@ const SignUp = () => {
 
     if (formData.password !== formData.confirmPassword) {
       toast({
-        title: "Error",
-        description: "Passwords do not match",
+        title: "ত্রুটি",
+        description: "পাসওয়ার্ড মিল নেই",
         variant: "destructive",
       });
       return;
@@ -52,8 +122,8 @@ const SignUp = () => {
 
     if (formData.password.length < 6) {
       toast({
-        title: "Error",
-        description: "Password must be at least 6 characters",
+        title: "ত্রুটি",
+        description: "পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে",
         variant: "destructive",
       });
       return;
@@ -61,16 +131,27 @@ const SignUp = () => {
 
     setLoading(true);
     try {
-      await register(formData.email, formData.password, formData.displayName);
+      await register(
+        formData.email, 
+        formData.password, 
+        formData.displayName,
+        {
+          division_id: formData.division_id,
+          district_id: formData.district_id,
+          upazila_id: formData.upazila_id,
+          union_id: formData.union_id,
+          village_id: formData.village_id
+        }
+      );
       toast({
-        title: "Success",
-        description: "Registration successful! Please wait for admin approval.",
+        title: "সফল",
+        description: "রেজিস্ট্রেশন সফল! অ্যাডমিনের অনুমোদনের অপেক্ষা করুন।",
       });
       navigate('/pending-verification');
     } catch (error: any) {
       toast({
-        title: "Registration Failed",
-        description: error.message || "An error occurred during registration",
+        title: "রেজিস্ট্রেশন ব্যর্থ",
+        description: error.message || "রেজিস্ট্রেশনে ত্রুটি হয়েছে",
         variant: "destructive",
       });
     } finally {
@@ -113,6 +194,7 @@ const SignUp = () => {
                   required
                 />
               </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="email">ইমেইল</Label>
                 <Input
@@ -125,6 +207,88 @@ const SignUp = () => {
                   required
                 />
               </div>
+
+              {/* Location Selection */}
+              <div className="space-y-3 pt-2 border-t">
+                <Label className="text-sm font-medium text-gray-700">এলাকা নির্বাচন করুন</Label>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="division">বিভাগ *</Label>
+                  <Select value={formData.division_id} onValueChange={(value) => handleLocationChange('division_id', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {divisions.map((division) => (
+                        <SelectItem key={division.id} value={division.id}>
+                          {division.bn_name} ({division.name})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="district">জেলা *</Label>
+                  <Select 
+                    value={formData.district_id} 
+                    onValueChange={(value) => handleLocationChange('district_id', value)}
+                    disabled={!formData.division_id}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="জেলা নির্বাচন করুন" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {districts.map((district) => (
+                        <SelectItem key={district.id} value={district.id}>
+                          {district.bn_name} ({district.name})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="upazila">উপজেলা *</Label>
+                  <Select 
+                    value={formData.upazila_id} 
+                    onValueChange={(value) => handleLocationChange('upazila_id', value)}
+                    disabled={!formData.district_id}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="উপজেলা নির্বাচন করুন" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {upazilas.map((upazila) => (
+                        <SelectItem key={upazila.id} value={upazila.id}>
+                          {upazila.bn_name} ({upazila.name})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="union">ইউনিয়ন (ঐচ্ছিক)</Label>
+                  <Select 
+                    value={formData.union_id} 
+                    onValueChange={(value) => handleLocationChange('union_id', value)}
+                    disabled={!formData.upazila_id}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="ইউনিয়ন নির্বাচন করুন" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {unions.map((union) => (
+                        <SelectItem key={union.id} value={union.id}>
+                          {union.bn_name} ({union.name})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="password">পাসওয়ার্ড</Label>
                 <div className="relative">
@@ -147,6 +311,7 @@ const SignUp = () => {
                   </button>
                 </div>
               </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">পাসওয়ার্ড নিশ্চিত করুন</Label>
                 <div className="relative">

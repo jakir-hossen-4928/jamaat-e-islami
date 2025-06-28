@@ -32,15 +32,20 @@ export interface VoterData {
   district_id: string;
   upazila_id: string;
   union_id: string;
-  ward_id?: string;
-  village_id?: string;
+  village_id: string;
+  // Location names for display
+  division_name?: string;
+  district_name?: string;
+  upazila_name?: string;
+  union_name?: string;
+  village_name?: string;
 }
 
 export interface User {
   uid: string;
   email: string;
   displayName?: string;
-  role: 'super_admin' | 'division_admin' | 'district_admin' | 'ward_admin' | 'moderator' | 'user';
+  role: 'super_admin' | 'division_admin' | 'district_admin' | 'upazila_admin' | 'village_admin';
   approved: boolean;
   createdAt: string;
   lastLogin?: string;
@@ -50,10 +55,17 @@ export interface User {
     district_id?: string;
     upazila_id?: string;
     union_id?: string;
-    ward_id?: string;
+    village_id?: string;
+    // Location names for display
+    division_name?: string;
+    district_name?: string;
+    upazila_name?: string;
+    union_name?: string;
+    village_name?: string;
   };
   // Assigned by role hierarchy
   assignedBy?: string; // UID of the admin who assigned this role
+  verifiedBy?: string; // UID of the admin who verified this user
 }
 
 export interface SMSCampaign {
@@ -64,6 +76,15 @@ export interface SMSCampaign {
   sentCount: number;
   status: 'draft' | 'sent' | 'scheduled';
   createdAt: string;
+  createdBy: string; // UID of creator
+  // Location-based targeting
+  locationScope: {
+    division_id?: string;
+    district_id?: string;
+    upazila_id?: string;
+    union_id?: string;
+    village_id?: string;
+  };
 }
 
 // Location hierarchy interfaces
@@ -111,7 +132,7 @@ export interface Ward {
 
 export interface Village {
   id: string;
-  ward_id: string;
+  union_id: string;
   name: string;
   bn_name: string;
   locality_type: 'village' | 'neighborhood' | 'locality';
@@ -134,5 +155,8 @@ export interface RolePermissions {
   canUpdate: boolean;
   canDelete: boolean;
   canAssignRoles: string[]; // Array of roles this user can assign
-  locationScope: 'all' | 'division' | 'district' | 'upazila' | 'union' | 'ward';
+  canVerifyUsers: boolean;
+  canAccessDataHub: boolean;
+  canAccessAllVoters: boolean;
+  locationScope: 'all' | 'division' | 'district' | 'upazila' | 'union' | 'village';
 }
