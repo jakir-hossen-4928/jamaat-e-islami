@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -134,14 +133,7 @@ const SignUp = () => {
       await register(
         formData.email, 
         formData.password, 
-        formData.displayName,
-        {
-          division_id: formData.division_id,
-          district_id: formData.district_id,
-          upazila_id: formData.upazila_id,
-          union_id: formData.union_id,
-          village_id: formData.village_id
-        }
+        formData.displayName
       );
       toast({
         title: "সফল",

@@ -87,12 +87,10 @@ const UserVerify = () => {
         return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'district_admin':
         return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'ward_admin':
+      case 'upazila_admin':
         return 'bg-green-100 text-green-800 border-green-200';
-      case 'moderator':
+      case 'village_admin':
         return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'user':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -264,15 +262,14 @@ const UserVerify = () => {
                                       {user.role === 'super_admin' ? 'সুপার অ্যাডমিন' :
                                        user.role === 'division_admin' ? 'বিভাগীয় অ্যাডমিন' :
                                        user.role === 'district_admin' ? 'জেলা অ্যাডমিন' :
-                                       user.role === 'ward_admin' ? 'ওয়ার্ড অ্যাডমিন' :
-                                       user.role === 'moderator' ? 'মডারেটর' : 'ব্যবহারকারী'}
+                                       user.role === 'upazila_admin' ? 'উপজেলা অ্যাডমিন' :
+                                       user.role === 'village_admin' ? 'গ্রাম অ্যাডমিন' : 'ব্যবহারকারী'}
                                     </Badge>
                                   </SelectValue>
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="user">ব্যবহারকারী</SelectItem>
-                                  <SelectItem value="moderator">মডারেটর</SelectItem>
-                                  <SelectItem value="ward_admin">ওয়ার্ড অ্যাডমিন</SelectItem>
+                                  <SelectItem value="village_admin">গ্রাম অ্যাডমিন</SelectItem>
+                                  <SelectItem value="upazila_admin">উপজেলা অ্যাডমিন</SelectItem>
                                   <SelectItem value="district_admin">জেলা অ্যাডমিন</SelectItem>
                                   <SelectItem value="division_admin">বিভাগীয় অ্যাডমিন</SelectItem>
                                   <SelectItem value="super_admin">সুপার অ্যাডমিন</SelectItem>
@@ -369,8 +366,8 @@ const UserVerify = () => {
                           {user.role === 'super_admin' ? 'সুপার অ্যাডমিন' :
                            user.role === 'division_admin' ? 'বিভাগীয় অ্যাডমিন' :
                            user.role === 'district_admin' ? 'জেলা অ্যাডমিন' :
-                           user.role === 'ward_admin' ? 'ওয়ার্ড অ্যাডমিন' :
-                           user.role === 'moderator' ? 'মডারেটর' : 'ব্যবহারকারী'}
+                           user.role === 'upazila_admin' ? 'উপজেলা অ্যাডমিন' :
+                           user.role === 'village_admin' ? 'গ্রাম অ্যাডমিন' : 'ব্যবহারকারী'}
                         </Badge>
                       </div>
 
@@ -387,9 +384,8 @@ const UserVerify = () => {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="user">ব্যবহারকারী</SelectItem>
-                            <SelectItem value="moderator">মডারেটর</SelectItem>
-                            <SelectItem value="ward_admin">ওয়ার্ড অ্যাডমিন</SelectItem>
+                            <SelectItem value="village_admin">গ্রাম অ্যাডমিন</SelectItem>
+                            <SelectItem value="upazila_admin">উপজেলা অ্যাডমিন</SelectItem>
                             <SelectItem value="district_admin">জেলা অ্যাডমিন</SelectItem>
                             <SelectItem value="division_admin">বিভাগীয় অ্যাডমিন</SelectItem>
                             <SelectItem value="super_admin">সুপার অ্যাডমিন</SelectItem>

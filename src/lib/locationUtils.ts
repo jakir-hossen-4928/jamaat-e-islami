@@ -1,4 +1,3 @@
-
 import { Division, District, Upazila, Union, Ward, Village } from './types';
 
 // Sample data structure - you can replace these with your actual JSON data
@@ -87,16 +86,10 @@ export const getUnionsByUpazila = async (upazilaId: string): Promise<Union[]> =>
   return data.unions.filter(union => union.upazilla_id === upazilaId);
 };
 
-// Get wards by union ID
-export const getWardsByUnion = async (unionId: string): Promise<Ward[]> => {
+// Get villages by union ID
+export const getVillagesByUnion = async (unionId: string): Promise<Village[]> => {
   const data = await loadLocationData();
-  return data.wards.filter(ward => ward.union_id === unionId);
-};
-
-// Get villages by ward ID
-export const getVillagesByWard = async (wardId: string): Promise<Village[]> => {
-  const data = await loadLocationData();
-  return data.villages.filter(village => village.ward_id === wardId);
+  return data.villages.filter(village => village.union_id === unionId);
 };
 
 // Get location name by ID
