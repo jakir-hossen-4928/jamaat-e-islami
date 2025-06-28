@@ -17,11 +17,13 @@ export interface VoterData {
   // Contact Info
   Phone?: string;
   NID?: string;
+  WhatsApp?: 'Yes' | 'No'; // Added missing WhatsApp property
 
   // Voting Info
   'Will Vote'?: 'Yes' | 'No';
   'Voted Before'?: 'Yes' | 'No';
   'Vote Probability (%)'?: number; // Should be a number between 10 and 100
+  'Priority Level'?: 'Low' | 'Medium' | 'High'; // Added missing Priority Level property
 
   'Political Support'?: string;
 
@@ -34,7 +36,7 @@ export interface VoterData {
   district_id?: string;
   upazila_id?: string;
   union_id?: string;
-  village_id?: string; // Added village_id
+  village_id?: string;
 
   // Metadata
   'House Name'?: string;
