@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User as FirebaseUser, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -57,26 +56,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (
     email: string, 
     password: string, 
-    displayName: string,
-    locationScope?: {
-      division_id?: string;
-      district_id?: string;
-      upazila_id?: string;
-      union_id?: string;
-      village_id?: string;
-    }
+    displayName: string
   ) => {
     const result = await createUserWithEmailAndPassword(auth, email, password);
 
-    // Create user profile in Firestore with location scope
+    // Create user profile in Firestore
     const userProfile: User = {
       uid: result.user.uid,
       email: email,
       displayName: displayName,
-      role: 'village_admin', // Default role for new users
+      role: 'union_admin', // Default role for new users
       approved: false,
       createdAt: new Date().toISOString(),
-      accessScope: locationScope || {} // Initialize with provided location scope
+      accessScope: {} // Initialize empty access scope
     };
 
     await setDoc(doc(db, 'users', result.user.uid), userProfile);

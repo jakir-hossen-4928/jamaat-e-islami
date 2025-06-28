@@ -32,7 +32,7 @@ export interface VoterData {
   district_id: string;
   upazila_id: string;
   union_id: string;
-  village_id: string;
+  village_id?: string;
   // Location names for display
   division_name?: string;
   district_name?: string;
@@ -45,7 +45,7 @@ export interface User {
   uid: string;
   email: string;
   displayName?: string;
-  role: 'super_admin' | 'division_admin' | 'district_admin' | 'upazila_admin' | 'village_admin';
+  role: 'super_admin' | 'division_admin' | 'district_admin' | 'upazila_admin' | 'union_admin';
   approved: boolean;
   createdAt: string;
   lastLogin?: string;
@@ -55,13 +55,11 @@ export interface User {
     district_id?: string;
     upazila_id?: string;
     union_id?: string;
-    village_id?: string;
     // Location names for display
     division_name?: string;
     district_name?: string;
     upazila_name?: string;
     union_name?: string;
-    village_name?: string;
   };
   // Assigned by role hierarchy
   assignedBy?: string; // UID of the admin who assigned this role
@@ -83,7 +81,6 @@ export interface SMSCampaign {
     district_id?: string;
     upazila_id?: string;
     union_id?: string;
-    village_id?: string;
   };
 }
 
@@ -158,5 +155,5 @@ export interface RolePermissions {
   canVerifyUsers: boolean;
   canAccessDataHub: boolean;
   canAccessAllVoters: boolean;
-  locationScope: 'all' | 'division' | 'district' | 'upazila' | 'union' | 'village';
+  locationScope: 'all' | 'division' | 'district' | 'upazila' | 'union';
 }

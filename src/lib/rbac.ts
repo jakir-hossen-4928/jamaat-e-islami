@@ -45,13 +45,13 @@ export const getRolePermissions = (role: User['role']): RolePermissions => {
         canRead: true,
         canUpdate: true,
         canDelete: false,
-        canAssignRoles: ['village_admin'],
+        canAssignRoles: ['union_admin'],
         canVerifyUsers: true,
         canAccessDataHub: false,
         canAccessAllVoters: false,
         locationScope: 'upazila'
       };
-    case 'village_admin':
+    case 'union_admin':
       return {
         canCreate: true,
         canRead: true,
@@ -61,7 +61,7 @@ export const getRolePermissions = (role: User['role']): RolePermissions => {
         canVerifyUsers: false,
         canAccessDataHub: false,
         canAccessAllVoters: false,
-        locationScope: 'village'
+        locationScope: 'union'
       };
     default:
       return {
@@ -73,7 +73,7 @@ export const getRolePermissions = (role: User['role']): RolePermissions => {
         canVerifyUsers: false,
         canAccessDataHub: false,
         canAccessAllVoters: false,
-        locationScope: 'village'
+        locationScope: 'union'
       };
   }
 };
@@ -83,7 +83,6 @@ export const canAccessLocation = (user: User, targetLocation: {
   district_id?: string;
   upazila_id?: string;
   union_id?: string;
-  village_id?: string;
 }): boolean => {
   if (user.role === 'super_admin') return true;
 
@@ -96,8 +95,8 @@ export const canAccessLocation = (user: User, targetLocation: {
       return targetLocation.district_id === userScope.district_id;
     case 'upazila_admin':
       return targetLocation.upazila_id === userScope.upazila_id;
-    case 'village_admin':
-      return targetLocation.village_id === userScope.village_id;
+    case 'union_admin':
+      return targetLocation.union_id === userScope.union_id;
     default:
       return false;
   }
@@ -110,8 +109,7 @@ export const getAccessibleVoters = async (user: User, allVoters: any[]) => {
     division_id: voter.division_id,
     district_id: voter.district_id,
     upazila_id: voter.upazila_id,
-    union_id: voter.union_id,
-    village_id: voter.village_id
+    union_id: voter.union_id
   }));
 };
 
@@ -121,7 +119,7 @@ export const getRoleDisplayName = (role: string): string => {
     division_admin: 'বিভাগীয় অ্যাডমিন',
     district_admin: 'জেলা অ্যাডমিন',
     upazila_admin: 'উপজেলা অ্যাডমিন',
-    village_admin: 'গ্রাম অ্যাডমিন'
+    union_admin: 'ইউনিয়ন অ্যাডমিন'
   };
   return roleNames[role as keyof typeof roleNames] || 'অজানা';
 };
@@ -131,7 +129,7 @@ export const canVerifyRole = (verifierRole: string, roleToVerify: string): boole
     super_admin: ['division_admin'],
     division_admin: ['district_admin'],
     district_admin: ['upazila_admin'],
-    upazila_admin: ['village_admin']
+    upazila_admin: ['union_admin']
   };
   
   return hierarchy[verifierRole as keyof typeof hierarchy]?.includes(roleToVerify) || false;

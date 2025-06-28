@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,10 +8,9 @@ import {
   getDistrictsByDivision,
   getUpazilasByDistrict,
   getUnionsByUpazila,
-  getWardsByUnion,
-  getVillagesByWard
+  getVillagesByUnion
 } from '@/lib/locationUtils';
-import { Division, District, Upazila, Union, Ward, Village } from '@/lib/types';
+import { Division, District, Upazila, Union, Village } from '@/lib/types';
 
 interface LocationSelectorProps {
   onLocationChange: (locationIds: {
@@ -20,7 +18,6 @@ interface LocationSelectorProps {
     district_id?: string;
     upazila_id?: string;
     union_id?: string;
-    ward_id?: string;
     village_id?: string;
   }) => void;
   initialValues?: {
@@ -28,7 +25,6 @@ interface LocationSelectorProps {
     district_id?: string;
     upazila_id?: string;
     union_id?: string;
-    ward_id?: string;
     village_id?: string;
   };
   title?: string;
@@ -45,14 +41,12 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   const [districts, setDistricts] = useState<District[]>([]);
   const [upazilas, setUpazilas] = useState<Upazila[]>([]);
   const [unions, setUnions] = useState<Union[]>([]);
-  const [wards, setWards] = useState<Ward[]>([]);
   const [villages, setVillages] = useState<Village[]>([]);
 
   const [selectedDivision, setSelectedDivision] = useState<string>('');
   const [selectedDistrict, setSelectedDistrict] = useState<string>('');
   const [selectedUpazila, setSelectedUpazila] = useState<string>('');
   const [selectedUnion, setSelectedUnion] = useState<string>('');
-  const [selectedWard, setSelectedWard] = useState<string>('');
   const [selectedVillage, setSelectedVillage] = useState<string>('');
 
   const [loading, setLoading] = useState<{
@@ -60,14 +54,12 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     districts: boolean;
     upazilas: boolean;
     unions: boolean;
-    wards: boolean;
     villages: boolean;
   }>({
     divisions: false,
     districts: false,
     upazilas: false,
     unions: false,
-    wards: false,
     villages: false
   });
 
@@ -94,7 +86,6 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
       setSelectedDistrict(initialValues.district_id || '');
       setSelectedUpazila(initialValues.upazila_id || '');
       setSelectedUnion(initialValues.union_id || '');
-      setSelectedWard(initialValues.ward_id || '');
       setSelectedVillage(initialValues.village_id || '');
     }
   }, [initialValues]);
@@ -105,13 +96,11 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     setSelectedDistrict('');
     setSelectedUpazila('');
     setSelectedUnion('');
-    setSelectedWard('');
     setSelectedVillage('');
     
     setDistricts([]);
     setUpazilas([]);
     setUnions([]);
-    setWards([]);
     setVillages([]);
 
     if (divisionId) {
@@ -136,12 +125,10 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
     setSelectedDistrict(districtId);
     setSelectedUpazila('');
     setSelectedUnion('');
-    setSelectedWard('');
     setSelectedVillage('');
     
     setUpazilas([]);
     setUnions([]);
-    setWards([]);
     setVillages([]);
 
     if (districtId) {
@@ -166,11 +153,9 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   const handleUpazilaChange = async (upazilaId: string) => {
     setSelectedUpazila(upazilaId);
     setSelectedUnion('');
-    setSelectedWard('');
     setSelectedVillage('');
     
     setUnions([]);
-    setWards([]);
     setVillages([]);
 
     if (upazilaId) {
@@ -195,42 +180,13 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
   // Handle union change
   const handleUnionChange = async (unionId: string) => {
     setSelectedUnion(unionId);
-    setSelectedWard('');
     setSelectedVillage('');
-    
-    setWards([]);
     setVillages([]);
 
     if (unionId && showAllLevels) {
-      setLoading(prev => ({ ...prev, wards: true }));
-      try {
-        const wardsData = await getWardsByUnion(unionId);
-        setWards(wardsData);
-      } catch (error) {
-        console.error('Error loading wards:', error);
-      } finally {
-        setLoading(prev => ({ ...prev, wards: false }));
-      }
-    }
-
-    onLocationChange({
-      division_id: selectedDivision || undefined,
-      district_id: selectedDistrict || undefined,
-      upazila_id: selectedUpazila || undefined,
-      union_id: unionId || undefined
-    });
-  };
-
-  // Handle ward change
-  const handleWardChange = async (wardId: string) => {
-    setSelectedWard(wardId);
-    setSelectedVillage('');
-    setVillages([]);
-
-    if (wardId && showAllLevels) {
       setLoading(prev => ({ ...prev, villages: true }));
       try {
-        const villagesData = await getVillagesByWard(wardId);
+        const villagesData = await getVillagesByUnion(unionId);
         setVillages(villagesData);
       } catch (error) {
         console.error('Error loading villages:', error);
@@ -243,8 +199,7 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
       division_id: selectedDivision || undefined,
       district_id: selectedDistrict || undefined,
       upazila_id: selectedUpazila || undefined,
-      union_id: selectedUnion || undefined,
-      ward_id: wardId || undefined
+      union_id: unionId || undefined
     });
   };
 
@@ -257,7 +212,6 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
       district_id: selectedDistrict || undefined,
       upazila_id: selectedUpazila || undefined,
       union_id: selectedUnion || undefined,
-      ward_id: selectedWard || undefined,
       village_id: villageId || undefined
     });
   };
@@ -373,34 +327,8 @@ const LocationSelector: React.FC<LocationSelectorProps> = ({
           </div>
         )}
 
-        {/* Ward Selector */}
-        {selectedUnion && showAllLevels && wards.length > 0 && (
-          <div className="space-y-2">
-            <Label htmlFor="ward">ওয়ার্ড</Label>
-            <Select value={selectedWard} onValueChange={handleWardChange}>
-              <SelectTrigger className="w-full">
-                {loading.wards ? (
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>লোড হচ্ছে...</span>
-                  </div>
-                ) : (
-                  <SelectValue placeholder="ওয়ার্ড নির্বাচন করুন" />
-                )}
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                {wards.map((ward) => (
-                  <SelectItem key={ward.id} value={ward.id}>
-                    {ward.bn_name} ({ward.name})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
         {/* Village Selector */}
-        {selectedWard && showAllLevels && villages.length > 0 && (
+        {selectedUnion && showAllLevels && villages.length > 0 && (
           <div className="space-y-2">
             <Label htmlFor="village">গ্রাম/এলাকা</Label>
             <Select value={selectedVillage} onValueChange={handleVillageChange}>

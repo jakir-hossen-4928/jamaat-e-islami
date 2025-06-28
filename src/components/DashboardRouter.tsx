@@ -5,7 +5,7 @@ import SuperAdminDashboard from '@/dashboards/SuperAdminDashboard';
 import DivisionAdminDashboard from '@/dashboards/DivisionAdminDashboard';
 import DistrictAdminDashboard from '@/dashboards/DistrictAdminDashboard';
 import UpazilaAdminDashboard from '@/dashboards/UpazilaAdminDashboard';
-import VillageAdminDashboard from '@/dashboards/VillageAdminDashboard';
+import UnionAdminDashboard from '@/dashboards/UnionAdminDashboard';
 
 const DashboardRouter: React.FC = () => {
   const { userProfile } = useAuth();
@@ -40,10 +40,10 @@ const DashboardRouter: React.FC = () => {
       return <DistrictAdminDashboard />;
     case 'upazila_admin':
       return <UpazilaAdminDashboard />;
-    case 'village_admin':
-      return <VillageAdminDashboard />;
+    case 'union_admin':
+      return <UnionAdminDashboard />;
     default:
-      return <VillageAdminDashboard />;
+      return <UnionAdminDashboard />;
   }
 };
 
