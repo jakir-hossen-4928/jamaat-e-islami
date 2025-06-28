@@ -523,7 +523,7 @@ const AllVoters = () => {
     queryKey: ['voters', locationFilters],
     queryFn: async () => {
       const votersRef = collection(db, 'voters');
-      let votersQuery = votersRef;
+      let votersQuery = query(votersRef); // Start with a query, not a collection reference
 
       // Apply location-based filtering for role-based access
       if (userProfile?.role !== 'super_admin') {

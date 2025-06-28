@@ -68,10 +68,18 @@ const LocationDemo = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Location Selector */}
           <div>
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">প্রশাসনিক অঞ্চল নির্বাচন করুন</h2>
+              <p className="text-sm text-gray-600">বাংলাদেশের সকল প্রশাসনিক স্তর</p>
+            </div>
             <LocationSelector
               onLocationChange={handleLocationChange}
-              title="প্রশাসনিক অঞ্চল নির্বাচন করুন"
-              showAllLevels={true}
+              initialValues={{
+                division_id: selectedLocation.division_id,
+                district_id: selectedLocation.district_id,
+                upazila_id: selectedLocation.upazila_id,
+                union_id: selectedLocation.union_id
+              }}
             />
           </div>
 
