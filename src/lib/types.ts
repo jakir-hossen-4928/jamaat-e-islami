@@ -27,11 +27,11 @@ export interface VoterData {
   Collector?: string;
   'Collection Date'?: string;
   'Last Updated'?: string;
-  // Location hierarchy IDs
-  division_id?: string;
-  district_id?: string;
-  upazila_id?: string;
-  union_id?: string;
+  // Location hierarchy IDs - REQUIRED for location-based filtering
+  division_id: string;
+  district_id: string;
+  upazila_id: string;
+  union_id: string;
   ward_id?: string;
   village_id?: string;
 }
@@ -40,16 +40,20 @@ export interface User {
   uid: string;
   email: string;
   displayName?: string;
-  role: 'super_admin' | 'division_admin' | 'district_admin' | 'ward_admin' | 'moderator' | 'user' | 'admin';
+  role: 'super_admin' | 'division_admin' | 'district_admin' | 'ward_admin' | 'moderator' | 'user';
   approved: boolean;
   createdAt: string;
   lastLogin?: string;
-  // Role-based access scope
-  division_id?: string;
-  district_id?: string;
-  upazila_id?: string;
-  union_id?: string;
-  ward_id?: string;
+  // Location-based access scope - defines what areas user can access
+  accessScope: {
+    division_id?: string;
+    district_id?: string;
+    upazila_id?: string;
+    union_id?: string;
+    ward_id?: string;
+  };
+  // Assigned by role hierarchy
+  assignedBy?: string; // UID of the admin who assigned this role
 }
 
 export interface SMSCampaign {
@@ -121,4 +125,14 @@ export interface LocationData {
   unions: Union[];
   wards: Ward[];
   villages: Village[];
+}
+
+// Role-based permissions interface
+export interface RolePermissions {
+  canCreate: boolean;
+  canRead: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
+  canAssignRoles: string[]; // Array of roles this user can assign
+  locationScope: 'all' | 'division' | 'district' | 'upazila' | 'union' | 'ward';
 }

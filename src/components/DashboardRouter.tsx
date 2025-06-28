@@ -19,6 +19,19 @@ const DashboardRouter: React.FC = () => {
     );
   }
 
+  // Check if user is approved
+  if (!userProfile.approved) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">অনুমোদনের অপেক্ষায়</h2>
+          <p className="text-gray-600">আপনার অ্যাকাউন্ট এখনও অনুমোদিত হয়নি। অ্যাডমিনের অনুমোদনের জন্য অপেক্ষা করুন।</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Route based on role
   switch (userProfile.role) {
     case 'super_admin':
       return <SuperAdminDashboard />;
@@ -32,7 +45,7 @@ const DashboardRouter: React.FC = () => {
       return <ModeratorDashboard />;
     case 'user':
       return <UserDashboard />;
-    case 'admin': // Legacy admin role
+    case 'admin': // Legacy admin role - treat as super admin
       return <SuperAdminDashboard />;
     default:
       return <UserDashboard />;

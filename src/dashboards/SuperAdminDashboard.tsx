@@ -1,12 +1,13 @@
 
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Building, MapPin, BarChart3, Shield, Settings } from 'lucide-react';
+import { Users, Building, MapPin, BarChart3, Shield, Settings, UserCheck, Database } from 'lucide-react';
 import { VoterData, User } from '@/lib/types';
+import RoleBasedSidebar from '@/components/layout/RoleBasedSidebar';
 
 const SuperAdminDashboard = () => {
   const { data: stats, isLoading } = useQuery({
@@ -14,14 +15,17 @@ const SuperAdminDashboard = () => {
     queryFn: async () => {
       const votersRef = collection(db, 'voters');
       const usersRef = collection(db, 'users');
+      const pendingUsersQuery = query(usersRef, where('approved', '==', false));
       
-      const [votersSnapshot, usersSnapshot] = await Promise.all([
+      const [votersSnapshot, usersSnapshot, pendingUsersSnapshot] = await Promise.all([
         getDocs(votersRef),
-        getDocs(usersRef)
+        getDocs(usersRef),
+        getDocs(pendingUsersQuery)
       ]);
       
       const voters = votersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoterData));
       const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as User));
+      const pendingUsers = pendingUsersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as User));
       
       return {
         totalVoters: voters.length,
@@ -30,9 +34,17 @@ const SuperAdminDashboard = () => {
         totalDistricts: 64,
         totalUpazilas: 495,
         totalUnions: 4500,
-        activeAdmins: users.filter(u => u.role !== 'user').length,
-        pendingApprovals: users.filter(u => !u.approved).length,
-        highPriorityVoters: voters.filter(v => v['Priority Level'] === 'High').length
+        activeAdmins: users.filter(u => u.role !== 'user' && u.approved).length,
+        pendingApprovals: pendingUsers.length,
+        highPriorityVoters: voters.filter(v => v['Priority Level'] === 'High').length,
+        roleDistribution: {
+          super_admin: users.filter(u => u.role === 'super_admin').length,
+          division_admin: users.filter(u => u.role === 'division_admin').length,
+          district_admin: users.filter(u => u.role === 'district_admin').length,
+          ward_admin: users.filter(u => u.role === 'ward_admin').length,
+          moderator: users.filter(u => u.role === 'moderator').length,
+          user: users.filter(u => u.role === 'user').length
+        }
       };
     }
   });
@@ -46,23 +58,15 @@ const SuperAdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <RoleBasedSidebar>
+      <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">সুপার অ্যাডমিন ড্যাশবোর্ড</h1>
-            <p className="text-gray-600 mt-1">জামায়াতে ইসলামী ভোটার ব্যবস্থাপনা - সম্পূর্ণ নিয়ন্ত্রণ</p>
-          </div>
-          <div className="flex space-x-2 mt-4 md:mt-0">
-            <Button variant="outline" size="sm">
-              <Settings className="w-4 h-4 mr-2" />
-              সিস্টেম সেটিংস
-            </Button>
-          </div>
+        <div className="bg-gradient-to-r from-green-600 to-green-800 rounded-lg p-6 text-white">
+          <h1 className="text-2xl lg:text-3xl font-bold">সুপার অ্যাডমিন ড্যাশবোর্ড</h1>
+          <p className="mt-2 text-green-100">জামায়াতে ইসলামী ভোটার ব্যবস্থাপনা - সম্পূর্ণ নিয়ন্ত্রণ</p>
         </div>
 
-        {/* National Overview */}
+        {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="bg-blue-50 border-blue-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -109,9 +113,46 @@ const SuperAdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Management Sections */}
+        {/* Role Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <UserCheck className="w-5 h-5 text-blue-600" />
+              <span>ভূমিকা ভিত্তিক বিতরণ</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="text-center">
+                <div className="text-lg font-bold text-red-600">{stats?.roleDistribution?.super_admin || 0}</div>
+                <div className="text-xs text-gray-600">সুপার অ্যাডমিন</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-blue-600">{stats?.roleDistribution?.division_admin || 0}</div>
+                <div className="text-xs text-gray-600">বিভাগীয় অ্যাডমিন</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-green-600">{stats?.roleDistribution?.district_admin || 0}</div>
+                <div className="text-xs text-gray-600">জেলা অ্যাডমিন</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-purple-600">{stats?.roleDistribution?.ward_admin || 0}</div>
+                <div className="text-xs text-gray-600">ওয়ার্ড অ্যাডমিন</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-orange-600">{stats?.roleDistribution?.moderator || 0}</div>
+                <div className="text-xs text-gray-600">মডারেটর</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-gray-600">{stats?.roleDistribution?.user || 0}</div>
+                <div className="text-xs text-gray-600">ব্যবহারকারী</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* User Management */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -120,21 +161,17 @@ const SuperAdminDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button className="w-full" variant="outline">
-                <a href="/admin/verify-users" className="flex items-center">
+              <Button className="w-full" variant="outline" asChild>
+                <a href="/admin/verify-users">
                   ইউজার অনুমোদন ({stats?.pendingApprovals || 0})
                 </a>
               </Button>
               <Button className="w-full" variant="outline">
                 রোল অ্যাসাইনমেন্ট
               </Button>
-              <Button className="w-full" variant="outline">
-                অ্যাডমিন পরিচালনা
-              </Button>
             </CardContent>
           </Card>
 
-          {/* Location Management */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -149,13 +186,9 @@ const SuperAdminDashboard = () => {
               <Button className="w-full" variant="outline">
                 জেলা ভিত্তিক ডেটা
               </Button>
-              <Button className="w-full" variant="outline">
-                এলাকা ভিত্তিক রিপোর্ট
-              </Button>
             </CardContent>
           </Card>
 
-          {/* System Management */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
@@ -164,69 +197,17 @@ const SuperAdminDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button className="w-full" variant="outline">
-                <a href="/admin/analytics" className="flex items-center">
-                  সিস্টেম অ্যানালিটিক্স
-                </a>
+              <Button className="w-full" variant="outline" asChild>
+                <a href="/admin/analytics">সিস্টেম অ্যানালিটিক্স</a>
               </Button>
-              <Button className="w-full" variant="outline">
-                <a href="/admin/sms-campaign" className="flex items-center">
-                  SMS ক্যাম্পেইন
-                </a>
+              <Button className="w-full" variant="outline" asChild>
+                <a href="/admin/data-hub">ডেটা হাব</a>
               </Button>
-              <Button className="w-full" variant="outline">
-                <a href="/admin/data-hub" className="flex items-center">
-                  ডেটা হাব
-                </a>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>দ্রুত কার্যক্রম</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button className="w-full">
-                <a href="/admin/add-voter" className="flex items-center">
-                  নতুন ভোটার যোগ করুন
-                </a>
-              </Button>
-              <Button className="w-full" variant="outline">
-                <a href="/admin/voters" className="flex items-center">
-                  সব ভোটার দেখুন
-                </a>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>পার্টি পরিসংখ্যান</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>উচ্চ অগ্রাধিকার:</span>
-                  <span className="font-semibold">{stats?.highPriorityVoters || 0}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>মোট ইউনিয়ন:</span>
-                  <span className="font-semibold">{stats?.totalUnions || 0}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>উপজেলা:</span>
-                  <span className="font-semibold">{stats?.totalUpazilas || 0}</span>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>
       </div>
-    </div>
+    </RoleBasedSidebar>
   );
 };
 
