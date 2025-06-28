@@ -196,6 +196,12 @@ const RoleBasedSidebar = ({ children }: RoleBasedSidebarProps) => {
               <span className="text-sm text-gray-600 hidden md:block">
                 স্বাগতম, {userProfile?.displayName}
               </span>
+              <Link
+                to="/docs"
+                className="text-sm text-blue-600 hover:text-blue-800"
+              >
+                ডকুমেন্টেশন
+              </Link>
             </div>
           </div>
         </div>

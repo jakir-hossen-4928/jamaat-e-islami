@@ -29,6 +29,7 @@ import LocationDemo from "./pages/LocationDemo";
 import DashboardRouter from "./components/DashboardRouter";
 import LocationManagement from "./adminDashboard/LocationManagement";
 import SystemSettings from "./adminDashboard/SystemSettings";
+import Documentation from "./pages/Documentation";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,10 @@ const App = () => (
               <Route path="/verification-loading" element={<VerificationLoading />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="/location-demo" element={<LocationDemo />} />
+
+              {/* Documentation Routes */}
+              <Route path="/docs" element={<Documentation />} />
+              <Route path="/docs/*" element={<Documentation />} />
 
               {/* Main Dashboard Route - Role-based routing */}
               <Route path="/dashboard" element={
