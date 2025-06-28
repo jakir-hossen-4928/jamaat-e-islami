@@ -47,21 +47,22 @@ const App = () => (
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="/location-demo" element={<LocationDemo />} />
 
-              {/* Protected Routes */}
+              {/* Main Dashboard Route - Role-based routing */}
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <AdminDashboard />
                 </ProtectedRoute>
               } />
 
+              {/* Admin Routes - Updated to use new role system */}
               <Route path="/admin" element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <AdminDashboard />
                 </ProtectedRoute>
               } />
 
               <Route path="/admin/dashboard" element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <AdminDashboard />
                 </ProtectedRoute>
               } />
