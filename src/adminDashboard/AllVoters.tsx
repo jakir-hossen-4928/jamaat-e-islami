@@ -45,46 +45,41 @@ const AllVoters = () => {
     queryFn: async () => {
       if (!userProfile) return [];
       
-      let votersQuery;
       const votersCollection = collection(db, 'voters');
+      let finalQuery;
       
       // Apply location-based filtering based on user role and selected location
       if (userProfile.role !== 'super_admin') {
         const userScope = userProfile.accessScope;
         if (userScope.village_id) {
-          votersQuery = query(votersCollection, where('village_id', '==', userScope.village_id));
+          finalQuery = query(votersCollection, where('village_id', '==', userScope.village_id), orderBy('Last Updated', 'desc'));
         } else if (userScope.union_id) {
-          votersQuery = query(votersCollection, where('union_id', '==', userScope.union_id));
+          finalQuery = query(votersCollection, where('union_id', '==', userScope.union_id), orderBy('Last Updated', 'desc'));
         } else if (userScope.upazila_id) {
-          votersQuery = query(votersCollection, where('upazila_id', '==', userScope.upazila_id));
+          finalQuery = query(votersCollection, where('upazila_id', '==', userScope.upazila_id), orderBy('Last Updated', 'desc'));
         } else if (userScope.district_id) {
-          votersQuery = query(votersCollection, where('district_id', '==', userScope.district_id));
+          finalQuery = query(votersCollection, where('district_id', '==', userScope.district_id), orderBy('Last Updated', 'desc'));
         } else if (userScope.division_id) {
-          votersQuery = query(votersCollection, where('division_id', '==', userScope.division_id));
+          finalQuery = query(votersCollection, where('division_id', '==', userScope.division_id), orderBy('Last Updated', 'desc'));
         } else {
-          votersQuery = votersCollection;
+          finalQuery = query(votersCollection, orderBy('Last Updated', 'desc'));
         }
       } else {
         // For super admin, apply selected location filters
         if (selectedLocation.village_id) {
-          votersQuery = query(votersCollection, where('village_id', '==', selectedLocation.village_id));
+          finalQuery = query(votersCollection, where('village_id', '==', selectedLocation.village_id), orderBy('Last Updated', 'desc'));
         } else if (selectedLocation.union_id) {
-          votersQuery = query(votersCollection, where('union_id', '==', selectedLocation.union_id));
+          finalQuery = query(votersCollection, where('union_id', '==', selectedLocation.union_id), orderBy('Last Updated', 'desc'));
         } else if (selectedLocation.upazila_id) {
-          votersQuery = query(votersCollection, where('upazila_id', '==', selectedLocation.upazila_id));
+          finalQuery = query(votersCollection, where('upazila_id', '==', selectedLocation.upazila_id), orderBy('Last Updated', 'desc'));
         } else if (selectedLocation.district_id) {
-          votersQuery = query(votersCollection, where('district_id', '==', selectedLocation.district_id));
+          finalQuery = query(votersCollection, where('district_id', '==', selectedLocation.district_id), orderBy('Last Updated', 'desc'));
         } else if (selectedLocation.division_id) {
-          votersQuery = query(votersCollection, where('division_id', '==', selectedLocation.division_id));
+          finalQuery = query(votersCollection, where('division_id', '==', selectedLocation.division_id), orderBy('Last Updated', 'desc'));
         } else {
-          votersQuery = votersCollection;
+          finalQuery = query(votersCollection, orderBy('Last Updated', 'desc'));
         }
       }
-      
-      // Add ordering
-      const finalQuery = votersQuery === votersCollection 
-        ? query(votersCollection, orderBy('Last Updated', 'desc'))
-        : query(votersQuery, orderBy('Last Updated', 'desc'));
       
       const snapshot = await getDocs(finalQuery);
       return snapshot.docs.map(doc => ({
