@@ -1,15 +1,14 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
-import { getDivisions, getDistrictsByDivision, getUpazilasByDistrict, getUnionsByUpazila } from '@/lib/locationUtils';
-import { useQuery } from '@tanstack/react-query';
+import LocationSelector from '@/components/LocationSelector';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -20,8 +19,7 @@ const SignUp = () => {
     division_id: '',
     district_id: '',
     upazila_id: '',
-    union_id: '',
-    village_id: ''
+    union_id: ''
   });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -30,33 +28,6 @@ const SignUp = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Load divisions
-  const { data: divisions = [] } = useQuery({
-    queryKey: ['divisions'],
-    queryFn: getDivisions
-  });
-
-  // Load districts based on selected division
-  const { data: districts = [] } = useQuery({
-    queryKey: ['districts', formData.division_id],
-    queryFn: () => getDistrictsByDivision(formData.division_id),
-    enabled: !!formData.division_id
-  });
-
-  // Load upazilas based on selected district
-  const { data: upazilas = [] } = useQuery({
-    queryKey: ['upazilas', formData.district_id],
-    queryFn: () => getUpazilasByDistrict(formData.district_id),
-    enabled: !!formData.district_id
-  });
-
-  // Load unions based on selected upazila
-  const { data: unions = [] } = useQuery({
-    queryKey: ['unions', formData.upazila_id],
-    queryFn: () => getUnionsByUpazila(formData.upazila_id),
-    enabled: !!formData.upazila_id
-  });
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
@@ -64,29 +35,16 @@ const SignUp = () => {
     });
   };
 
-  const handleLocationChange = (field: string, value: string) => {
-    setFormData(prev => {
-      const updated = { ...prev, [field]: value };
-      
-      // Reset dependent fields when parent changes
-      if (field === 'division_id') {
-        updated.district_id = '';
-        updated.upazila_id = '';
-        updated.union_id = '';
-        updated.village_id = '';
-      } else if (field === 'district_id') {
-        updated.upazila_id = '';
-        updated.union_id = '';
-        updated.village_id = '';
-      } else if (field === 'upazila_id') {
-        updated.union_id = '';
-        updated.village_id = '';
-      } else if (field === 'union_id') {
-        updated.village_id = '';
-      }
-      
-      return updated;
-    });
+  const handleLocationChange = (location: {
+    division_id: string;
+    district_id: string;
+    upazila_id: string;
+    union_id: string;
+  }) => {
+    setFormData(prev => ({
+      ...prev,
+      ...location
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -203,82 +161,15 @@ const SignUp = () => {
               {/* Location Selection */}
               <div className="space-y-3 pt-2 border-t">
                 <Label className="text-sm font-medium text-gray-700">এলাকা নির্বাচন করুন</Label>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="division">বিভাগ *</Label>
-                  <Select value={formData.division_id} onValueChange={(value) => handleLocationChange('division_id', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {divisions.map((division) => (
-                        <SelectItem key={division.id} value={division.id}>
-                          {division.bn_name} ({division.name})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="district">জেলা *</Label>
-                  <Select 
-                    value={formData.district_id} 
-                    onValueChange={(value) => handleLocationChange('district_id', value)}
-                    disabled={!formData.division_id}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="জেলা নির্বাচন করুন" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {districts.map((district) => (
-                        <SelectItem key={district.id} value={district.id}>
-                          {district.bn_name} ({district.name})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="upazila">উপজেলা *</Label>
-                  <Select 
-                    value={formData.upazila_id} 
-                    onValueChange={(value) => handleLocationChange('upazila_id', value)}
-                    disabled={!formData.district_id}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="উপজেলা নির্বাচন করুন" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {upazilas.map((upazila) => (
-                        <SelectItem key={upazila.id} value={upazila.id}>
-                          {upazila.bn_name} ({upazila.name})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="union">ইউনিয়ন (ঐচ্ছিক)</Label>
-                  <Select 
-                    value={formData.union_id} 
-                    onValueChange={(value) => handleLocationChange('union_id', value)}
-                    disabled={!formData.upazila_id}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="ইউনিয়ন নির্বাচন করুন" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {unions.map((union) => (
-                        <SelectItem key={union.id} value={union.id}>
-                          {union.bn_name} ({union.name})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <LocationSelector
+                  onLocationChange={handleLocationChange}
+                  initialValues={{
+                    division_id: formData.division_id,
+                    district_id: formData.district_id,
+                    upazila_id: formData.upazila_id,
+                    union_id: formData.union_id
+                  }}
+                />
               </div>
               
               <div className="space-y-2">

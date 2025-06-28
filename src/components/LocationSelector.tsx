@@ -1,359 +1,275 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { MapPin, Loader2 } from 'lucide-react';
-import {
-  getDivisions,
-  getDistrictsByDivision,
-  getUpazilasByDistrict,
-  getUnionsByUpazila,
-  getVillagesByUnion
-} from '@/lib/locationUtils';
-import { Division, District, Upazila, Union, Village } from '@/lib/types';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+import { getDivisions, getDistrictsByDivision, getUpazilasByDistrict, getUnionsByUpazila } from '@/lib/locationUtils';
 
 interface LocationSelectorProps {
-  onLocationChange: (locationIds: {
-    division_id?: string;
-    district_id?: string;
-    upazila_id?: string;
-    union_id?: string;
-    village_id?: string;
+  onLocationChange: (location: {
+    division_id: string;
+    district_id: string;
+    upazila_id: string;
+    union_id: string;
   }) => void;
   initialValues?: {
     division_id?: string;
     district_id?: string;
     upazila_id?: string;
     union_id?: string;
-    village_id?: string;
   };
-  title?: string;
-  showAllLevels?: boolean;
 }
 
-const LocationSelector: React.FC<LocationSelectorProps> = ({
-  onLocationChange,
-  initialValues,
-  title = "অবস্থান নির্বাচন করুন",
-  showAllLevels = true
-}) => {
-  const [divisions, setDivisions] = useState<Division[]>([]);
-  const [districts, setDistricts] = useState<District[]>([]);
-  const [upazilas, setUpazilas] = useState<Upazila[]>([]);
-  const [unions, setUnions] = useState<Union[]>([]);
-  const [villages, setVillages] = useState<Village[]>([]);
-
-  const [selectedDivision, setSelectedDivision] = useState<string>('');
-  const [selectedDistrict, setSelectedDistrict] = useState<string>('');
-  const [selectedUpazila, setSelectedUpazila] = useState<string>('');
-  const [selectedUnion, setSelectedUnion] = useState<string>('');
-  const [selectedVillage, setSelectedVillage] = useState<string>('');
-
-  const [loading, setLoading] = useState<{
-    divisions: boolean;
-    districts: boolean;
-    upazilas: boolean;
-    unions: boolean;
-    villages: boolean;
-  }>({
-    divisions: false,
-    districts: false,
-    upazilas: false,
-    unions: false,
-    villages: false
+const LocationSelector: React.FC<LocationSelectorProps> = ({ onLocationChange, initialValues = {} }) => {
+  const [selectedLocation, setSelectedLocation] = useState({
+    division_id: initialValues.division_id || '',
+    district_id: initialValues.district_id || '',
+    upazila_id: initialValues.upazila_id || '',
+    union_id: initialValues.union_id || ''
   });
 
-  // Load divisions on component mount
-  useEffect(() => {
-    const loadDivisions = async () => {
-      setLoading(prev => ({ ...prev, divisions: true }));
-      try {
-        const divisionsData = await getDivisions();
-        setDivisions(divisionsData);
-      } catch (error) {
-        console.error('Error loading divisions:', error);
-      } finally {
-        setLoading(prev => ({ ...prev, divisions: false }));
-      }
-    };
-    loadDivisions();
-  }, []);
+  const [customInputs, setCustomInputs] = useState({
+    district: '',
+    upazila: '',
+    union: ''
+  });
 
-  // Set initial values
-  useEffect(() => {
-    if (initialValues) {
-      setSelectedDivision(initialValues.division_id || '');
-      setSelectedDistrict(initialValues.district_id || '');
-      setSelectedUpazila(initialValues.upazila_id || '');
-      setSelectedUnion(initialValues.union_id || '');
-      setSelectedVillage(initialValues.village_id || '');
-    }
-  }, [initialValues]);
+  const [showCustomInput, setShowCustomInput] = useState({
+    district: false,
+    upazila: false,
+    union: false
+  });
 
-  // Handle division change
-  const handleDivisionChange = async (divisionId: string) => {
-    setSelectedDivision(divisionId);
-    setSelectedDistrict('');
-    setSelectedUpazila('');
-    setSelectedUnion('');
-    setSelectedVillage('');
+  // Load divisions
+  const { data: divisions = [] } = useQuery({
+    queryKey: ['divisions'],
+    queryFn: getDivisions
+  });
+
+  // Load districts based on selected division
+  const { data: districts = [] } = useQuery({
+    queryKey: ['districts', selectedLocation.division_id],
+    queryFn: () => getDistrictsByDivision(selectedLocation.division_id),
+    enabled: !!selectedLocation.division_id
+  });
+
+  // Load upazilas based on selected district
+  const { data: upazilas = [] } = useQuery({
+    queryKey: ['upazilas', selectedLocation.district_id],
+    queryFn: () => getUpazilasByDistrict(selectedLocation.district_id),
+    enabled: !!selectedLocation.district_id
+  });
+
+  // Load unions based on selected upazila
+  const { data: unions = [] } = useQuery({
+    queryKey: ['unions', selectedLocation.upazila_id],
+    queryFn: () => getUnionsByUpazila(selectedLocation.upazila_id),
+    enabled: !!selectedLocation.upazila_id
+  });
+
+  const handleLocationChange = (field: string, value: string) => {
+    const updated = { ...selectedLocation, [field]: value };
     
-    setDistricts([]);
-    setUpazilas([]);
-    setUnions([]);
-    setVillages([]);
-
-    if (divisionId) {
-      setLoading(prev => ({ ...prev, districts: true }));
-      try {
-        const districtsData = await getDistrictsByDivision(divisionId);
-        setDistricts(districtsData);
-      } catch (error) {
-        console.error('Error loading districts:', error);
-      } finally {
-        setLoading(prev => ({ ...prev, districts: false }));
-      }
+    // Reset dependent fields when parent changes
+    if (field === 'division_id') {
+      updated.district_id = '';
+      updated.upazila_id = '';
+      updated.union_id = '';
+      setShowCustomInput({ district: false, upazila: false, union: false });
+    } else if (field === 'district_id') {
+      updated.upazila_id = '';
+      updated.union_id = '';
+      setShowCustomInput({ ...showCustomInput, upazila: false, union: false });
+    } else if (field === 'upazila_id') {
+      updated.union_id = '';
+      setShowCustomInput({ ...showCustomInput, union: false });
     }
-
-    onLocationChange({
-      division_id: divisionId || undefined
-    });
-  };
-
-  // Handle district change
-  const handleDistrictChange = async (districtId: string) => {
-    setSelectedDistrict(districtId);
-    setSelectedUpazila('');
-    setSelectedUnion('');
-    setSelectedVillage('');
     
-    setUpazilas([]);
-    setUnions([]);
-    setVillages([]);
-
-    if (districtId) {
-      setLoading(prev => ({ ...prev, upazilas: true }));
-      try {
-        const upazilasData = await getUpazilasByDistrict(districtId);
-        setUpazilas(upazilasData);
-      } catch (error) {
-        console.error('Error loading upazilas:', error);
-      } finally {
-        setLoading(prev => ({ ...prev, upazilas: false }));
-      }
-    }
-
-    onLocationChange({
-      division_id: selectedDivision || undefined,
-      district_id: districtId || undefined
-    });
+    setSelectedLocation(updated);
+    onLocationChange(updated);
   };
 
-  // Handle upazila change
-  const handleUpazilaChange = async (upazilaId: string) => {
-    setSelectedUpazila(upazilaId);
-    setSelectedUnion('');
-    setSelectedVillage('');
-    
-    setUnions([]);
-    setVillages([]);
-
-    if (upazilaId) {
-      setLoading(prev => ({ ...prev, unions: true }));
-      try {
-        const unionsData = await getUnionsByUpazila(upazilaId);
-        setUnions(unionsData);
-      } catch (error) {
-        console.error('Error loading unions:', error);
-      } finally {
-        setLoading(prev => ({ ...prev, unions: false }));
+  const handleCustomInput = (type: 'district' | 'upazila' | 'union') => {
+    const customValue = customInputs[type];
+    if (customValue.trim()) {
+      // Generate a temporary ID for the custom location
+      const customId = `custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      if (type === 'district') {
+        handleLocationChange('district_id', customId);
+      } else if (type === 'upazila') {
+        handleLocationChange('upazila_id', customId);
+      } else if (type === 'union') {
+        handleLocationChange('union_id', customId);
       }
+      
+      setShowCustomInput({ ...showCustomInput, [type]: false });
+      setCustomInputs({ ...customInputs, [type]: '' });
     }
-
-    onLocationChange({
-      division_id: selectedDivision || undefined,
-      district_id: selectedDistrict || undefined,
-      upazila_id: upazilaId || undefined
-    });
-  };
-
-  // Handle union change
-  const handleUnionChange = async (unionId: string) => {
-    setSelectedUnion(unionId);
-    setSelectedVillage('');
-    setVillages([]);
-
-    if (unionId && showAllLevels) {
-      setLoading(prev => ({ ...prev, villages: true }));
-      try {
-        const villagesData = await getVillagesByUnion(unionId);
-        setVillages(villagesData);
-      } catch (error) {
-        console.error('Error loading villages:', error);
-      } finally {
-        setLoading(prev => ({ ...prev, villages: false }));
-      }
-    }
-
-    onLocationChange({
-      division_id: selectedDivision || undefined,
-      district_id: selectedDistrict || undefined,
-      upazila_id: selectedUpazila || undefined,
-      union_id: unionId || undefined
-    });
-  };
-
-  // Handle village change
-  const handleVillageChange = (villageId: string) => {
-    setSelectedVillage(villageId);
-
-    onLocationChange({
-      division_id: selectedDivision || undefined,
-      district_id: selectedDistrict || undefined,
-      upazila_id: selectedUpazila || undefined,
-      union_id: selectedUnion || undefined,
-      village_id: villageId || undefined
-    });
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <MapPin className="w-5 h-5 text-green-600" />
-          <span>{title}</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Division Selector */}
-        <div className="space-y-2">
-          <Label htmlFor="division">বিভাগ</Label>
-          <Select value={selectedDivision} onValueChange={handleDivisionChange}>
-            <SelectTrigger className="w-full">
-              {loading.divisions ? (
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>লোড হচ্ছে...</span>
-                </div>
-              ) : (
-                <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
-              )}
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="division">বিভাগ *</Label>
+        <Select value={selectedLocation.division_id} onValueChange={(value) => handleLocationChange('division_id', value)}>
+          <SelectTrigger>
+            <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
+          </SelectTrigger>
+          <SelectContent>
+            {divisions.map((division) => (
+              <SelectItem key={division.id} value={division.id}>
+                {division.bn_name} ({division.name})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="district">জেলা *</Label>
+        <div className="flex gap-2">
+          <Select 
+            value={selectedLocation.district_id} 
+            onValueChange={(value) => handleLocationChange('district_id', value)}
+            disabled={!selectedLocation.division_id}
+          >
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="জেলা নির্বাচন করুন" />
             </SelectTrigger>
-            <SelectContent className="bg-white">
-              {divisions.map((division) => (
-                <SelectItem key={division.id} value={division.id}>
-                  {division.bn_name} ({division.name})
+            <SelectContent>
+              {districts.map((district) => (
+                <SelectItem key={district.id} value={district.id}>
+                  {district.bn_name} ({district.name})
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCustomInput({ ...showCustomInput, district: !showCustomInput.district })}
+            disabled={!selectedLocation.division_id}
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
         </div>
-
-        {/* District Selector */}
-        {selectedDivision && (
-          <div className="space-y-2">
-            <Label htmlFor="district">জেলা</Label>
-            <Select value={selectedDistrict} onValueChange={handleDistrictChange}>
-              <SelectTrigger className="w-full">
-                {loading.districts ? (
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>লোড হচ্ছে...</span>
-                  </div>
-                ) : (
-                  <SelectValue placeholder="জেলা নির্বাচন করুন" />
-                )}
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                {districts.map((district) => (
-                  <SelectItem key={district.id} value={district.id}>
-                    {district.bn_name} ({district.name})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {showCustomInput.district && (
+          <div className="flex gap-2">
+            <Input
+              placeholder="নতুন জেলার নাম লিখুন"
+              value={customInputs.district}
+              onChange={(e) => setCustomInputs({ ...customInputs, district: e.target.value })}
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => handleCustomInput('district')}
+            >
+              যোগ করুন
+            </Button>
           </div>
         )}
+      </div>
 
-        {/* Upazila Selector */}
-        {selectedDistrict && (
-          <div className="space-y-2">
-            <Label htmlFor="upazila">উপজেলা</Label>
-            <Select value={selectedUpazila} onValueChange={handleUpazilaChange}>
-              <SelectTrigger className="w-full">
-                {loading.upazilas ? (
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>লোড হচ্ছে...</span>
-                  </div>
-                ) : (
-                  <SelectValue placeholder="উপজেলা নির্বাচন করুন" />
-                )}
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                {upazilas.map((upazila) => (
-                  <SelectItem key={upazila.id} value={upazila.id}>
-                    {upazila.bn_name} ({upazila.name})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <div className="space-y-2">
+        <Label htmlFor="upazila">উপজেলা *</Label>
+        <div className="flex gap-2">
+          <Select 
+            value={selectedLocation.upazila_id} 
+            onValueChange={(value) => handleLocationChange('upazila_id', value)}
+            disabled={!selectedLocation.district_id}
+          >
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="উপজেলা নির্বাচন করুন" />
+            </SelectTrigger>
+            <SelectContent>
+              {upazilas.map((upazila) => (
+                <SelectItem key={upazila.id} value={upazila.id}>
+                  {upazila.bn_name} ({upazila.name})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCustomInput({ ...showCustomInput, upazila: !showCustomInput.upazila })}
+            disabled={!selectedLocation.district_id}
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+        {showCustomInput.upazila && (
+          <div className="flex gap-2">
+            <Input
+              placeholder="নতুন উপজেলার নাম লিখুন"
+              value={customInputs.upazila}
+              onChange={(e) => setCustomInputs({ ...customInputs, upazila: e.target.value })}
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => handleCustomInput('upazila')}
+            >
+              যোগ করুন
+            </Button>
           </div>
         )}
+      </div>
 
-        {/* Union Selector */}
-        {selectedUpazila && (
-          <div className="space-y-2">
-            <Label htmlFor="union">ইউনিয়ন</Label>
-            <Select value={selectedUnion} onValueChange={handleUnionChange}>
-              <SelectTrigger className="w-full">
-                {loading.unions ? (
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>লোড হচ্ছে...</span>
-                  </div>
-                ) : (
-                  <SelectValue placeholder="ইউনিয়ন নির্বাচন করুন" />
-                )}
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                {unions.map((union) => (
-                  <SelectItem key={union.id} value={union.id}>
-                    {union.bn_name} ({union.name})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <div className="space-y-2">
+        <Label htmlFor="union">ইউনিয়ন (ঐচ্ছিক)</Label>
+        <div className="flex gap-2">
+          <Select 
+            value={selectedLocation.union_id} 
+            onValueChange={(value) => handleLocationChange('union_id', value)}
+            disabled={!selectedLocation.upazila_id}
+          >
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="ইউনিয়ন নির্বাচন করুন" />
+            </SelectTrigger>
+            <SelectContent>
+              {unions.map((union) => (
+                <SelectItem key={union.id} value={union.id}>
+                  {union.bn_name} ({union.name})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCustomInput({ ...showCustomInput, union: !showCustomInput.union })}
+            disabled={!selectedLocation.upazila_id}
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+        {showCustomInput.union && (
+          <div className="flex gap-2">
+            <Input
+              placeholder="নতুন ইউনিয়নের নাম লিখুন"
+              value={customInputs.union}
+              onChange={(e) => setCustomInputs({ ...customInputs, union: e.target.value })}
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => handleCustomInput('union')}
+            >
+              যোগ করুন
+            </Button>
           </div>
         )}
-
-        {/* Village Selector */}
-        {selectedUnion && showAllLevels && villages.length > 0 && (
-          <div className="space-y-2">
-            <Label htmlFor="village">গ্রাম/এলাকা</Label>
-            <Select value={selectedVillage} onValueChange={handleVillageChange}>
-              <SelectTrigger className="w-full">
-                {loading.villages ? (
-                  <div className="flex items-center space-x-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>লোড হচ্ছে...</span>
-                  </div>
-                ) : (
-                  <SelectValue placeholder="গ্রাম/এলাকা নির্বাচন করুন" />
-                )}
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                {villages.map((village) => (
-                  <SelectItem key={village.id} value={village.id}>
-                    {village.bn_name} ({village.name})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 

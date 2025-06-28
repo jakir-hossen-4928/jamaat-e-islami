@@ -1,9 +1,9 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, deleteDoc, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import AdminLayout from '@/components/layout/AdminLayout';
+import LocationFilter from '@/components/admin/LocationFilter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { useNavigate } from 'react-router-dom';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { canAccessLocation } from '@/lib/rbac';
 
 const StatsCards = ({ stats }: { stats: { totalVoters: number; willVoteCount: number; highPriorityCount: number; studentCount: number } }) => {
   return (
@@ -472,6 +473,13 @@ const AllVoters = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showLocationFilter, setShowLocationFilter] = useState(false);
+  const [locationFilters, setLocationFilters] = useState<{
+    division_id?: string;
+    district_id?: string;
+    upazila_id?: string;
+    union_id?: string;
+  }>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const queryClient = useQueryClient();
@@ -481,7 +489,7 @@ const AllVoters = () => {
   const allColumns = [
     'Voter Name', 'House Name', 'FatherOrHusband', 'Age', 'Gender', 'Marital Status',
     'Student', 'Occupation', 'Education', 'Religion', 'Phone', 'WhatsApp', 'NID',
-    'Is Voter', 'Will Vote', 'Voted Before', 'Vote Probability (%)', 'Political Support',
+    'Will Vote', 'Voted Before', 'Vote Probability (%)', 'Political Support',
     'Priority Level', 'Has Disability', 'Is Migrated', 'Remarks', 'Collector', 'Collection Date'
   ];
 
@@ -502,7 +510,6 @@ const AllVoters = () => {
     'Religion': false,
     'WhatsApp': false,
     'NID': false,
-    'Is Voter': false,
     'Voted Before': false,
     'Political Support': false,
     'Has Disability': false,
@@ -513,10 +520,37 @@ const AllVoters = () => {
   });
 
   const { data: voters = [], isLoading } = useQuery({
-    queryKey: ['voters'],
+    queryKey: ['voters', locationFilters],
     queryFn: async () => {
       const votersRef = collection(db, 'voters');
-      const snapshot = await getDocs(votersRef);
+      let votersQuery = votersRef;
+
+      // Apply location-based filtering for role-based access
+      if (userProfile?.role !== 'super_admin') {
+        const userScope = userProfile?.accessScope;
+        if (userScope) {
+          const constraints = [];
+          if (userScope.division_id) constraints.push(where('division_id', '==', userScope.division_id));
+          if (userScope.district_id) constraints.push(where('district_id', '==', userScope.district_id));
+          if (userScope.upazila_id) constraints.push(where('upazila_id', '==', userScope.upazila_id));
+          if (userScope.union_id) constraints.push(where('union_id', '==', userScope.union_id));
+          
+          if (constraints.length > 0) {
+            votersQuery = query(votersRef, ...constraints);
+          }
+        }
+      } else if (Object.keys(locationFilters).length > 0) {
+        // Super admin can filter by location
+        const constraints = Object.entries(locationFilters)
+          .filter(([_, value]) => value)
+          .map(([key, value]) => where(key, '==', value));
+        
+        if (constraints.length > 0) {
+          votersQuery = query(votersRef, ...constraints);
+        }
+      }
+
+      const snapshot = await getDocs(votersQuery);
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoterData));
     }
   });
@@ -616,6 +650,16 @@ const AllVoters = () => {
     }
   };
 
+  const handleLocationFilterChange = (filters: {
+    division_id?: string;
+    district_id?: string;
+    upazila_id?: string;
+    union_id?: string;
+  }) => {
+    setLocationFilters(filters);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
   const getFieldValue = (voter: VoterData, field: string) => {
     return voter[field as keyof VoterData] || '-';
   };
@@ -626,6 +670,15 @@ const AllVoters = () => {
   return (
     <AdminLayout>
       <div className="space-y-3 p-2 sm:p-4 lg:p-6">
+        {/* Location Filter for Super Admin */}
+        {userProfile?.role === 'super_admin' && (
+          <LocationFilter
+            onFilterChange={handleLocationFilterChange}
+            isVisible={showLocationFilter}
+            onToggle={setShowLocationFilter}
+          />
+        )}
+
         <StatsCards stats={stats} />
 
         {/* Mobile-Optimized Controls */}
