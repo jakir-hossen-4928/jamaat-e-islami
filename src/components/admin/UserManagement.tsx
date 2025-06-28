@@ -12,10 +12,10 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { User } from '@/lib/types';
-import { getRolePermissions, getRoleDisplayName, canVerifyRole } from '@/lib/rbac';
+import { getRolePermissions, getRoleDisplayName } from '@/lib/rbac';
 import { CheckCircle, XCircle, UserCheck, MapPin, Settings } from 'lucide-react';
 
-// Local cache for location data
+// Location cache
 const locationCache = {
   divisions: null as any[] | null,
   districts: null as any[] | null,
@@ -24,7 +24,6 @@ const locationCache = {
   villages: null as any[] | null,
 };
 
-// Load location data with caching
 const loadLocationData = async (type: string) => {
   if (locationCache[type as keyof typeof locationCache]) {
     return locationCache[type as keyof typeof locationCache];
@@ -73,15 +72,19 @@ const UserAssignmentDialog = ({
   React.useEffect(() => {
     if (isOpen) {
       const loadData = async () => {
-        const [divisions, districts, upazilas, unions, villages] = await Promise.all([
-          loadLocationData('divisions'),
-          loadLocationData('districts'),
-          loadLocationData('upazilas'),
-          loadLocationData('unions'),
-          loadLocationData('villages')
-        ]);
-        
-        setLocationData({ divisions, districts, upazilas, unions, villages });
+        try {
+          const [divisions, districts, upazilas, unions, villages] = await Promise.all([
+            loadLocationData('divisions'),
+            loadLocationData('districts'),
+            loadLocationData('upazilas'),
+            loadLocationData('unions'),
+            loadLocationData('villages')
+          ]);
+          
+          setLocationData({ divisions, districts, upazilas, unions, villages });
+        } catch (error) {
+          console.error('Error loading location data:', error);
+        }
       };
       loadData();
     }
@@ -104,7 +107,10 @@ const UserAssignmentDialog = ({
   );
 
   const handleLocationChange = (level: string, value: string) => {
-    const newLocation = { ...selectedLocation, [level]: value };
+    const newLocation = { ...selectedLocation };
+    
+    // Set the selected value
+    newLocation[level as keyof typeof selectedLocation] = value;
     
     // Clear dependent fields
     if (level === 'division_id') {
@@ -147,21 +153,23 @@ const UserAssignmentDialog = ({
     const union = locationData.unions.find(d => d.id === selectedLocation.union_id);
     const village = locationData.villages.find(v => v.id === selectedLocation.village_id);
 
+    const accessScope = {
+      ...(selectedLocation.division_id && { division_id: selectedLocation.division_id }),
+      ...(selectedLocation.district_id && { district_id: selectedLocation.district_id }),
+      ...(selectedLocation.upazila_id && { upazila_id: selectedLocation.upazila_id }),
+      ...(selectedLocation.union_id && { union_id: selectedLocation.union_id }),
+      ...(selectedLocation.village_id && { village_id: selectedLocation.village_id }),
+      ...(division?.name && { division_name: division.name }),
+      ...(district?.name && { district_name: district.name }),
+      ...(upazila?.name && { upazila_name: upazila.name }),
+      ...(union?.name && { union_name: union.name }),
+      ...(village?.name && { village_name: village.name })
+    };
+
     const updates: Partial<User> = {
       role: selectedRole,
-      approved: true, // Auto-approve when super_admin assigns role
-      accessScope: {
-        division_id: selectedLocation.division_id || undefined,
-        district_id: selectedLocation.district_id || undefined,
-        upazila_id: selectedLocation.upazila_id || undefined,
-        union_id: selectedLocation.union_id || undefined,
-        village_id: selectedLocation.village_id || undefined,
-        division_name: division?.name,
-        district_name: district?.name,
-        upazila_name: upazila?.name,
-        union_name: union?.name,
-        village_name: village?.name
-      },
+      approved: true,
+      accessScope,
       assignedBy: currentUserProfile.uid,
       verifiedBy: currentUserProfile.uid
     };
@@ -206,7 +214,7 @@ const UserAssignmentDialog = ({
           ভূমিকা বরাদ্দ করুন
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>ব্যবহারকারী ভূমিকা বরাদ্দ</DialogTitle>
         </DialogHeader>
@@ -238,7 +246,7 @@ const UserAssignmentDialog = ({
                   <SelectContent>
                     {locationData.divisions.map(division => (
                       <SelectItem key={division.id} value={division.id}>
-                        {division.name}
+                        {division.name} ({division.bn_name})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -255,7 +263,7 @@ const UserAssignmentDialog = ({
                     <SelectContent>
                       {filteredDistricts.map(district => (
                         <SelectItem key={district.id} value={district.id}>
-                          {district.name}
+                          {district.name} ({district.bn_name})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -273,7 +281,7 @@ const UserAssignmentDialog = ({
                     <SelectContent>
                       {filteredUpazilas.map(upazila => (
                         <SelectItem key={upazila.id} value={upazila.id}>
-                          {upazila.name}
+                          {upazila.name} ({upazila.bn_name})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -291,7 +299,7 @@ const UserAssignmentDialog = ({
                     <SelectContent>
                       {filteredUnions.map(union => (
                         <SelectItem key={union.id} value={union.id}>
-                          {union.name}
+                          {union.name} ({union.bn_name})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -309,7 +317,7 @@ const UserAssignmentDialog = ({
                     <SelectContent>
                       {filteredVillages.map(village => (
                         <SelectItem key={village.id} value={village.id}>
-                          {village.name}
+                          {village.name} ({village.bn_name})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -350,7 +358,7 @@ const UserManagement = () => {
         ...doc.data() 
       } as User));
     },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   // For super admin, show all users. For others, filter by location scope
@@ -358,10 +366,9 @@ const UserManagement = () => {
     if (!userProfile) return [];
     
     if (userProfile.role === 'super_admin') {
-      return allUsers; // Super admin sees all users
+      return allUsers;
     }
 
-    // Other admins see users in their scope
     return allUsers.filter(user => {
       if (!user.accessScope || !userProfile.accessScope) return false;
       
@@ -385,7 +392,7 @@ const UserManagement = () => {
 
   const permissions = userProfile ? getRolePermissions(userProfile.role) : null;
 
-  // Update user mutation - Fixed for super_admin workflow
+  // Update user mutation
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, updates }: { userId: string; updates: Partial<User> }) => {
       const userRef = doc(db, 'users', userId);
@@ -397,7 +404,6 @@ const UserManagement = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       
-      // Show appropriate success message based on what was updated
       if (variables.updates.role) {
         toast({
           title: 'সফল',
@@ -410,7 +416,8 @@ const UserManagement = () => {
         });
       }
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('User update error:', error);
       toast({
         title: 'ত্রুটি',
         description: 'আপডেট করতে সমস্যা হয়েছে',
@@ -436,7 +443,8 @@ const UserManagement = () => {
         description: 'ব্যবহারকারী যাচাই সম্পন্ন হয়েছে',
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('User verification error:', error);
       toast({
         title: 'ত্রুটি',
         description: 'যাচাই করতে সমস্যা হয়েছে',
@@ -504,7 +512,6 @@ const UserManagement = () => {
                       </div>
                       <p className="text-sm text-gray-600">{user.email}</p>
                       
-                      {/* Location Information */}
                       {user.accessScope && user.role !== 'super_admin' && (
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <MapPin className="w-4 h-4" />
@@ -527,7 +534,6 @@ const UserManagement = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {/* Role assignment for super_admin or users without roles */}
                       {permissions.canAssignRoles.length > 0 && (
                         <UserAssignmentDialog
                           user={user}
@@ -536,7 +542,6 @@ const UserManagement = () => {
                         />
                       )}
 
-                      {/* Basic approval buttons for users without assigned roles */}
                       {!user.role && userProfile.role === 'super_admin' && (
                         <>
                           {!user.approved && (
