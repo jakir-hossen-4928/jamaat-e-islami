@@ -103,12 +103,12 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
           <div className="bg-green-700 rounded-lg p-4 mb-4">
             <p className="text-white text-sm font-medium">{userProfile?.displayName}</p>
             <p className="text-green-200 text-xs">{userProfile?.email}</p>
-            <p className="text-green-200 text-xs capitalize">
+            <p className="text-green-200 text-xs">
               {userProfile?.role === 'super_admin' ? 'সুপার অ্যাডমিন' :
                 userProfile?.role === 'division_admin' ? 'বিভাগীয় অ্যাডমিন' :
                 userProfile?.role === 'district_admin' ? 'জেলা অ্যাডমিন' :
-                userProfile?.role === 'ward_admin' ? 'ওয়ার্ড অ্যাডমিন' :
-                userProfile?.role === 'moderator' ? 'মডারেটর' : 'ব্যবহারকারী'}
+                userProfile?.role === 'upazila_admin' ? 'উপজেলা অ্যাডমিন' :
+                userProfile?.role === 'village_admin' ? 'গ্রাম অ্যাডমিন' : 'ব্যবহারকারী'}
             </p>
           </div>
           <Button

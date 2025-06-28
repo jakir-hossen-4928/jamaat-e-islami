@@ -26,6 +26,7 @@ import GoogleForm from "./adminDashboard/GoogleForm";
 import UserVerify from "./adminDashboard/usersverify/UserVerify";
 import PDFPreview from "./adminDashboard/PDFPreview";
 import LocationDemo from "./pages/LocationDemo";
+import DashboardRouter from "./components/DashboardRouter";
 
 const queryClient = new QueryClient();
 
@@ -50,7 +51,7 @@ const App = () => (
               {/* Main Dashboard Route - Role-based routing */}
               <Route path="/dashboard" element={
                 <ProtectedRoute>
-                  <AdminDashboard />
+                  <DashboardRouter />
                 </ProtectedRoute>
               } />
 
@@ -98,19 +99,19 @@ const App = () => (
               } />
 
               <Route path="/admin/sms-campaign" element={
-                <ProtectedRoute requiredRole="moderator">
+                <ProtectedRoute requiredRole="division_admin">
                   <SMSCampaign />
                 </ProtectedRoute>
               } />
 
               <Route path="/admin/sms-campaign-new" element={
-                <ProtectedRoute requiredRole="moderator">
+                <ProtectedRoute requiredRole="division_admin">
                   <SMSCampaignNew />
                 </ProtectedRoute>
               } />
 
               <Route path="/admin/data-hub" element={
-                <ProtectedRoute requiredRole="moderator">
+                <ProtectedRoute requiredRole="super_admin">
                   <DataHub />
                 </ProtectedRoute>
               } />
