@@ -1,18 +1,61 @@
+
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import AdminLayout from '@/components/layout/AdminLayout';
+import LocationFilter from '@/components/admin/LocationFilter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { TrendingUp, Users, Vote, AlertTriangle } from 'lucide-react';
+import { TrendingUp, Users, Vote, AlertTriangle, Filter } from 'lucide-react';
 import { VoterData } from '@/lib/types';
+import { useAuth } from '@/hooks/useAuth';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 const Analytics = () => {
+  const { userProfile } = useAuth();
+  const [showLocationFilter, setShowLocationFilter] = useState(false);
+  const [locationFilters, setLocationFilters] = useState<{
+    division_id?: string;
+    district_id?: string;
+    upazila_id?: string;
+    union_id?: string;
+    village_id?: string;
+  }>({});
+
   const { data: analytics, isLoading } = useQuery({
-    queryKey: ['analytics'],
+    queryKey: ['analytics', locationFilters, userProfile?.accessScope],
     queryFn: async () => {
       const votersRef = collection(db, 'voters');
-      const snapshot = await getDocs(votersRef);
+      let votersQuery = query(votersRef);
+
+      // Apply role-based filtering
+      if (userProfile?.role !== 'super_admin') {
+        const userScope = userProfile?.accessScope;
+        if (userScope) {
+          const constraints = [];
+          if (userScope.division_id) constraints.push(where('division_id', '==', userScope.division_id));
+          if (userScope.district_id) constraints.push(where('district_id', '==', userScope.district_id));
+          if (userScope.upazila_id) constraints.push(where('upazila_id', '==', userScope.upazila_id));
+          if (userScope.union_id) constraints.push(where('union_id', '==', userScope.union_id));
+          if (userScope.village_id) constraints.push(where('village_id', '==', userScope.village_id));
+          
+          if (constraints.length > 0) {
+            votersQuery = query(votersRef, ...constraints);
+          }
+        }
+      } else if (Object.keys(locationFilters).length > 0) {
+        // Super admin can filter by location
+        const constraints = Object.entries(locationFilters)
+          .filter(([_, value]) => value)
+          .map(([key, value]) => where(key, '==', value));
+        
+        if (constraints.length > 0) {
+          votersQuery = query(votersRef, ...constraints);
+        }
+      }
+
+      const snapshot = await getDocs(votersQuery);
       const voters = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoterData));
 
       // Age distribution
@@ -50,6 +93,15 @@ const Analytics = () => {
       // Occupation categories
       const occupations: { [key: string]: number } = {};
 
+      // Location-based distribution
+      const locationStats = {
+        divisions: {} as { [key: string]: number },
+        districts: {} as { [key: string]: number },
+        upazilas: {} as { [key: string]: number },
+        unions: {} as { [key: string]: number },
+        villages: {} as { [key: string]: number }
+      };
+
       voters.forEach(voter => {
         // Age grouping
         if (voter.Age) {
@@ -83,6 +135,25 @@ const Analytics = () => {
         if (voter.Occupation) {
           occupations[voter.Occupation] = (occupations[voter.Occupation] || 0) + 1;
         }
+
+        // Location stats (for super admin view)
+        if (userProfile?.role === 'super_admin') {
+          if (voter.division_id) {
+            locationStats.divisions[voter.division_id] = (locationStats.divisions[voter.division_id] || 0) + 1;
+          }
+          if (voter.district_id) {
+            locationStats.districts[voter.district_id] = (locationStats.districts[voter.district_id] || 0) + 1;
+          }
+          if (voter.upazila_id) {
+            locationStats.upazilas[voter.upazila_id] = (locationStats.upazilas[voter.upazila_id] || 0) + 1;
+          }
+          if (voter.union_id) {
+            locationStats.unions[voter.union_id] = (locationStats.unions[voter.union_id] || 0) + 1;
+          }
+          if (voter.village_id) {
+            locationStats.villages[voter.village_id] = (locationStats.villages[voter.village_id] || 0) + 1;
+          }
+        }
       });
 
       return {
@@ -93,13 +164,24 @@ const Analytics = () => {
         voteIntention: Object.entries(voteIntention).map(([name, value]) => ({ name, value })),
         educationLevels: Object.entries(educationLevels).slice(0, 10).map(([name, value]) => ({ name, value })),
         occupations: Object.entries(occupations).slice(0, 10).map(([name, value]) => ({ name, value })),
-        avgVoteProbability: voters.reduce((sum, v) => sum + (v['Vote Probability (%)'] || 0), 0) / voters.length,
+        avgVoteProbability: voters.length > 0 ? voters.reduce((sum, v) => sum + (v['Vote Probability (%)'] || 0), 0) / voters.length : 0,
         highPriorityVoters: voters.filter(v => v['Priority Level'] === 'High').length,
-        votersWithPhone: voters.filter(v => v.Phone).length
+        votersWithPhone: voters.filter(v => v.Phone).length,
+        locationStats
       };
-    }
+    },
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
   });
 
+  const handleLocationFilterChange = (filters: {
+    division_id?: string;
+    district_id?: string;
+    upazila_id?: string;
+    union_id?: string;
+    village_id?: string;
+  }) => {
+    setLocationFilters(filters);
+  };
 
   const COLORS = ['#059669', '#DC2626', '#D97706', '#7C3AED', '#2563EB', '#DB2777'];
 
@@ -118,7 +200,26 @@ const Analytics = () => {
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <h1 className="text-2xl font-bold text-gray-900">বিশ্লেষণ ও পরিসংখ্যান</h1>
+          {userProfile?.role === 'super_admin' && (
+            <Button
+              variant="outline"
+              onClick={() => setShowLocationFilter(!showLocationFilter)}
+              className="flex items-center gap-2"
+            >
+              <Filter className="w-4 h-4" />
+              এলাকা ফিল্টার
+            </Button>
+          )}
         </div>
+
+        {/* Location Filter for Super Admin */}
+        {userProfile?.role === 'super_admin' && (
+          <LocationFilter
+            onFilterChange={handleLocationFilterChange}
+            isVisible={showLocationFilter}
+            onToggle={setShowLocationFilter}
+          />
+        )}
 
         {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -129,7 +230,17 @@ const Analytics = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{analytics?.totalVoters || 0}</div>
-              <p className="text-xs text-muted-foreground">ডেটাবেসে মোট ভোটার</p>
+              <p className="text-xs text-muted-foreground">
+                {userProfile?.role !== 'super_admin' && userProfile?.accessScope && (
+                  <>
+                    {userProfile.accessScope.village_name || 
+                     userProfile.accessScope.union_name || 
+                     userProfile.accessScope.upazila_name || 
+                     userProfile.accessScope.district_name || 
+                     userProfile.accessScope.division_name} এলাকায়
+                  </>
+                )}
+              </p>
             </CardContent>
           </Card>
 
