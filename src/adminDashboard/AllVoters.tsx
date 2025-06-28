@@ -46,7 +46,7 @@ const AllVoters = () => {
       if (!userProfile) return [];
       
       const votersCollection = collection(db, 'voters');
-      let finalQuery;
+      let finalQuery = query(votersCollection, orderBy('Last Updated', 'desc'));
       
       // Apply location-based filtering based on user role and selected location
       if (userProfile.role !== 'super_admin') {
@@ -61,8 +61,6 @@ const AllVoters = () => {
           finalQuery = query(votersCollection, where('district_id', '==', userScope.district_id), orderBy('Last Updated', 'desc'));
         } else if (userScope.division_id) {
           finalQuery = query(votersCollection, where('division_id', '==', userScope.division_id), orderBy('Last Updated', 'desc'));
-        } else {
-          finalQuery = query(votersCollection, orderBy('Last Updated', 'desc'));
         }
       } else {
         // For super admin, apply selected location filters
@@ -76,18 +74,46 @@ const AllVoters = () => {
           finalQuery = query(votersCollection, where('district_id', '==', selectedLocation.district_id), orderBy('Last Updated', 'desc'));
         } else if (selectedLocation.division_id) {
           finalQuery = query(votersCollection, where('division_id', '==', selectedLocation.division_id), orderBy('Last Updated', 'desc'));
-        } else {
-          finalQuery = query(votersCollection, orderBy('Last Updated', 'desc'));
         }
       }
       
       const snapshot = await getDocs(finalQuery);
       return snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
+        const documentData = doc.data();
+        const voterData: VoterData = {
           id: doc.id,
-          ...data
-        } as VoterData;
+          ID: documentData.ID || '',
+          'Voter Name': documentData['Voter Name'] || '',
+          FatherOrHusband: documentData.FatherOrHusband,
+          Age: documentData.Age,
+          Gender: documentData.Gender,
+          'Marital Status': documentData['Marital Status'],
+          Student: documentData.Student,
+          Occupation: documentData.Occupation,
+          Education: documentData.Education,
+          Religion: documentData.Religion,
+          Phone: documentData.Phone,
+          NID: documentData.NID,
+          WhatsApp: documentData.WhatsApp,
+          'Will Vote': documentData['Will Vote'],
+          'Voted Before': documentData['Voted Before'],
+          'Vote Probability (%)': documentData['Vote Probability (%)'],
+          'Priority Level': documentData['Priority Level'],
+          'Political Support': documentData['Political Support'],
+          'Has Disability': documentData['Has Disability'],
+          'Is Migrated': documentData['Is Migrated'],
+          division_id: documentData.division_id,
+          district_id: documentData.district_id,
+          upazila_id: documentData.upazila_id,
+          union_id: documentData.union_id,
+          village_id: documentData.village_id,
+          'House Name': documentData['House Name'],
+          Remarks: documentData.Remarks,
+          Collector: documentData.Collector,
+          'Collection Date': documentData['Collection Date'],
+          'Last Updated': documentData['Last Updated']
+        };
+        return voterData;
       });
     },
     enabled: !!userProfile
