@@ -30,6 +30,13 @@ import DashboardRouter from "./components/DashboardRouter";
 import LocationManagement from "./adminDashboard/LocationManagement";
 import SystemSettings from "./adminDashboard/SystemSettings";
 import Documentation from "./pages/Documentation";
+import VoterManagement from "./pages/docs/VoterManagement";
+import LocationDocumentation from "./components/documentation/LocationDocumentation";
+import AnalyticsSystem from "./pages/docs/AnalyticsSystem";
+import SMSCampaign as SMSCampaignDocs from "./pages/docs/SMSCampaign";
+import DataHub as DataHubDocs from "./pages/docs/DataHub";
+import SystemSettings as SystemSettingsDocs from "./pages/docs/SystemSettings";
+import APIReference from "./pages/docs/APIReference";
 
 const queryClient = new QueryClient();
 
@@ -53,7 +60,13 @@ const App = () => (
 
               {/* Documentation Routes */}
               <Route path="/docs" element={<Documentation />} />
-              <Route path="/docs/*" element={<Documentation />} />
+              <Route path="/docs/voter-management" element={<VoterManagement />} />
+              <Route path="/docs/location-management" element={<LocationDocumentation />} />
+              <Route path="/docs/analytics" element={<AnalyticsSystem />} />
+              <Route path="/docs/sms-campaign" element={<SMSCampaignDocs />} />
+              <Route path="/docs/data-hub" element={<DataHubDocs />} />
+              <Route path="/docs/system-settings" element={<SystemSettingsDocs />} />
+              <Route path="/docs/api-reference" element={<APIReference />} />
 
               {/* Main Dashboard Route - Role-based routing */}
               <Route path="/dashboard" element={
