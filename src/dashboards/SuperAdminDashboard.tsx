@@ -6,7 +6,7 @@ import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Users, Building, MapPin, BarChart3, Shield, Settings } from 'lucide-react';
-import { VoterData } from '@/lib/types';
+import { VoterData, User } from '@/lib/types';
 
 const SuperAdminDashboard = () => {
   const { data: stats, isLoading } = useQuery({
@@ -21,7 +21,7 @@ const SuperAdminDashboard = () => {
       ]);
       
       const voters = votersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoterData));
-      const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
       
       return {
         totalVoters: voters.length,
