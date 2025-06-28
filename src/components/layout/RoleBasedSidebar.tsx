@@ -79,18 +79,15 @@ const RoleBasedSidebar = ({ children }: RoleBasedSidebarProps) => {
     }
 
     if (userProfile.role === 'super_admin') {
-      baseItems.push({ icon: Database, label: 'ডেটা হাব', path: '/admin/data-hub' });
+      baseItems.push(
+        { icon: Database, label: 'ডেটা হাব', path: '/admin/data-hub' },
+        { icon: MapPin, label: 'এলাকা ব্যবস্থাপনা', path: '/admin/location-management' },
+        { icon: Settings, label: 'সিস্টেম সেটিংস', path: '/admin/system-settings' }
+      );
     }
 
     if (permissions.canAssignRoles.length > 0) {
       baseItems.push({ icon: UserCheck, label: 'ব্যবহারকারী ব্যবস্থাপনা', path: '/admin/verify-users' });
-    }
-
-    if (userProfile.role === 'super_admin') {
-      baseItems.push(
-        { icon: Settings, label: 'সিস্টেম সেটিংস', path: '/admin/system-settings' },
-        { icon: MapPin, label: 'এলাকা ব্যবস্থাপনা', path: '/admin/location-management' }
-      );
     }
 
     return baseItems;
