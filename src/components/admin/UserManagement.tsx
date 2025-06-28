@@ -1,20 +1,18 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { User } from '@/lib/types';
 import { getRolePermissions, getRoleDisplayName, canVerifyRole } from '@/lib/rbac';
-import { CheckCircle, XCircle, Trash2, UserCheck, MapPin, Settings } from 'lucide-react';
+import { CheckCircle, XCircle, UserCheck, MapPin, Settings } from 'lucide-react';
 
 // Local cache for location data
 const locationCache = {
@@ -52,7 +50,7 @@ const UserAssignmentDialog = ({
   currentUserProfile: User;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<User['role']>(user.role);
+  const [selectedRole, setSelectedRole] = useState<User['role'] | ''>('');
   const [locationData, setLocationData] = useState({
     divisions: [] as any[],
     districts: [] as any[],
@@ -61,11 +59,11 @@ const UserAssignmentDialog = ({
     villages: [] as any[]
   });
   const [selectedLocation, setSelectedLocation] = useState({
-    division_id: user.accessScope.division_id || '',
-    district_id: user.accessScope.district_id || '',
-    upazila_id: user.accessScope.upazila_id || '',
-    union_id: user.accessScope.union_id || '',
-    village_id: user.accessScope.village_id || ''
+    division_id: '',
+    district_id: '',
+    upazila_id: '',
+    union_id: '',
+    village_id: ''
   });
 
   const permissions = getRolePermissions(currentUserProfile.role);
@@ -129,17 +127,28 @@ const UserAssignmentDialog = ({
 
   const handleRoleChange = (value: string) => {
     setSelectedRole(value as User['role']);
+    // Reset location when role changes
+    setSelectedLocation({
+      division_id: '',
+      district_id: '',
+      upazila_id: '',
+      union_id: '',
+      village_id: ''
+    });
   };
 
   const handleSubmit = () => {
+    if (!selectedRole) return;
+
     const division = locationData.divisions.find(d => d.id === selectedLocation.division_id);
     const district = locationData.districts.find(d => d.id === selectedLocation.district_id);
-    const upazila = locationData.upazilas.find(u => u.id === selectedLocation.upazila_id);
-    const union = locationData.unions.find(u => u.id === selectedLocation.union_id);
+    const upazila = locationData.upazilas.find(d => d.id === selectedLocation.upazila_id);
+    const union = locationData.unions.find(d => d.id === selectedLocation.union_id);
     const village = locationData.villages.find(v => v.id === selectedLocation.village_id);
 
     const updates: Partial<User> = {
       role: selectedRole,
+      approved: true, // Approve user when assigning role
       accessScope: {
         division_id: selectedLocation.division_id || undefined,
         district_id: selectedLocation.district_id || undefined,
@@ -152,11 +161,21 @@ const UserAssignmentDialog = ({
         union_name: union?.name,
         village_name: village?.name
       },
-      assignedBy: currentUserProfile.uid
+      assignedBy: currentUserProfile.uid,
+      verifiedBy: currentUserProfile.uid
     };
 
     onUpdate(user.uid, updates);
     setIsOpen(false);
+    // Reset form
+    setSelectedRole('');
+    setSelectedLocation({
+      division_id: '',
+      district_id: '',
+      upazila_id: '',
+      union_id: '',
+      village_id: ''
+    });
   };
 
   const getLocationRequirement = (role: string) => {
@@ -171,8 +190,10 @@ const UserAssignmentDialog = ({
   };
 
   const isValidAssignment = () => {
+    if (!selectedRole) return false;
+    
     const requiredLocation = getLocationRequirement(selectedRole);
-    if (!requiredLocation) return true;
+    if (!requiredLocation) return true; // super_admin doesn't need location
     return selectedLocation[requiredLocation as keyof typeof selectedLocation];
   };
 
@@ -181,19 +202,19 @@ const UserAssignmentDialog = ({
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="h-7 px-2 text-xs">
           <Settings className="w-3 h-3 mr-1" />
-          বরাদ্দ করুন
+          ভূমিকা বরাদ্দ করুন
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>ব্যবহারকারী বরাদ্দ</DialogTitle>
+          <DialogTitle>ব্যবহারকারী ভূমিকা বরাদ্দ</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label>ভূমিকা নির্বাচন করুন</Label>
+            <Label>ভূমিকা নির্বাচন করুন *</Label>
             <Select value={selectedRole} onValueChange={handleRoleChange}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="ভূমিকা নির্বাচন করুন" />
               </SelectTrigger>
               <SelectContent>
                 {availableRoles.map(role => (
@@ -205,10 +226,10 @@ const UserAssignmentDialog = ({
             </Select>
           </div>
 
-          {selectedRole !== 'super_admin' && (
+          {selectedRole && selectedRole !== 'super_admin' && (
             <div className="space-y-3">
               <div>
-                <Label>বিভাগ</Label>
+                <Label>বিভাগ {getLocationRequirement(selectedRole) === 'division_id' && '*'}</Label>
                 <Select value={selectedLocation.division_id} onValueChange={(value) => handleLocationChange('division_id', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
@@ -225,10 +246,10 @@ const UserAssignmentDialog = ({
 
               {(selectedRole === 'district_admin' || selectedRole === 'upazila_admin' || selectedRole === 'union_admin' || selectedRole === 'village_admin') && (
                 <div>
-                  <Label>জেলা</Label>
-                  <Select value={selectedLocation.district_id} onValueChange={(value) => handleLocationChange('district_id', value)}>
+                  <Label>জেলা {getLocationRequirement(selectedRole) === 'district_id' && '*'}</Label>
+                  <Select value={selectedLocation.district_id} onValueChange={(value) => handleLocationChange('district_id', value)} disabled={!selectedLocation.division_id}>
                     <SelectTrigger>
-                      <SelectValue placeholder="জেলা নির্বাচন করুন" />
+                      <SelectValue placeholder={!selectedLocation.division_id ? "প্রথমে বিভাগ নির্বাচন করুন" : "জেলা নির্বাচন করুন"} />
                     </SelectTrigger>
                     <SelectContent>
                       {filteredDistricts.map(district => (
@@ -243,10 +264,10 @@ const UserAssignmentDialog = ({
 
               {(selectedRole === 'upazila_admin' || selectedRole === 'union_admin' || selectedRole === 'village_admin') && (
                 <div>
-                  <Label>উপজেলা</Label>
-                  <Select value={selectedLocation.upazila_id} onValueChange={(value) => handleLocationChange('upazila_id', value)}>
+                  <Label>উপজেলা {getLocationRequirement(selectedRole) === 'upazila_id' && '*'}</Label>
+                  <Select value={selectedLocation.upazila_id} onValueChange={(value) => handleLocationChange('upazila_id', value)} disabled={!selectedLocation.district_id}>
                     <SelectTrigger>
-                      <SelectValue placeholder="উপজেলা নির্বাচন করুন" />
+                      <SelectValue placeholder={!selectedLocation.district_id ? "প্রথমে জেলা নির্বাচন করুন" : "উপজেলা নির্বাচন করুন"} />
                     </SelectTrigger>
                     <SelectContent>
                       {filteredUpazilas.map(upazila => (
@@ -261,10 +282,10 @@ const UserAssignmentDialog = ({
 
               {(selectedRole === 'union_admin' || selectedRole === 'village_admin') && (
                 <div>
-                  <Label>ইউনিয়ন</Label>
-                  <Select value={selectedLocation.union_id} onValueChange={(value) => handleLocationChange('union_id', value)}>
+                  <Label>ইউনিয়ন {getLocationRequirement(selectedRole) === 'union_id' && '*'}</Label>
+                  <Select value={selectedLocation.union_id} onValueChange={(value) => handleLocationChange('union_id', value)} disabled={!selectedLocation.upazila_id}>
                     <SelectTrigger>
-                      <SelectValue placeholder="ইউনিয়ন নির্বাচন করুন" />
+                      <SelectValue placeholder={!selectedLocation.upazila_id ? "প্রথমে উপজেলা নির্বাচন করুন" : "ইউনিয়ন নির্বাচন করুন"} />
                     </SelectTrigger>
                     <SelectContent>
                       {filteredUnions.map(union => (
@@ -279,10 +300,10 @@ const UserAssignmentDialog = ({
 
               {selectedRole === 'village_admin' && (
                 <div>
-                  <Label>গ্রাম</Label>
-                  <Select value={selectedLocation.village_id} onValueChange={(value) => handleLocationChange('village_id', value)}>
+                  <Label>গ্রাম *</Label>
+                  <Select value={selectedLocation.village_id} onValueChange={(value) => handleLocationChange('village_id', value)} disabled={!selectedLocation.union_id}>
                     <SelectTrigger>
-                      <SelectValue placeholder="গ্রাম নির্বাচন করুন" />
+                      <SelectValue placeholder={!selectedLocation.union_id ? "প্রথমে ইউনিয়ন নির্বাচন করুন" : "গ্রাম নির্বাচন করুন"} />
                     </SelectTrigger>
                     <SelectContent>
                       {filteredVillages.map(village => (
@@ -302,7 +323,7 @@ const UserAssignmentDialog = ({
               বাতিল
             </Button>
             <Button onClick={handleSubmit} disabled={!isValidAssignment()}>
-              বরাদ্দ করুন
+              ভূমিকা বরাদ্দ করুন
             </Button>
           </div>
         </div>
@@ -316,12 +337,13 @@ const UserManagement = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch all users (for super admin) or filtered users (for other roles)
+  // Fetch all users ordered by creation date (newest first)
   const { data: allUsers = [], isLoading } = useQuery({
     queryKey: ['users'],
     queryFn: async () => {
       const usersRef = collection(db, 'users');
-      const snapshot = await getDocs(usersRef);
+      const q = query(usersRef, orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({ 
         uid: doc.id, 
         ...doc.data() 
@@ -330,7 +352,7 @@ const UserManagement = () => {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
-  // Filter users based on current user's role and access scope
+  // For super admin, show all users. For others, filter by location scope
   const filteredUsers = React.useMemo(() => {
     if (!userProfile) return [];
     
@@ -338,7 +360,7 @@ const UserManagement = () => {
       return allUsers; // Super admin sees all users
     }
 
-    // Other admins see users in their scope and users they can assign
+    // Other admins see users in their scope
     return allUsers.filter(user => {
       const userScope = userProfile.accessScope;
       const targetScope = user.accessScope;
@@ -411,37 +433,12 @@ const UserManagement = () => {
     },
   });
 
-  // Delete user mutation
-  const deleteUserMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      await deleteDoc(doc(db, 'users', userId));
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast({
-        title: 'সফল',
-        description: 'ব্যবহারকারী মুছে ফেলা হয়েছে',
-      });
-    },
-    onError: () => {
-      toast({
-        title: 'ত্রুটি',
-        description: 'মুছে ফেলতে সমস্যা হয়েছে',
-        variant: 'destructive',
-      });
-    },
-  });
-
   const handleVerifyUser = (userId: string, approved: boolean) => {
     verifyUserMutation.mutate({ userId, approved });
   };
 
   const handleUpdateUser = (userId: string, updates: Partial<User>) => {
     updateUserMutation.mutate({ userId, updates });
-  };
-
-  const handleDeleteUser = (userId: string) => {
-    deleteUserMutation.mutate(userId);
   };
 
   if (!userProfile || !permissions?.canVerifyUsers) {
@@ -470,7 +467,7 @@ const UserManagement = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserCheck className="w-5 h-5" />
-            ব্যবহারকারী যাচাই ও ব্যবস্থাপনা
+            ব্যবহারকারী যাচাই ও ভূমিকা বরাদ্দ
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -487,9 +484,11 @@ const UserManagement = () => {
                         <Badge variant={user.approved ? 'default' : 'secondary'}>
                           {user.approved ? 'যাচাইকৃত' : 'অযাচাইকৃত'}
                         </Badge>
-                        <Badge variant="outline">
-                          {getRoleDisplayName(user.role)}
-                        </Badge>
+                        {user.role && (
+                          <Badge variant="outline">
+                            {getRoleDisplayName(user.role)}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-gray-600">{user.email}</p>
                       
@@ -516,7 +515,17 @@ const UserManagement = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {canVerifyRole(userProfile.role, user.role) && (
+                      {/* Show role assignment dialog for all users if current user can assign roles */}
+                      {permissions.canAssignRoles.length > 0 && (
+                        <UserAssignmentDialog
+                          user={user}
+                          onUpdate={handleUpdateUser}
+                          currentUserProfile={userProfile}
+                        />
+                      )}
+
+                      {/* Show verify/unverify buttons only if user doesn't have an assigned role yet */}
+                      {!user.role && canVerifyRole(userProfile.role, 'village_admin') && (
                         <>
                           {!user.approved && (
                             <Button
@@ -542,43 +551,6 @@ const UserManagement = () => {
                               বাতিল
                             </Button>
                           )}
-
-                          <UserAssignmentDialog
-                            user={user}
-                            onUpdate={handleUpdateUser}
-                            currentUserProfile={userProfile}
-                          />
-
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                disabled={deleteUserMutation.isPending}
-                                className="h-7 px-2 text-xs"
-                              >
-                                <Trash2 className="w-3 h-3 mr-1" />
-                                মুছে ফেলুন
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>ব্যবহারকারী মুছে ফেলুন</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  আপনি কি নিশ্চিত যে এই ব্যবহারকারীকে মুছে ফেলতে চান? এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>বাতিল</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteUser(user.uid)}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  মুছে ফেলুন
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
                         </>
                       )}
                     </div>
