@@ -1,4 +1,5 @@
 
+
 export interface VoterData {
   id?: string; // Firestore Document ID
   ID: string;
@@ -17,13 +18,11 @@ export interface VoterData {
   // Contact Info
   Phone?: string;
   NID?: string;
-  WhatsApp?: 'Yes' | 'No'; // Added missing WhatsApp property
 
   // Voting Info
   'Will Vote'?: 'Yes' | 'No';
   'Voted Before'?: 'Yes' | 'No';
   'Vote Probability (%)'?: number; // Should be a number between 10 and 100
-  'Priority Level'?: 'Low' | 'Medium' | 'High'; // Added missing Priority Level property
 
   'Political Support'?: string;
 
@@ -167,3 +166,4 @@ export interface RolePermissions {
   canAccessAllVoters: boolean;
   locationScope: 'all' | 'division' | 'district' | 'upazila' | 'union' | 'village';
 }
+

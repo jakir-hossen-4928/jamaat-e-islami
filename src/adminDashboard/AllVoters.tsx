@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
@@ -152,6 +153,8 @@ const AllVoters = () => {
       filtered = filtered.filter(voter => 
         voter['Vote Probability (%)'] && voter['Vote Probability (%)'] >= 70
       );
+    } else if (selectedTab === 'with-phone') {
+      filtered = filtered.filter(voter => voter.Phone);
     }
 
     return filtered;
@@ -186,8 +189,9 @@ const AllVoters = () => {
     const highProbability = allVoters.filter(v => 
       v['Vote Probability (%)'] && v['Vote Probability (%)'] >= 70
     ).length;
+    const withPhone = allVoters.filter(v => v.Phone).length;
     
-    return { total, willVote, wontVote, highProbability };
+    return { total, willVote, wontVote, highProbability, withPhone };
   }, [allVoters]);
 
   const handleExportToPDF = () => {
@@ -262,7 +266,7 @@ const AllVoters = () => {
           )}
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-6">
             <Card>
               <CardContent className="p-3 lg:p-6">
                 <div className="flex items-center">
@@ -316,6 +320,18 @@ const AllVoters = () => {
                 </div>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardContent className="p-3 lg:p-6">
+                <div className="flex items-center">
+                  <Phone className="h-6 w-6 lg:h-8 lg:w-8 text-orange-600" />
+                  <div className="ml-2 lg:ml-4">
+                    <p className="text-xs lg:text-sm font-medium text-gray-600">ফোন আছে</p>
+                    <p className="text-lg lg:text-2xl font-bold text-orange-600">{stats.withPhone}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Search and Filters */}
@@ -347,7 +363,7 @@ const AllVoters = () => {
 
           {/* Tabs */}
           <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
+            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
               <TabsTrigger value="all" className="text-xs lg:text-sm">
                 সকল ভোটার ({stats.total})
               </TabsTrigger>
@@ -359,6 +375,9 @@ const AllVoters = () => {
               </TabsTrigger>
               <TabsTrigger value="high-probability" className="text-xs lg:text-sm">
                 উচ্চ সম্ভাবনা ({stats.highProbability})
+              </TabsTrigger>
+              <TabsTrigger value="with-phone" className="text-xs lg:text-sm">
+                ফোন আছে ({stats.withPhone})
               </TabsTrigger>
             </TabsList>
 
@@ -403,6 +422,11 @@ const AllVoters = () => {
                                       <MapPin className="h-3 w-3 mr-1" />
                                       {getLocationName(voter)}
                                     </div>
+                                    {voter['Political Support'] && (
+                                      <p className="text-xs text-gray-600">
+                                        সমর্থন: {voter['Political Support']}
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                                 <div className="flex flex-col lg:flex-row items-end lg:items-center space-y-2 lg:space-y-0 lg:space-x-2">
@@ -439,3 +463,4 @@ const AllVoters = () => {
 };
 
 export default AllVoters;
+

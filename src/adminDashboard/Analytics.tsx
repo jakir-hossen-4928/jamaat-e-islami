@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -68,13 +69,6 @@ const Analytics = () => {
         Other: 0
       };
 
-      // Priority distribution
-      const priorityDistribution = {
-        High: 0,
-        Medium: 0,
-        Low: 0
-      };
-
       // Vote intention
       const voteIntention = {
         Yes: 0,
@@ -87,6 +81,16 @@ const Analytics = () => {
 
       // Occupation categories
       const occupations: { [key: string]: number } = {};
+
+      // Political support distribution
+      const politicalSupport: { [key: string]: number } = {};
+
+      // Special conditions
+      const specialConditions = {
+        'Has Disability': 0,
+        'Is Migrated': 0,
+        'Student': 0
+      };
 
       // Location-based distribution
       const locationStats = {
@@ -111,11 +115,6 @@ const Analytics = () => {
           genderDistribution[voter.Gender]++;
         }
 
-        // Priority
-        if (voter['Priority Level']) {
-          priorityDistribution[voter['Priority Level']]++;
-        }
-
         // Vote intention
         if (voter['Will Vote'] === 'Yes') voteIntention.Yes++;
         else if (voter['Will Vote'] === 'No') voteIntention.No++;
@@ -130,6 +129,16 @@ const Analytics = () => {
         if (voter.Occupation) {
           occupations[voter.Occupation] = (occupations[voter.Occupation] || 0) + 1;
         }
+
+        // Political support
+        if (voter['Political Support']) {
+          politicalSupport[voter['Political Support']] = (politicalSupport[voter['Political Support']] || 0) + 1;
+        }
+
+        // Special conditions
+        if (voter['Has Disability'] === 'Yes') specialConditions['Has Disability']++;
+        if (voter['Is Migrated'] === 'Yes') specialConditions['Is Migrated']++;
+        if (voter.Student === 'Yes') specialConditions['Student']++;
 
         // Location stats (for super admin view)
         if (userProfile?.role === 'super_admin') {
@@ -155,12 +164,13 @@ const Analytics = () => {
         totalVoters: voters.length,
         ageGroups: Object.entries(ageGroups).map(([name, value]) => ({ name, value })),
         genderDistribution: Object.entries(genderDistribution).map(([name, value]) => ({ name, value })),
-        priorityDistribution: Object.entries(priorityDistribution).map(([name, value]) => ({ name, value })),
         voteIntention: Object.entries(voteIntention).map(([name, value]) => ({ name, value })),
         educationLevels: Object.entries(educationLevels).slice(0, 10).map(([name, value]) => ({ name, value })),
         occupations: Object.entries(occupations).slice(0, 10).map(([name, value]) => ({ name, value })),
+        politicalSupport: Object.entries(politicalSupport).slice(0, 10).map(([name, value]) => ({ name, value })),
+        specialConditions: Object.entries(specialConditions).map(([name, value]) => ({ name, value })),
         avgVoteProbability: voters.length > 0 ? voters.reduce((sum, v) => sum + (v['Vote Probability (%)'] || 0), 0) / voters.length : 0,
-        highPriorityVoters: voters.filter(v => v['Priority Level'] === 'High').length,
+        highProbabilityVoters: voters.filter(v => v['Vote Probability (%)'] && v['Vote Probability (%)'] >= 70).length,
         votersWithPhone: voters.filter(v => v.Phone).length,
         locationStats
       };
@@ -323,12 +333,12 @@ const Analytics = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">উচ্চ অগ্রাধিকার</CardTitle>
+              <CardTitle className="text-sm font-medium">উচ্চ সম্ভাবনা</CardTitle>
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{analytics?.highPriorityVoters || 0}</div>
-              <p className="text-xs text-muted-foreground">উচ্চ অগ্রাধিকার ভোটার</p>
+              <div className="text-2xl font-bold">{analytics?.highProbabilityVoters || 0}</div>
+              <p className="text-xs text-muted-foreground">৭০%+ ভোট সম্ভাবনা</p>
             </CardContent>
           </Card>
 
@@ -420,14 +430,14 @@ const Analytics = () => {
             </CardContent>
           </Card>
 
-          {/* Priority Distribution */}
+          {/* Political Support */}
           <Card>
             <CardHeader>
-              <CardTitle>অগ্রাধিকার স্তর</CardTitle>
+              <CardTitle>রাজনৈতিক সমর্থন</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={analytics?.priorityDistribution}>
+                <BarChart data={analytics?.politicalSupport}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
@@ -439,8 +449,8 @@ const Analytics = () => {
           </Card>
         </div>
 
-        {/* Education and Occupation */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Education, Occupation and Special Conditions */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>শিক্ষাগত যোগ্যতা (শীর্ষ ১০)</CardTitle>
@@ -474,6 +484,23 @@ const Analytics = () => {
               </ResponsiveContainer>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>বিশেষ অবস্থা</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={analytics?.specialConditions}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#DB2776" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </AdminLayout>
@@ -481,3 +508,4 @@ const Analytics = () => {
 };
 
 export default Analytics;
+
