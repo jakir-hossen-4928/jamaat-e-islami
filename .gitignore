@@ -11,8 +11,12 @@ node_modules
 dist
 dist-ssr
 *.local
+
+# Environment files (do not commit these!)
 .env
-.env.example
+.env.*
+!.env.example
+
 .vite.config.ts
 
 # Editor directories and files
