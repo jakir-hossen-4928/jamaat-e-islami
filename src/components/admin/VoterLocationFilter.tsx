@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -69,26 +69,26 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
     onLocationChange(updated);
   };
 
-  // Filter data based on selections
-  const getFilteredDistricts = () => {
+  // Memoized filtered data to avoid recalculation on every render
+  const filteredDistricts = useMemo(() => {
     if (!selectedLocation.division_id) return locationData.districts;
     return locationData.districts.filter(d => d.division_id === selectedLocation.division_id);
-  };
+  }, [locationData.districts, selectedLocation.division_id]);
 
-  const getFilteredUpazilas = () => {
+  const filteredUpazilas = useMemo(() => {
     if (!selectedLocation.district_id) return locationData.upazilas;
     return locationData.upazilas.filter(u => u.district_id === selectedLocation.district_id);
-  };
+  }, [locationData.upazilas, selectedLocation.district_id]);
 
-  const getFilteredUnions = () => {
+  const filteredUnions = useMemo(() => {
     if (!selectedLocation.upazila_id) return locationData.unions;
     return locationData.unions.filter(u => u.upazilla_id === selectedLocation.upazila_id);
-  };
+  }, [locationData.unions, selectedLocation.upazila_id]);
 
-  const getFilteredVillages = () => {
+  const filteredVillages = useMemo(() => {
     if (!selectedLocation.union_id) return locationData.villages;
     return locationData.villages.filter(v => v.union_id === selectedLocation.union_id);
-  };
+  }, [locationData.villages, selectedLocation.union_id]);
 
   return (
     <Card>
@@ -119,7 +119,7 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
                 <SelectItem value="all">সব বিভাগ</SelectItem>
                 {locationData.divisions.map(division => (
                   <SelectItem key={division.id} value={division.id}>
-                    {division.name} ({division.bn_name})
+                    {division.bn_name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -138,9 +138,9 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">সব জেলা</SelectItem>
-                {getFilteredDistricts().map(district => (
+                {filteredDistricts.map(district => (
                   <SelectItem key={district.id} value={district.id}>
-                    {district.name} ({district.bn_name})
+                    {district.bn_name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -159,9 +159,9 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">সব উপজেলা</SelectItem>
-                {getFilteredUpazilas().map(upazila => (
+                {filteredUpazilas.map(upazila => (
                   <SelectItem key={upazila.id} value={upazila.id}>
-                    {upazila.name} ({upazila.bn_name})
+                    {upazila.bn_name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -180,9 +180,9 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">সব ইউনিয়ন</SelectItem>
-                {getFilteredUnions().map(union => (
+                {filteredUnions.map(union => (
                   <SelectItem key={union.id} value={union.id}>
-                    {union.name} ({union.bn_name})
+                    {union.bn_name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -201,9 +201,9 @@ const VoterLocationFilter: React.FC<VoterLocationFilterProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">সব গ্রাম</SelectItem>
-                {getFilteredVillages().map(village => (
+                {filteredVillages.map(village => (
                   <SelectItem key={village.id} value={village.id}>
-                    {village.name} ({village.bn_name})
+                    {village.bn_name}
                   </SelectItem>
                 ))}
               </SelectContent>

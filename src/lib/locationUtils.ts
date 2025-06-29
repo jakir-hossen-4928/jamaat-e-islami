@@ -1,16 +1,22 @@
+
 import { Division, District, Upazila, Union } from './types';
 
-// Cache for loaded data
+// Enhanced cache with better memory management
 let cachedLocationData: {
   divisions: Division[];
   districts: District[];
   upazilas: Upazila[];
   unions: Union[];
+  lastLoaded: number;
 } | null = null;
 
-// Load location data from static JSON files
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
+// Load location data from static JSON files with better caching
 export const loadLocationData = async () => {
-  if (cachedLocationData) {
+  // Check if cache is still valid
+  if (cachedLocationData && 
+      (Date.now() - cachedLocationData.lastLoaded) < CACHE_DURATION) {
     return cachedLocationData;
   }
 
@@ -33,7 +39,8 @@ export const loadLocationData = async () => {
       divisions,
       districts,
       upazilas,
-      unions
+      unions,
+      lastLoaded: Date.now()
     };
 
     return cachedLocationData;
@@ -43,9 +50,33 @@ export const loadLocationData = async () => {
       divisions: [],
       districts: [],
       upazilas: [],
-      unions: []
+      unions: [],
+      lastLoaded: Date.now()
     };
   }
+};
+
+// Optimized lookup functions with in-memory maps
+let locationMaps: {
+  divisions: Map<string, Division>;
+  districts: Map<string, District>;
+  upazilas: Map<string, Upazila>;
+  unions: Map<string, Union>;
+} | null = null;
+
+const createLocationMaps = async () => {
+  if (locationMaps) return locationMaps;
+  
+  const data = await loadLocationData();
+  
+  locationMaps = {
+    divisions: new Map(data.divisions.map(d => [d.id, d])),
+    districts: new Map(data.districts.map(d => [d.id, d])),
+    upazilas: new Map(data.upazilas.map(u => [u.id, u])),
+    unions: new Map(data.unions.map(u => [u.id, u]))
+  };
+  
+  return locationMaps;
 };
 
 // Get all divisions
@@ -54,74 +85,74 @@ export const getDivisions = async (): Promise<Division[]> => {
   return data.divisions;
 };
 
-// Get districts by division ID
+// Get districts by division ID with optimized filtering
 export const getDistrictsByDivision = async (divisionId: string): Promise<District[]> => {
   const data = await loadLocationData();
   return data.districts.filter(district => district.division_id === divisionId);
 };
 
-// Get upazilas by district ID
+// Get upazilas by district ID with optimized filtering
 export const getUpazilasByDistrict = async (districtId: string): Promise<Upazila[]> => {
   const data = await loadLocationData();
   return data.upazilas.filter(upazila => upazila.district_id === districtId);
 };
 
-// Get unions by upazila ID
+// Get unions by upazila ID with optimized filtering
 export const getUnionsByUpazila = async (upazilaId: string): Promise<Union[]> => {
   const data = await loadLocationData();
   return data.unions.filter(union => union.upazilla_id === upazilaId);
 };
 
-// Add missing export for villages (placeholder implementation)
+// Placeholder for villages - return empty array to reduce unnecessary calls
 export const getVillagesByUnion = async (unionId: string): Promise<any[]> => {
-  // Placeholder implementation - return empty array for now
-  // This can be expanded when village data is available
   return [];
 };
 
-// Get name by ID for any location type
+// Optimized location name lookup using Maps
 export const getLocationNameById = async (type: 'division' | 'district' | 'upazila' | 'union', id: string): Promise<string> => {
-  const data = await loadLocationData();
+  const maps = await createLocationMaps();
   
   switch (type) {
     case 'division':
-      return data.divisions.find(item => item.id === id)?.bn_name || '';
+      return maps.divisions.get(id)?.bn_name || '';
     case 'district':
-      return data.districts.find(item => item.id === id)?.bn_name || '';
+      return maps.districts.get(id)?.bn_name || '';
     case 'upazila':
-      return data.upazilas.find(item => item.id === id)?.bn_name || '';
+      return maps.upazilas.get(id)?.bn_name || '';
     case 'union':
-      return data.unions.find(item => item.id === id)?.bn_name || '';
+      return maps.unions.get(id)?.bn_name || '';
     default:
       return '';
   }
 };
 
-// Get English name by ID
+// Optimized English name lookup
 export const getLocationNameByIdEn = async (type: 'division' | 'district' | 'upazila' | 'union', id: string): Promise<string> => {
-  const data = await loadLocationData();
+  const maps = await createLocationMaps();
   
   switch (type) {
     case 'division':
-      return data.divisions.find(item => item.id === id)?.name || '';
+      return maps.divisions.get(id)?.name || '';
     case 'district':
-      return data.districts.find(item => item.id === id)?.name || '';
+      return maps.districts.get(id)?.name || '';
     case 'upazila':
-      return data.upazilas.find(item => item.id === id)?.name || '';
+      return maps.upazilas.get(id)?.name || '';
     case 'union':
-      return data.unions.find(item => item.id === id)?.name || '';
+      return maps.unions.get(id)?.name || '';
     default:
       return '';
   }
 };
 
-// Get full location hierarchy for display
+// Batch location hierarchy lookup to reduce API calls
 export const getFullLocationHierarchy = async (locationIds: {
   division_id?: string;
   district_id?: string;
   upazila_id?: string;
   union_id?: string;
 }) => {
+  const maps = await createLocationMaps();
+  
   const hierarchy = {
     division: '',
     district: '',
@@ -129,31 +160,46 @@ export const getFullLocationHierarchy = async (locationIds: {
     union: '',
     division_en: '',
     district_en: '',
-    upazila_en: '' ,
+    upazila_en: '',
     union_en: ''
   };
 
   if (locationIds.division_id) {
-    hierarchy.division = await getLocationNameById('division', locationIds.division_id);
-    hierarchy.division_en = await getLocationNameByIdEn('division', locationIds.division_id);
+    const division = maps.divisions.get(locationIds.division_id);
+    if (division) {
+      hierarchy.division = division.bn_name;
+      hierarchy.division_en = division.name;
+    }
   }
+  
   if (locationIds.district_id) {
-    hierarchy.district = await getLocationNameById('district', locationIds.district_id);
-    hierarchy.district_en = await getLocationNameByIdEn('district', locationIds.district_id);
+    const district = maps.districts.get(locationIds.district_id);
+    if (district) {
+      hierarchy.district = district.bn_name;
+      hierarchy.district_en = district.name;
+    }
   }
+  
   if (locationIds.upazila_id) {
-    hierarchy.upazila = await getLocationNameById('upazila', locationIds.upazila_id);
-    hierarchy.upazila_en = await getLocationNameByIdEn('upazila', locationIds.upazila_id);
+    const upazila = maps.upazilas.get(locationIds.upazila_id);
+    if (upazila) {
+      hierarchy.upazila = upazila.bn_name;
+      hierarchy.upazila_en = upazila.name;
+    }
   }
+  
   if (locationIds.union_id) {
-    hierarchy.union = await getLocationNameById('union', locationIds.union_id);
-    hierarchy.union_en = await getLocationNameByIdEn('union', locationIds.union_id);
+    const union = maps.unions.get(locationIds.union_id);
+    if (union) {
+      hierarchy.union = union.bn_name;
+      hierarchy.union_en = union.name;
+    }
   }
 
   return hierarchy;
 };
 
-// Filtering utility functions
+// Optimized filtering utility functions
 export const filterDistrictsByDivision = (districts: District[], divisionId: string): District[] => {
   return districts.filter(district => district.division_id === divisionId);
 };

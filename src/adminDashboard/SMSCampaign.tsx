@@ -1,7 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +15,8 @@ import { MessageSquare, Users, Send, Filter, DollarSign, Wifi, Loader2 } from 'l
 import { VoterData } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useVotersQuery } from '@/hooks/useOptimizedQuery';
+import { getFullLocationHierarchy } from '@/lib/locationUtils';
 
 interface SMSLog {
   timestamp: string;
@@ -37,6 +37,7 @@ const SMSCampaign = () => {
   const [isSending, setIsSending] = useState(false);
   const [smsLogs, setSmsLogs] = useState<SMSLog[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [locationNames, setLocationNames] = useState<{[key: string]: string}>({});
   const [filters, setFilters] = useState({
     willVote: 'all',
     gender: 'all',
@@ -48,72 +49,126 @@ const SMSCampaign = () => {
     isMigrated: 'all',
   });
 
-  // Fetch voters with role-based access control
-  const { data: voters = [], isLoading } = useQuery({
-    queryKey: ['sms-voters', userProfile?.uid],
-    queryFn: async () => {
-      if (!userProfile) return [];
-      
-      const votersCollection = collection(db, 'voters');
-      let finalQuery = query(votersCollection, orderBy('Last Updated', 'desc'));
-      
-      // Apply location-based filtering based on user role
-      if (userProfile.role !== 'super_admin') {
-        const userScope = userProfile.accessScope;
-        if (userScope.village_id) {
-          finalQuery = query(votersCollection, where('village_id', '==', userScope.village_id), orderBy('Last Updated', 'desc'));
-        } else if (userScope.union_id) {
-          finalQuery = query(votersCollection, where('union_id', '==', userScope.union_id), orderBy('Last Updated', 'desc'));
-        } else if (userScope.upazila_id) {
-          finalQuery = query(votersCollection, where('upazila_id', '==', userScope.upazila_id), orderBy('Last Updated', 'desc'));
-        } else if (userScope.district_id) {
-          finalQuery = query(votersCollection, where('district_id', '==', userScope.district_id), orderBy('Last Updated', 'desc'));
-        } else if (userScope.division_id) {
-          finalQuery = query(votersCollection, where('division_id', '==', userScope.division_id), orderBy('Last Updated', 'desc'));
-        }
+  // Create optimized query based on user role with pagination/limits
+  const createVotersQuery = () => {
+    if (!userProfile) return null;
+    
+    const votersCollection = collection(db, 'voters');
+    
+    // Apply role-based filtering with limits to reduce reads
+    if (userProfile.role !== 'super_admin') {
+      const userScope = userProfile.accessScope;
+      if (userScope.village_id) {
+        return query(votersCollection, 
+          where('village_id', '==', userScope.village_id), 
+          orderBy('Last Updated', 'desc'),
+          limit(1000) // Limit to reduce reads
+        );
+      } else if (userScope.union_id) {
+        return query(votersCollection, 
+          where('union_id', '==', userScope.union_id), 
+          orderBy('Last Updated', 'desc'),
+          limit(2000)
+        );
+      } else if (userScope.upazila_id) {
+        return query(votersCollection, 
+          where('upazila_id', '==', userScope.upazila_id), 
+          orderBy('Last Updated', 'desc'),
+          limit(5000)
+        );
+      } else if (userScope.district_id) {
+        return query(votersCollection, 
+          where('district_id', '==', userScope.district_id), 
+          orderBy('Last Updated', 'desc'),
+          limit(10000)
+        );
+      } else if (userScope.division_id) {
+        return query(votersCollection, 
+          where('division_id', '==', userScope.division_id), 
+          orderBy('Last Updated', 'desc'),
+          limit(15000)
+        );
       }
-      
-      const snapshot = await getDocs(finalQuery);
-      return snapshot.docs.map((doc) => {
-        const documentData = doc.data();
-        const voterData: VoterData = {
-          id: doc.id,
-          ID: documentData.ID || '',
-          'Voter Name': documentData['Voter Name'] || '',
-          FatherOrHusband: documentData.FatherOrHusband,
-          Age: documentData.Age,
-          Gender: documentData.Gender,
-          'Marital Status': documentData['Marital Status'],
-          Student: documentData.Student,
-          Occupation: documentData.Occupation,
-          Education: documentData.Education,
-          Religion: documentData.Religion,
-          Phone: documentData.Phone,
-          NID: documentData.NID,
-          'Will Vote': documentData['Will Vote'],
-          'Voted Before': documentData['Voted Before'],
-          'Vote Probability (%)': documentData['Vote Probability (%)'],
-          'Political Support': documentData['Political Support'],
-          'Has Disability': documentData['Has Disability'],
-          'Is Migrated': documentData['Is Migrated'],
-          division_id: documentData.division_id,
-          district_id: documentData.district_id,
-          upazila_id: documentData.upazila_id,
-          union_id: documentData.union_id,
-          village_id: documentData.village_id,
-          'House Name': documentData['House Name'],
-          Remarks: documentData.Remarks,
-          Collector: documentData.Collector,
-          'Collection Date': documentData['Collection Date'],
-          'Last Updated': documentData['Last Updated']
-        };
-        return voterData;
-      });
-    },
-    enabled: !!userProfile,
+    }
+    
+    // For super admin, limit to recent records
+    return query(votersCollection, 
+      orderBy('Last Updated', 'desc'),
+      limit(20000)
+    );
+  };
+
+  const votersQuery = createVotersQuery();
+
+  // Use optimized query hook
+  const { data: voters = [], isLoading } = useVotersQuery({
+    query: votersQuery!,
+    queryKey: ['sms-voters-optimized', userProfile?.uid, userProfile?.accessScope],
+    enabled: !!userProfile && !!votersQuery,
   });
 
-  // Fetch SMS balance
+  // Load location names efficiently using static data
+  useEffect(() => {
+    const loadLocationNames = async () => {
+      if (voters.length === 0) return;
+      
+      const locationIds = new Set<string>();
+      const locationTypes = new Set<string>();
+      
+      voters.forEach(voter => {
+        if (voter.division_id) {
+          locationIds.add(`division_${voter.division_id}`);
+          locationTypes.add('division');
+        }
+        if (voter.district_id) {
+          locationIds.add(`district_${voter.district_id}`);
+          locationTypes.add('district');
+        }
+        if (voter.upazila_id) {
+          locationIds.add(`upazila_${voter.upazila_id}`);
+          locationTypes.add('upazila');
+        }
+        if (voter.union_id) {
+          locationIds.add(`union_${voter.union_id}`);
+          locationTypes.add('union');
+        }
+      });
+
+      // Batch load location names to reduce API calls
+      const names: {[key: string]: string} = {};
+      
+      try {
+        const uniqueVoters = voters.filter((voter, index, self) => 
+          index === self.findIndex(v => 
+            v.division_id === voter.division_id &&
+            v.district_id === voter.district_id &&
+            v.upazila_id === voter.upazila_id &&
+            v.union_id === voter.union_id
+          )
+        );
+
+        for (const voter of uniqueVoters.slice(0, 50)) { // Limit location lookups
+          const hierarchy = await getFullLocationHierarchy({
+            division_id: voter.division_id,
+            district_id: voter.district_id,
+            upazila_id: voter.upazila_id,
+            union_id: voter.union_id
+          });
+          
+          const locationKey = `${voter.division_id}_${voter.district_id}_${voter.upazila_id}_${voter.union_id}`;
+          names[locationKey] = [hierarchy.union, hierarchy.upazila, hierarchy.district].filter(Boolean).join(', ');
+        }
+        
+        setLocationNames(names);
+      } catch (error) {
+        console.error('Error loading location names:', error);
+      }
+    };
+
+    loadLocationNames();
+  }, [voters]);
+
+  // Fetch SMS balance with caching
   const fetchBalance = async () => {
     setIsLoadingBalance(true);
     try {
@@ -140,51 +195,45 @@ const SMSCampaign = () => {
     fetchBalance();
   }, []);
 
-  // Filter voters based on search and advanced filters
+  // Optimized filter function with early returns
   const filteredVoters = voters.filter((voter) => {
-    // Only include voters with phone numbers
+    // Early return for voters without phone numbers
     if (!voter.Phone) return false;
 
-    // Search filter
-    const matchesSearch = !searchTerm || 
-      voter['Voter Name']?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      voter.Phone?.includes(searchTerm) ||
-      voter.ID?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    // Advanced filters - using 'all' instead of empty string
-    const matchesWillVote = filters.willVote === 'all' || voter['Will Vote'] === filters.willVote;
-    const matchesGender = filters.gender === 'all' || voter.Gender === filters.gender;
-    
-    const matchesMinAge = !filters.minAge || 
-      (voter.Age !== undefined && voter.Age >= parseInt(filters.minAge));
-    const matchesMaxAge = !filters.maxAge || 
-      (voter.Age !== undefined && voter.Age <= parseInt(filters.maxAge));
+    // Search filter with early return
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const matchesSearch = 
+        voter['Voter Name']?.toLowerCase().includes(term) ||
+        voter.Phone?.includes(term) ||
+        voter.ID?.toLowerCase().includes(term);
       
-    const matchesMaritalStatus = filters.maritalStatus === 'all' || voter['Marital Status'] === filters.maritalStatus;
-    const matchesStudent = filters.student === 'all' || voter.Student === filters.student;
-    const matchesHasDisability = filters.hasDisability === 'all' || voter['Has Disability'] === filters.hasDisability;
-    const matchesIsMigrated = filters.isMigrated === 'all' || voter['Is Migrated'] === filters.isMigrated;
+      if (!matchesSearch) return false;
+    }
 
-    return (
-      matchesSearch &&
-      matchesWillVote &&
-      matchesGender &&
-      matchesMinAge &&
-      matchesMaxAge &&
-      matchesMaritalStatus &&
-      matchesStudent &&
-      matchesHasDisability &&
-      matchesIsMigrated
-    );
+    // Advanced filters with early returns
+    if (filters.willVote !== 'all' && voter['Will Vote'] !== filters.willVote) return false;
+    if (filters.gender !== 'all' && voter.Gender !== filters.gender) return false;
+    if (filters.minAge && (!voter.Age || voter.Age < parseInt(filters.minAge))) return false;
+    if (filters.maxAge && (!voter.Age || voter.Age > parseInt(filters.maxAge))) return false;
+    if (filters.maritalStatus !== 'all' && voter['Marital Status'] !== filters.maritalStatus) return false;
+    if (filters.student !== 'all' && voter.Student !== filters.student) return false;
+    if (filters.hasDisability !== 'all' && voter['Has Disability'] !== filters.hasDisability) return false;
+    if (filters.isMigrated !== 'all' && voter['Is Migrated'] !== filters.isMigrated) return false;
+
+    return true;
   });
 
-  console.log('Total voters:', voters.length);
+  console.log('Total voters loaded:', voters.length);
   console.log('Filtered voters:', filteredVoters.length);
-  console.log('Applied filters:', filters);
-  console.log('Search term:', searchTerm);
 
   const selectedVoterData = filteredVoters.filter((voter) => selectedVoters.includes(voter.id!));
   const estimatedCost = selectedVoters.length * 0.35;
+
+  const getLocationName = (voter: VoterData) => {
+    const locationKey = `${voter.division_id}_${voter.district_id}_${voter.upazila_id}_${voter.union_id}`;
+    return locationNames[locationKey] || 'অজানা এলাকা';
+  };
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -343,7 +392,7 @@ const SMSCampaign = () => {
               </CardContent>
             </Card>
             <div className="flex items-center gap-2 text-sm">
-              <MessageSquare className="w-4 h-4 text-blue-600" />
+              <MessageSquare className="w-4 w-4 text-blue-600" />
               <span>নির্বাচিত: {selectedVoters.length}</span>
               <Badge variant="outline">খরচ: ৳{estimatedCost.toFixed(2)}</Badge>
             </div>
@@ -616,6 +665,7 @@ const SMSCampaign = () => {
                       <div className="flex-1">
                         <p className="text-sm font-medium text-gray-900">{voter['Voter Name']}</p>
                         <p className="text-xs text-gray-600">{voter.Phone || 'N/A'}</p>
+                        <p className="text-xs text-gray-500">{getLocationName(voter)}</p>
                         <div className="flex flex-wrap gap-2 mt-1">
                           <Badge
                             variant={voter['Will Vote'] === 'Yes' ? 'default' : 'secondary'}

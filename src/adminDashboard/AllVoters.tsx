@@ -1,6 +1,6 @@
+
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,8 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import RoleBasedSidebar from '@/components/layout/RoleBasedSidebar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { useVotersQuery } from '@/hooks/useOptimizedQuery';
+import { getFullLocationHierarchy } from '@/lib/locationUtils';
 
 const AllVoters = () => {
   usePageTitle('সকল ভোটার - অ্যাডমিন প্যানেল');
@@ -38,6 +40,7 @@ const AllVoters = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('all');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [locationNames, setLocationNames] = useState<{[key: string]: string}>({});
   
   const {
     locationData,
@@ -46,91 +49,142 @@ const AllVoters = () => {
     isLoading: locationLoading
   } = useLocationFilter();
 
-  // Optimized Firebase query with caching
-  const { data: allVoters = [], isLoading, error } = useQuery({
-    queryKey: ['voters', userProfile?.uid, selectedLocation],
-    queryFn: async () => {
-      if (!userProfile) return [];
-      
-      const votersCollection = collection(db, 'voters');
-      let finalQuery = query(votersCollection, orderBy('Last Updated', 'desc'));
-      
-      // Apply location-based filtering based on user role and selected location
-      if (userProfile.role !== 'super_admin') {
-        const userScope = userProfile.accessScope;
-        if (userScope.village_id) {
-          finalQuery = query(votersCollection, where('village_id', '==', userScope.village_id), orderBy('Last Updated', 'desc'));
-        } else if (userScope.union_id) {
-          finalQuery = query(votersCollection, where('union_id', '==', userScope.union_id), orderBy('Last Updated', 'desc'));
-        } else if (userScope.upazila_id) {
-          finalQuery = query(votersCollection, where('upazila_id', '==', userScope.upazila_id), orderBy('Last Updated', 'desc'));
-        } else if (userScope.district_id) {
-          finalQuery = query(votersCollection, where('district_id', '==', userScope.district_id), orderBy('Last Updated', 'desc'));
-        } else if (userScope.division_id) {
-          finalQuery = query(votersCollection, where('division_id', '==', userScope.division_id), orderBy('Last Updated', 'desc'));
-        }
-      } else {
-        // For super admin, apply selected location filters
-        if (selectedLocation.village_id) {
-          finalQuery = query(votersCollection, where('village_id', '==', selectedLocation.village_id), orderBy('Last Updated', 'desc'));
-        } else if (selectedLocation.union_id) {
-          finalQuery = query(votersCollection, where('union_id', '==', selectedLocation.union_id), orderBy('Last Updated', 'desc'));
-        } else if (selectedLocation.upazila_id) {
-          finalQuery = query(votersCollection, where('upazila_id', '==', selectedLocation.upazila_id), orderBy('Last Updated', 'desc'));
-        } else if (selectedLocation.district_id) {
-          finalQuery = query(votersCollection, where('district_id', '==', selectedLocation.district_id), orderBy('Last Updated', 'desc'));
-        } else if (selectedLocation.division_id) {
-          finalQuery = query(votersCollection, where('division_id', '==', selectedLocation.division_id), orderBy('Last Updated', 'desc'));
-        }
+  // Create optimized query with limits
+  const createVotersQuery = () => {
+    if (!userProfile) return null;
+    
+    const votersCollection = collection(db, 'voters');
+    
+    // Apply role-based filtering with limits to reduce reads
+    if (userProfile.role !== 'super_admin') {
+      const userScope = userProfile.accessScope;
+      if (userScope.village_id) {
+        return query(votersCollection, 
+          where('village_id', '==', userScope.village_id), 
+          orderBy('Last Updated', 'desc'),
+          limit(1000)
+        );
+      } else if (userScope.union_id) {
+        return query(votersCollection, 
+          where('union_id', '==', userScope.union_id), 
+          orderBy('Last Updated', 'desc'),
+          limit(2000)
+        );
+      } else if (userScope.upazila_id) {
+        return query(votersCollection, 
+          where('upazila_id', '==', userScope.upazila_id), 
+          orderBy('Last Updated', 'desc'),
+          limit(5000)
+        );
+      } else if (userScope.district_id) {
+        return query(votersCollection, 
+          where('district_id', '==', userScope.district_id), 
+          orderBy('Last Updated', 'desc'),
+          limit(10000)
+        );
+      } else if (userScope.division_id) {
+        return query(votersCollection, 
+          where('division_id', '==', userScope.division_id), 
+          orderBy('Last Updated', 'desc'),
+          limit(15000)
+        );
       }
-      
-      const snapshot = await getDocs(finalQuery);
-      return snapshot.docs.map(doc => {
-        const documentData = doc.data();
-        const voterData: VoterData = {
-          id: doc.id,
-          ID: documentData.ID || '',
-          'Voter Name': documentData['Voter Name'] || '',
-          FatherOrHusband: documentData.FatherOrHusband,
-          Age: documentData.Age,
-          Gender: documentData.Gender,
-          'Marital Status': documentData['Marital Status'],
-          Student: documentData.Student,
-          Occupation: documentData.Occupation,
-          Education: documentData.Education,
-          Religion: documentData.Religion,
-          Phone: documentData.Phone,
-          NID: documentData.NID,
-          'Will Vote': documentData['Will Vote'],
-          'Voted Before': documentData['Voted Before'],
-          'Vote Probability (%)': documentData['Vote Probability (%)'],
-          'Political Support': documentData['Political Support'],
-          'Has Disability': documentData['Has Disability'],
-          'Is Migrated': documentData['Is Migrated'],
-          division_id: documentData.division_id,
-          district_id: documentData.district_id,
-          upazila_id: documentData.upazila_id,
-          union_id: documentData.union_id,
-          village_id: documentData.village_id,
-          'House Name': documentData['House Name'],
-          Remarks: documentData.Remarks,
-          Collector: documentData.Collector,
-          'Collection Date': documentData['Collection Date'],
-          'Last Updated': documentData['Last Updated']
-        };
-        return voterData;
-      });
-    },
-    enabled: !!userProfile,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes to reduce Firebase reads
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes (renamed from cacheTime)
+    } else {
+      // For super admin, apply selected location filters with limits
+      if (selectedLocation.village_id) {
+        return query(votersCollection, 
+          where('village_id', '==', selectedLocation.village_id), 
+          orderBy('Last Updated', 'desc'),
+          limit(1000)
+        );
+      } else if (selectedLocation.union_id) {
+        return query(votersCollection, 
+          where('union_id', '==', selectedLocation.union_id), 
+          orderBy('Last Updated', 'desc'),
+          limit(2000)
+        );
+      } else if (selectedLocation.upazila_id) {
+        return query(votersCollection, 
+          where('upazila_id', '==', selectedLocation.upazila_id), 
+          orderBy('Last Updated', 'desc'),
+          limit(5000)
+        );
+      } else if (selectedLocation.district_id) {
+        return query(votersCollection, 
+          where('district_id', '==', selectedLocation.district_id), 
+          orderBy('Last Updated', 'desc'),
+          limit(10000)
+        );
+      } else if (selectedLocation.division_id) {
+        return query(votersCollection, 
+          where('division_id', '==', selectedLocation.division_id), 
+          orderBy('Last Updated', 'desc'),
+          limit(15000)
+        );
+      }
+    }
+    
+    // Default query with limit
+    return query(votersCollection, 
+      orderBy('Last Updated', 'desc'),
+      limit(20000)
+    );
+  };
+
+  const votersQuery = createVotersQuery();
+
+  // Optimized Firebase query with caching
+  const { data: allVoters = [], isLoading, error } = useVotersQuery({
+    query: votersQuery!,
+    queryKey: ['voters-optimized', userProfile?.uid, selectedLocation],
+    enabled: !!userProfile && !!votersQuery,
   });
 
-  // Filter voters based on search and tab
+  // Load location names efficiently using static data
+  React.useEffect(() => {
+    const loadLocationNames = async () => {
+      if (allVoters.length === 0) return;
+      
+      const names: {[key: string]: string} = {};
+      
+      try {
+        // Get unique location combinations to reduce API calls
+        const uniqueVoters = allVoters.filter((voter, index, self) => 
+          index === self.findIndex(v => 
+            v.division_id === voter.division_id &&
+            v.district_id === voter.district_id &&
+            v.upazila_id === voter.upazila_id &&
+            v.union_id === voter.union_id
+          )
+        );
+
+        // Limit location lookups to reduce static file reads
+        for (const voter of uniqueVoters.slice(0, 100)) {
+          const hierarchy = await getFullLocationHierarchy({
+            division_id: voter.division_id,
+            district_id: voter.district_id,
+            upazila_id: voter.upazila_id,
+            union_id: voter.union_id
+          });
+          
+          const locationKey = `${voter.division_id}_${voter.district_id}_${voter.upazila_id}_${voter.union_id}`;
+          names[locationKey] = [hierarchy.union, hierarchy.upazila, hierarchy.district].filter(Boolean).join(', ');
+        }
+        
+        setLocationNames(names);
+      } catch (error) {
+        console.error('Error loading location names:', error);
+      }
+    };
+
+    loadLocationNames();
+  }, [allVoters]);
+
+  // Filter voters based on search and tab with optimizations
   const filteredVoters = useMemo(() => {
     let filtered = allVoters;
 
-    // Search filter
+    // Search filter with early return
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(voter =>
@@ -141,7 +195,7 @@ const AllVoters = () => {
       );
     }
 
-    // Tab filter
+    // Tab filter with early returns
     if (selectedTab === 'will-vote') {
       filtered = filtered.filter(voter => voter['Will Vote'] === 'Yes');
     } else if (selectedTab === 'wont-vote') {
@@ -158,27 +212,11 @@ const AllVoters = () => {
   }, [allVoters, searchTerm, selectedTab]);
 
   const getLocationName = (voter: VoterData) => {
-    const parts = [];
-    
-    if (voter.village_id) {
-      const village = locationData.villages.find(v => v.id === voter.village_id);
-      if (village) parts.push(village.bn_name || village.name);
-    }
-    
-    if (voter.union_id) {
-      const union = locationData.unions.find(u => u.id === voter.union_id);
-      if (union) parts.push(union.bn_name || union.name);
-    }
-    
-    if (voter.upazila_id) {
-      const upazila = locationData.upazilas.find(u => u.id === voter.upazila_id);
-      if (upazila) parts.push(upazila.bn_name || upazila.name);
-    }
-    
-    return parts.join(', ');
+    const locationKey = `${voter.division_id}_${voter.district_id}_${voter.upazila_id}_${voter.union_id}`;
+    return locationNames[locationKey] || 'অজানা এলাকা';
   };
 
-  // Statistics
+  // Statistics with memoization
   const stats = useMemo(() => {
     const total = allVoters.length;
     const willVote = allVoters.filter(v => v['Will Vote'] === 'Yes').length;
