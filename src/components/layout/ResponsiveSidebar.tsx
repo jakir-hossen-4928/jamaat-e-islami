@@ -132,7 +132,7 @@ const AppSidebar = () => {
                       `}>
                       <Link to={item.path} className="flex items-center space-x-3 px-3 py-2 w-full text-white">
                         <Icon className="w-5 h-5 flex-shrink-0 text-white" />
-                        <span className="truncate text-white">{item.label}</span>
+                        <span className="truncate text-blue-950 font-normal mx-0 my-0 my-0.5 my-0 text-left ">{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>;
