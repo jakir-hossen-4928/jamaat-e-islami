@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { Mail, ArrowLeft } from "lucide-react";
+import { rateLimit, securityLogger } from "@/lib/security";
 
 const ForgotPassword = () => {
   usePageTitle('পাসওয়ার্ড রিসেট - জামায়াতে ইসলামী');
@@ -30,11 +31,24 @@ const ForgotPassword = () => {
       return;
     }
 
+    const identifier = `reset_${email}`;
+    
+    // Check rate limiting
+    if (rateLimit.isLimited(identifier, 3, 10 * 60 * 1000)) { // 3 attempts per 10 minutes
+      securityLogger.logSuspiciousActivity('password_reset_rate_limit', { email });
+      setError("অনেকবার পাসওয়ার্ড রিসেটের চেষ্টা করেছেন। ১০ মিনিট পর আবার চেষ্টা করুন।");
+      return;
+    }
+
     try {
       setMessage("");
       setError("");
       setLoading(true);
       await sendPasswordResetEmail(auth, email);
+      
+      rateLimit.reset(identifier); // Reset on success
+      securityLogger.logAuthAttempt(email, true, 'password_reset');
+      
       setMessage("পাসওয়ার্ড রিসেট লিংক আপনার ইমেইলে পাঠানো হয়েছে");
       
       toast({
@@ -43,13 +57,18 @@ const ForgotPassword = () => {
       });
     } catch (error: any) {
       console.error("Password reset error:", error);
-      if (error.code === 'auth/user-not-found') {
-        setError("এই ইমেইল দিয়ে কোন অ্যাকাউন্ট পাওয়া যায়নি");
-      } else if (error.code === 'auth/invalid-email') {
-        setError("অবৈধ ইমেইল ঠিকানা");
-      } else {
-        setError("পাসওয়ার্ড রিসেট করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+      securityLogger.logAuthAttempt(email, false, `password_reset_${error.code}`);
+      
+      // Generic error message to prevent information leakage
+      let message = "পাসওয়ার্ড রিসেট করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।";
+      
+      if (error.code === 'auth/invalid-email') {
+        message = "অবৈধ ইমেইল ঠিকানা";
+      } else if (error.code === 'auth/too-many-requests') {
+        message = "অনেকবার চেষ্টা করেছেন। কিছুক্ষণ পর আবার চেষ্টা করুন।";
       }
+      
+      setError(message);
     } finally {
       setLoading(false);
     }

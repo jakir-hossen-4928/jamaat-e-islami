@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useSecureAuth } from "@/hooks/useSecureAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { Eye, EyeOff, UserPlus, ArrowLeft } from "lucide-react";
+import { passwordValidation } from "@/lib/security";
 
 const SignUp = () => {
   usePageTitle('রেজিস্টার - জামায়াতে ইসলামী');
@@ -22,18 +23,25 @@ const SignUp = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   
-  const { register } = useAuth();
+  const { secureRegister, loading } = useSecureAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
+
+    // Real-time password validation
+    if (name === 'password') {
+      const validation = passwordValidation.validate(value);
+      setPasswordErrors(validation.errors);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,35 +57,30 @@ const SignUp = () => {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError("পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে");
+    // Validate password strength
+    const validation = passwordValidation.validate(formData.password);
+    if (!validation.isValid) {
+      setError("পাসওয়ার্ড নীতিমালা মেনে চলুন");
       return;
     }
 
     try {
       setError("");
-      setLoading(true);
-      await register(formData.email, formData.password, formData.displayName);
+      const result = await secureRegister(formData.email, formData.password);
       
-      toast({
-        title: "✅ সফল",
-        description: "অ্যাকাউন্ট তৈরি হয়েছে। অনুমোদনের অপেক্ষায় রয়েছে।",
-      });
-      
-      navigate('/pending-verification');
+      if (result.success) {
+        toast({
+          title: "✅ সফল",
+          description: "অ্যাকাউন্ট তৈরি হয়েছে। অনুমোদনের অপেক্ষায় রয়েছে।",
+        });
+        navigate('/pending-verification');
+      } else {
+        // Error messages are already handled by useSecureAuth
+        setError("রেজিস্ট্রেশন করতে সমস্যা হয়েছে");
+      }
     } catch (error: any) {
       console.error("Registration error:", error);
-      if (error.code === 'auth/email-already-in-use') {
-        setError("এই ইমেইল দিয়ে ইতিমধ্যে অ্যাকাউন্ট রয়েছে");
-      } else if (error.code === 'auth/invalid-email') {
-        setError("অবৈধ ইমেইল ঠিকানা");
-      } else if (error.code === 'auth/weak-password') {
-        setError("পাসওয়ার্ড খুবই দুর্বল");
-      } else {
-        setError("রেজিস্ট্রেশন করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
-      }
-    } finally {
-      setLoading(false);
+      setError("রেজিস্ট্রেশন করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
     }
   };
 
@@ -158,7 +161,7 @@ const SignUp = () => {
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
                     onChange={handleChange}
-                    placeholder="পাসওয়ার্ড লিখুন (কমপক্ষে ৬ অক্ষর)"
+                    placeholder="শক্তিশালী পাসওয়ার্ড লিখুন"
                     disabled={loading}
                     required
                   />
@@ -176,6 +179,15 @@ const SignUp = () => {
                     )}
                   </Button>
                 </div>
+                
+                {/* Password requirements */}
+                {passwordErrors.length > 0 && (
+                  <div className="text-xs text-red-600 space-y-1">
+                    {passwordErrors.map((error, index) => (
+                      <div key={index}>• {error}</div>
+                    ))}
+                  </div>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -210,7 +222,7 @@ const SignUp = () => {
               <Button
                 type="submit"
                 className="w-full bg-green-600 hover:bg-green-700"
-                disabled={loading}
+                disabled={loading || passwordErrors.length > 0}
               >
                 {loading ? (
                   <div className="flex items-center gap-2">

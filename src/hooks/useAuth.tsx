@@ -1,9 +1,11 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User as FirebaseUser, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { User as FirebaseUser, onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { User } from '@/lib/types';
 import { useNavigate } from 'react-router-dom';
+import { useSecureAuth } from './useSecureAuth';
 
 interface AuthContextType {
   currentUser: FirebaseUser | null;
@@ -29,26 +31,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userProfile, setUserProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { secureLogin, secureRegister } = useSecureAuth();
 
   const login = async (email: string, password: string) => {
-    const result = await signInWithEmailAndPassword(auth, email, password);
+    const result = await secureLogin(email, password);
+    
+    if (result.success && result.user) {
+      // Fetch user profile to check approval status
+      const userDoc = await getDoc(doc(db, 'users', result.user.uid));
+      if (userDoc.exists()) {
+        const profile = userDoc.data() as User;
 
-    // Fetch user profile to check approval status
-    const userDoc = await getDoc(doc(db, 'users', result.user.uid));
-    if (userDoc.exists()) {
-      const profile = userDoc.data() as User;
+        // Navigate based on role and approval status
+        if (!profile.approved) {
+          // Will be handled by ProtectedRoute
+          return;
+        }
 
-      // Navigate based on role and approval status
-      if (!profile.approved) {
-        // Will be handled by ProtectedRoute
-        return;
-      }
-
-      // Navigate to appropriate dashboard
-      if (profile.role === 'super_admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/dashboard');
+        // Navigate to appropriate dashboard
+        if (profile.role === 'super_admin') {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/dashboard');
+        }
       }
     }
   };
@@ -58,20 +63,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     password: string, 
     displayName: string
   ) => {
-    const result = await createUserWithEmailAndPassword(auth, email, password);
+    const result = await secureRegister(email, password);
+    
+    if (result.success && result.user) {
+      // Create user profile in Firestore
+      const userProfile: User = {
+        uid: result.user.uid,
+        email: email,
+        displayName: displayName,
+        role: 'union_admin', // Default role for new users
+        approved: false,
+        createdAt: new Date().toISOString(),
+        accessScope: {} // Initialize empty access scope
+      };
 
-    // Create user profile in Firestore
-    const userProfile: User = {
-      uid: result.user.uid,
-      email: email,
-      displayName: displayName,
-      role: 'union_admin', // Default role for new users
-      approved: false,
-      createdAt: new Date().toISOString(),
-      accessScope: {} // Initialize empty access scope
-    };
-
-    await setDoc(doc(db, 'users', result.user.uid), userProfile);
+      await setDoc(doc(db, 'users', result.user.uid), userProfile);
+    }
   };
 
   const logout = () => {

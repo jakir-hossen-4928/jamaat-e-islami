@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useSecureAuth } from "@/hooks/useSecureAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,10 +17,9 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
-  const { login } = useAuth();
+  const { secureLogin, loading } = useSecureAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -33,26 +32,21 @@ const Login = () => {
 
     try {
       setError("");
-      setLoading(true);
-      await login(email, password);
+      const result = await secureLogin(email, password);
       
-      toast({
-        title: "✅ সফল",
-        description: "সফলভাবে লগইন হয়েছেন",
-      });
+      if (result.success) {
+        toast({
+          title: "✅ সফল",
+          description: "সফলভাবে লগইন হয়েছেন",
+        });
+        navigate('/dashboard');
+      } else {
+        // Error messages are already handled by useSecureAuth
+        setError("লগইন করতে সমস্যা হয়েছে");
+      }
     } catch (error: any) {
       console.error("Login error:", error);
-      if (error.code === 'auth/user-not-found') {
-        setError("এই ইমেইল দিয়ে কোন অ্যাকাউন্ট পাওয়া যায়নি");
-      } else if (error.code === 'auth/wrong-password') {
-        setError("ভুল পাসওয়ার্ড");
-      } else if (error.code === 'auth/invalid-email') {
-        setError("অবৈধ ইমেইল ঠিকানা");
-      } else {
-        setError("লগইন করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
-      }
-    } finally {
-      setLoading(false);
+      setError("লগইন করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
     }
   };
 
