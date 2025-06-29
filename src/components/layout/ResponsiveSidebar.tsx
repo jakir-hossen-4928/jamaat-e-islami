@@ -123,7 +123,7 @@ const AppSidebar = () => {
 
       <SidebarContent className="px-2 py-4">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-gray-200 font-semibold text-sm mb-2 px-2">
+          <SidebarGroupLabel className="text-white font-semibold text-sm mb-2 px-2">
             প্রধান মেনু
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -139,13 +139,13 @@ const AppSidebar = () => {
                       className={`
                         text-white hover:bg-gray-400 hover:text-white transition-all duration-200 rounded-lg
                         data-[active=true]:bg-gray-700 data-[active=true]:text-white
-                        data-[active=true]:border-l-4 data-[active=true]:border-gray-200 data-[active=true]:shadow-lg
+                        data-[active=true]:border-l-4 data-[active=true]:border-white data-[active=true]:shadow-lg
                         font-medium
                       `}
                     >
-                      <Link to={item.path} className="flex items-center space-x-3 px-3 py-2">
-                        <Icon className="w-5 h-5 flex-shrink-0" />
-                        <span className="truncate">{item.label}</span>
+                      <Link to={item.path} className="flex items-center space-x-3 px-3 py-2 w-full">
+                        <Icon className="w-5 h-5 flex-shrink-0 text-white" />
+                        <span className="truncate text-white">{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -232,3 +232,4 @@ export const ResponsiveSidebar = ({ children }: ResponsiveSidebarProps) => {
 };
 
 export default ResponsiveSidebar;
+
