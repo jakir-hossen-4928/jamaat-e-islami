@@ -1,7 +1,5 @@
+
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,10 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Building, Users, BarChart3, Plus, Download } from 'lucide-react';
-import RoleBasedSidebar from '@/components/layout/RoleBasedSidebar';
+import { MapPin, Building, Users, BarChart3, Plus, Download, Trash2 } from 'lucide-react';
+import ResponsiveSidebar from '@/components/layout/ResponsiveSidebar';
 import { usePageTitle } from '@/lib/usePageTitle';
-import { User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 // Location cache
@@ -44,23 +41,72 @@ const loadLocationData = async (type: string) => {
   }
 };
 
-const VillageBuilderDialog = ({ locationData }: { locationData: any }) => {
+// Generic Location Builder Dialog
+const LocationBuilderDialog = ({ 
+  type, 
+  locationData, 
+  onLocationAdded 
+}: { 
+  type: 'division' | 'district' | 'upazila' | 'union' | 'village';
+  locationData: any;
+  onLocationAdded: () => void;
+}) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [newVillage, setNewVillage] = useState({
+  const [newLocation, setNewLocation] = useState({
     name: '',
     bn_name: '',
-    union_id: '',
-    upazila_id: '',
+    division_id: '',
     district_id: '',
-    division_id: ''
+    upazila_id: '',
+    union_id: '',
+    url: ''
   });
   const { toast } = useToast();
 
-  const handleLocationChange = (level: string, value: string) => {
-    const updated = { ...newVillage, [level]: value };
+  const getTypeConfig = () => {
+    switch (type) {
+      case 'division':
+        return {
+          title: 'নতুন বিভাগ তৈরি করুন',
+          fields: ['name', 'bn_name', 'url'],
+          requiredFields: ['name', 'bn_name']
+        };
+      case 'district':
+        return {
+          title: 'নতুন জেলা তৈরি করুন',
+          fields: ['name', 'bn_name', 'division_id', 'url'],
+          requiredFields: ['name', 'bn_name', 'division_id']
+        };
+      case 'upazila':
+        return {
+          title: 'নতুন উপজেলা তৈরি করুন',
+          fields: ['name', 'bn_name', 'district_id', 'url'],
+          requiredFields: ['name', 'bn_name', 'district_id']
+        };
+      case 'union':
+        return {
+          title: 'নতুন ইউনিয়ন তৈরি করুন',
+          fields: ['name', 'bn_name', 'upazila_id', 'url'],
+          requiredFields: ['name', 'bn_name', 'upazila_id']
+        };
+      case 'village':
+        return {
+          title: 'নতুন গ্রাম তৈরি করুন',
+          fields: ['name', 'bn_name', 'union_id'],
+          requiredFields: ['name', 'bn_name', 'union_id']
+        };
+      default:
+        return { title: '', fields: [], requiredFields: [] };
+    }
+  };
+
+  const config = getTypeConfig();
+
+  const handleLocationChange = (field: string, value: string) => {
+    const updated = { ...newLocation, [field]: value };
     
-    // Auto-fill parent locations
-    if (level === 'union_id' && value) {
+    // Auto-fill parent locations for hierarchical data
+    if (field === 'union_id' && value) {
       const union = locationData.unions?.find((u: any) => u.id === value);
       if (union) {
         updated.upazila_id = union.upazilla_id;
@@ -73,13 +119,29 @@ const VillageBuilderDialog = ({ locationData }: { locationData: any }) => {
           }
         }
       }
+    } else if (field === 'upazila_id' && value) {
+      const upazila = locationData.upazilas?.find((u: any) => u.id === value);
+      if (upazila) {
+        updated.district_id = upazila.district_id;
+        const district = locationData.districts?.find((d: any) => d.id === upazila.district_id);
+        if (district) {
+          updated.division_id = district.division_id;
+        }
+      }
+    } else if (field === 'district_id' && value) {
+      const district = locationData.districts?.find((d: any) => d.id === value);
+      if (district) {
+        updated.division_id = district.division_id;
+      }
     }
     
-    setNewVillage(updated);
+    setNewLocation(updated);
   };
 
-  const handleAddVillage = () => {
-    if (!newVillage.name || !newVillage.bn_name || !newVillage.union_id) {
+  const handleAddLocation = () => {
+    const missingFields = config.requiredFields.filter(field => !newLocation[field as keyof typeof newLocation]);
+    
+    if (missingFields.length > 0) {
       toast({
         title: 'ত্রুটি',
         description: 'সকল প্রয়োজনীয় তথ্য পূরণ করুন',
@@ -89,39 +151,49 @@ const VillageBuilderDialog = ({ locationData }: { locationData: any }) => {
     }
 
     // Add to local cache
-    const newVillageData = {
-      id: `village_${Date.now()}`,
-      ...newVillage
+    const newLocationData = {
+      id: `${type}_${Date.now()}`,
+      ...newLocation
     };
 
-    if (locationCache.villages) {
-      locationCache.villages.push(newVillageData);
+    // Special handling for union (uses upazilla_id instead of upazila_id)
+    if (type === 'union') {
+      newLocationData.upazilla_id = newLocation.upazila_id;
+      delete newLocationData.upazila_id;
+    }
+
+    const cacheKey = `${type}s` as keyof typeof locationCache;
+    if (locationCache[cacheKey]) {
+      locationCache[cacheKey]!.push(newLocationData);
     } else {
-      locationCache.villages = [newVillageData];
+      locationCache[cacheKey] = [newLocationData];
     }
 
     toast({
       title: 'সফল',
-      description: 'নতুন গ্রাম যোগ করা হয়েছে',
+      description: `নতুন ${type === 'division' ? 'বিভাগ' : type === 'district' ? 'জেলা' : type === 'upazila' ? 'উপজেলা' : type === 'union' ? 'ইউনিয়ন' : 'গ্রাম'} যোগ করা হয়েছে`,
     });
 
     // Reset form
-    setNewVillage({
+    setNewLocation({
       name: '',
       bn_name: '',
-      union_id: '',
-      upazila_id: '',
+      division_id: '',
       district_id: '',
-      division_id: ''
+      upazila_id: '',
+      union_id: '',
+      url: ''
     });
     setIsOpen(false);
+    onLocationAdded();
   };
 
-  const downloadVillagesJSON = () => {
-    const dataStr = JSON.stringify(locationCache.villages || [], null, 2);
+  const downloadJSON = () => {
+    const cacheKey = `${type}s` as keyof typeof locationCache;
+    const dataStr = JSON.stringify(locationCache[cacheKey] || [], null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
     
-    const exportFileDefaultName = 'villages.json';
+    const exportFileDefaultName = `${type}s.json`;
     
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
@@ -129,64 +201,155 @@ const VillageBuilderDialog = ({ locationData }: { locationData: any }) => {
     linkElement.click();
   };
 
-  const filteredUnions = locationData.unions?.filter((u: any) => 
-    !newVillage.upazila_id || u.upazilla_id === newVillage.upazila_id
-  ) || [];
+  const getFilteredOptions = (optionType: string) => {
+    switch (optionType) {
+      case 'divisions':
+        return locationData.divisions || [];
+      case 'districts':
+        return newLocation.division_id 
+          ? (locationData.districts || []).filter((d: any) => d.division_id === newLocation.division_id)
+          : locationData.districts || [];
+      case 'upazilas':
+        return newLocation.district_id 
+          ? (locationData.upazilas || []).filter((u: any) => u.district_id === newLocation.district_id)
+          : locationData.upazilas || [];
+      case 'unions':
+        return newLocation.upazila_id 
+          ? (locationData.unions || []).filter((u: any) => u.upazilla_id === newLocation.upazila_id)
+          : locationData.unions || [];
+      default:
+        return [];
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button className="bg-green-600 hover:bg-green-700">
           <Plus className="w-4 h-4 mr-2" />
-          নতুন গ্রাম যোগ করুন
+          নতুন {type === 'division' ? 'বিভাগ' : type === 'district' ? 'জেলা' : type === 'upazila' ? 'উপজেলা' : type === 'union' ? 'ইউনিয়ন' : 'গ্রাম'} যোগ করুন
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>নতুন গ্রাম তৈরি করুন</DialogTitle>
+          <DialogTitle>{config.title}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div>
-            <Label>গ্রামের নাম (ইংরেজি) *</Label>
-            <Input
-              value={newVillage.name}
-              onChange={(e) => setNewVillage({ ...newVillage, name: e.target.value })}
-              placeholder="Village name in English"
-            />
-          </div>
-          <div>
-            <Label>গ্রামের নাম (বাংলা) *</Label>
-            <Input
-              value={newVillage.bn_name}
-              onChange={(e) => setNewVillage({ ...newVillage, bn_name: e.target.value })}
-              placeholder="গ্রামের নাম বাংলায়"
-            />
-          </div>
-          <div>
-            <Label>ইউনিয়ন *</Label>
-            <Select value={newVillage.union_id} onValueChange={(value) => handleLocationChange('union_id', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="ইউনিয়ন নির্বাচন করুন" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredUnions.map((union: any) => (
-                  <SelectItem key={union.id} value={union.id}>
-                    {union.name} ({union.bn_name})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {config.fields.includes('name') && (
+            <div>
+              <Label>নাম (ইংরেজি) *</Label>
+              <Input
+                value={newLocation.name}
+                onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
+                placeholder="Name in English"
+              />
+            </div>
+          )}
+          
+          {config.fields.includes('bn_name') && (
+            <div>
+              <Label>নাম (বাংলা) *</Label>
+              <Input
+                value={newLocation.bn_name}
+                onChange={(e) => setNewLocation({ ...newLocation, bn_name: e.target.value })}
+                placeholder="নাম বাংলায়"
+              />
+            </div>
+          )}
+
+          {config.fields.includes('division_id') && (
+            <div>
+              <Label>বিভাগ *</Label>
+              <Select value={newLocation.division_id} onValueChange={(value) => handleLocationChange('division_id', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getFilteredOptions('divisions').map((division: any) => (
+                    <SelectItem key={division.id} value={division.id}>
+                      {division.name} ({division.bn_name})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {config.fields.includes('district_id') && (
+            <div>
+              <Label>জেলা *</Label>
+              <Select value={newLocation.district_id} onValueChange={(value) => handleLocationChange('district_id', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="জেলা নির্বাচন করুন" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getFilteredOptions('districts').map((district: any) => (
+                    <SelectItem key={district.id} value={district.id}>
+                      {district.name} ({district.bn_name})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {config.fields.includes('upazila_id') && (
+            <div>
+              <Label>উপজেলা *</Label>
+              <Select value={newLocation.upazila_id} onValueChange={(value) => handleLocationChange('upazila_id', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="উপজেলা নির্বাচন করুন" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getFilteredOptions('upazilas').map((upazila: any) => (
+                    <SelectItem key={upazila.id} value={upazila.id}>
+                      {upazila.name} ({upazila.bn_name})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {config.fields.includes('union_id') && (
+            <div>
+              <Label>ইউনিয়ন *</Label>
+              <Select value={newLocation.union_id} onValueChange={(value) => handleLocationChange('union_id', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="ইউনিয়ন নির্বাচন করুন" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getFilteredOptions('unions').map((union: any) => (
+                    <SelectItem key={union.id} value={union.id}>
+                      {union.name} ({union.bn_name})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {config.fields.includes('url') && (
+            <div>
+              <Label>ওয়েবসাইট URL</Label>
+              <Input
+                value={newLocation.url}
+                onChange={(e) => setNewLocation({ ...newLocation, url: e.target.value })}
+                placeholder="www.example.gov.bd"
+              />
+            </div>
+          )}
+
           <div className="flex justify-between">
-            <Button variant="outline" onClick={downloadVillagesJSON}>
+            <Button variant="outline" onClick={downloadJSON}>
               <Download className="w-4 h-4 mr-2" />
-              villages.json ডাউনলোড
+              JSON ডাউনলোড
             </Button>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setIsOpen(false)}>
                 বাতিল
               </Button>
-              <Button onClick={handleAddVillage}>
+              <Button onClick={handleAddLocation}>
                 যোগ করুন
               </Button>
             </div>
@@ -242,23 +405,15 @@ const LocationManagement = () => {
     loadData();
   }, []);
 
-  // Fetch users to show location assignments
-  const { data: users = [] } = useQuery({
-    queryKey: ['users-location'],
-    queryFn: async () => {
-      try {
-        const usersRef = collection(db, 'users');
-        const snapshot = await getDocs(usersRef);
-        return snapshot.docs.map(doc => ({ 
-          uid: doc.id, 
-          ...doc.data() 
-        } as User));
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        return [];
-      }
-    }
-  });
+  const refreshData = () => {
+    setLocationData({
+      divisions: locationCache.divisions || [],
+      districts: locationCache.districts || [],
+      upazilas: locationCache.upazilas || [],
+      unions: locationCache.unions || [],
+      villages: locationCache.villages || []
+    });
+  };
 
   const getLocationStats = () => {
     const stats = {
@@ -266,12 +421,7 @@ const LocationManagement = () => {
       totalDistricts: locationData.districts.length,
       totalUpazilas: locationData.upazilas.length,
       totalUnions: locationData.unions.length,
-      totalVillages: locationData.villages.length,
-      assignedDivisions: new Set(users.map(u => u.accessScope?.division_id).filter(Boolean)).size,
-      assignedDistricts: new Set(users.map(u => u.accessScope?.district_id).filter(Boolean)).size,
-      assignedUpazilas: new Set(users.map(u => u.accessScope?.upazila_id).filter(Boolean)).size,
-      assignedUnions: new Set(users.map(u => u.accessScope?.union_id).filter(Boolean)).size,
-      assignedVillages: new Set(users.map(u => u.accessScope?.village_id).filter(Boolean)).size
+      totalVillages: locationData.villages.length
     };
     return stats;
   };
@@ -305,24 +455,30 @@ const LocationManagement = () => {
 
   if (!isDataLoaded) {
     return (
-      <RoleBasedSidebar>
+      <ResponsiveSidebar>
         <div className="flex items-center justify-center h-64">
           <div className="text-lg">লোডিং হচ্ছে...</div>
         </div>
-      </RoleBasedSidebar>
+      </ResponsiveSidebar>
     );
   }
 
   return (
-    <RoleBasedSidebar>
+    <ResponsiveSidebar>
       <div className="space-y-6">
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white">
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl lg:text-3xl font-bold">এলাকা ব্যবস্থাপনা</h1>
-              <p className="mt-2 text-blue-100">প্রশাসনিক এলাকা ও ব্যবহারকারী বরাদ্দ</p>
+              <p className="mt-2 text-blue-100">প্রশাসনিক এলাকা তৈরি ও ব্যবস্থাপনা</p>
             </div>
-            <VillageBuilderDialog locationData={locationData} />
+            <div className="flex gap-2 flex-wrap">
+              <LocationBuilderDialog type="division" locationData={locationData} onLocationAdded={refreshData} />
+              <LocationBuilderDialog type="district" locationData={locationData} onLocationAdded={refreshData} />
+              <LocationBuilderDialog type="upazila" locationData={locationData} onLocationAdded={refreshData} />
+              <LocationBuilderDialog type="union" locationData={locationData} onLocationAdded={refreshData} />
+              <LocationBuilderDialog type="village" locationData={locationData} onLocationAdded={refreshData} />
+            </div>
           </div>
         </div>
 
@@ -335,7 +491,7 @@ const LocationManagement = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <Label>বিভাগ</Label>
-                <Select value={selectedLocation.division_id} onValueChange={(value) => setSelectedLocation({ division_id: value, district_id: '', upazila_id: '', union_id: '' })}>
+                <Select value={selectedLocation.division_id} onValueChange={(value) => setSelectedLocation({ division_id: value === 'all' ? '' : value, district_id: '', upazila_id: '', union_id: '' })}>
                   <SelectTrigger>
                     <SelectValue placeholder="সব বিভাগ" />
                   </SelectTrigger>
@@ -351,7 +507,7 @@ const LocationManagement = () => {
               </div>
               <div>
                 <Label>জেলা</Label>
-                <Select value={selectedLocation.district_id} onValueChange={(value) => setSelectedLocation({ ...selectedLocation, district_id: value, upazila_id: '', union_id: '' })} disabled={!selectedLocation.division_id}>
+                <Select value={selectedLocation.district_id} onValueChange={(value) => setSelectedLocation({ ...selectedLocation, district_id: value === 'all' ? '' : value, upazila_id: '', union_id: '' })} disabled={!selectedLocation.division_id}>
                   <SelectTrigger>
                     <SelectValue placeholder="সব জেলা" />
                   </SelectTrigger>
@@ -367,7 +523,7 @@ const LocationManagement = () => {
               </div>
               <div>
                 <Label>উপজেলা</Label>
-                <Select value={selectedLocation.upazila_id} onValueChange={(value) => setSelectedLocation({ ...selectedLocation, upazila_id: value, union_id: '' })} disabled={!selectedLocation.district_id}>
+                <Select value={selectedLocation.upazila_id} onValueChange={(value) => setSelectedLocation({ ...selectedLocation, upazila_id: value === 'all' ? '' : value, union_id: '' })} disabled={!selectedLocation.district_id}>
                   <SelectTrigger>
                     <SelectValue placeholder="সব উপজেলা" />
                   </SelectTrigger>
@@ -383,7 +539,7 @@ const LocationManagement = () => {
               </div>
               <div>
                 <Label>ইউনিয়ন</Label>
-                <Select value={selectedLocation.union_id} onValueChange={(value) => setSelectedLocation({ ...selectedLocation, union_id: value })} disabled={!selectedLocation.upazila_id}>
+                <Select value={selectedLocation.union_id} onValueChange={(value) => setSelectedLocation({ ...selectedLocation, union_id: value === 'all' ? '' : value })} disabled={!selectedLocation.upazila_id}>
                   <SelectTrigger>
                     <SelectValue placeholder="সব ইউনিয়ন" />
                   </SelectTrigger>
@@ -402,12 +558,11 @@ const LocationManagement = () => {
         </Card>
 
         {/* Overview Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <Card className="bg-blue-50 border-blue-200">
             <CardContent className="p-4">
               <div className="text-lg font-bold text-blue-700">{stats.totalDivisions}</div>
               <div className="text-xs text-blue-600">মোট বিভাগ</div>
-              <div className="text-xs text-green-600">{stats.assignedDivisions} বরাদ্দকৃত</div>
             </CardContent>
           </Card>
 
@@ -415,7 +570,6 @@ const LocationManagement = () => {
             <CardContent className="p-4">
               <div className="text-lg font-bold text-green-700">{selectedLocation.division_id ? filteredDistricts.length : stats.totalDistricts}</div>
               <div className="text-xs text-green-600">{selectedLocation.division_id ? 'ফিল্টার করা জেলা' : 'মোট জেলা'}</div>
-              <div className="text-xs text-blue-600">{stats.assignedDistricts} বরাদ্দকৃত</div>
             </CardContent>
           </Card>
 
@@ -423,7 +577,6 @@ const LocationManagement = () => {
             <CardContent className="p-4">
               <div className="text-lg font-bold text-purple-700">{selectedLocation.district_id ? filteredUpazilas.length : stats.totalUpazilas}</div>
               <div className="text-xs text-purple-600">{selectedLocation.district_id ? 'ফিল্টার করা উপজেলা' : 'মোট উপজেলা'}</div>
-              <div className="text-xs text-blue-600">{stats.assignedUpazilas} বরাদ্দকৃত</div>
             </CardContent>
           </Card>
 
@@ -431,7 +584,6 @@ const LocationManagement = () => {
             <CardContent className="p-4">
               <div className="text-lg font-bold text-orange-700">{selectedLocation.upazila_id ? filteredUnions.length : stats.totalUnions}</div>
               <div className="text-xs text-orange-600">{selectedLocation.upazila_id ? 'ফিল্টার করা ইউনিয়ন' : 'মোট ইউনিয়ন'}</div>
-              <div className="text-xs text-blue-600">{stats.assignedUnions} বরাদ্দকৃত</div>
             </CardContent>
           </Card>
 
@@ -439,15 +591,6 @@ const LocationManagement = () => {
             <CardContent className="p-4">
               <div className="text-lg font-bold text-red-700">{selectedLocation.union_id ? filteredVillages.length : stats.totalVillages}</div>
               <div className="text-xs text-red-600">{selectedLocation.union_id ? 'ফিল্টার করা গ্রাম' : 'মোট গ্রাম'}</div>
-              <div className="text-xs text-blue-600">{stats.assignedVillages} বরাদ্দকৃত</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-50 border-gray-200">
-            <CardContent className="p-4">
-              <div className="text-lg font-bold text-gray-700">{users.length}</div>
-              <div className="text-xs text-gray-600">মোট ব্যবহারকারী</div>
-              <div className="text-xs text-green-600">{users.filter(u => u.approved).length} সক্রিয়</div>
             </CardContent>
           </Card>
         </div>
@@ -469,23 +612,16 @@ const LocationManagement = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {locationData.divisions.map(division => {
-                    const assignedUser = users.find(u => u.accessScope?.division_id === division.id);
-                    return (
-                      <div key={division.id} className="border rounded-lg p-4">
-                        <h3 className="font-medium">{division.name}</h3>
-                        <p className="text-sm text-gray-600">{division.bn_name}</p>
-                        <p className="text-xs text-gray-500">ID: {division.id}</p>
-                        {assignedUser ? (
-                          <Badge variant="default" className="mt-2">
-                            বরাদ্দকৃত: {assignedUser.displayName}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="mt-2">অবরাদ্দকৃত</Badge>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {locationData.divisions.map(division => (
+                    <div key={division.id} className="border rounded-lg p-4">
+                      <h3 className="font-medium">{division.name}</h3>
+                      <p className="text-sm text-gray-600">{division.bn_name}</p>
+                      <p className="text-xs text-gray-500">ID: {division.id}</p>
+                      {division.url && (
+                        <p className="text-xs text-blue-500 truncate">{division.url}</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -498,23 +634,16 @@ const LocationManagement = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                  {filteredDistricts.map(district => {
-                    const assignedUser = users.find(u => u.accessScope?.district_id === district.id);
-                    return (
-                      <div key={district.id} className="border rounded-lg p-4">
-                        <h3 className="font-medium">{district.name}</h3>
-                        <p className="text-sm text-gray-600">{district.bn_name}</p>
-                        <p className="text-xs text-gray-500">ID: {district.id}</p>
-                        {assignedUser ? (
-                          <Badge variant="default" className="mt-2">
-                            বরাদ্দকৃত: {assignedUser.displayName}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="mt-2">অবরাদ্দকৃত</Badge>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {filteredDistricts.map(district => (
+                    <div key={district.id} className="border rounded-lg p-4">
+                      <h3 className="font-medium">{district.name}</h3>
+                      <p className="text-sm text-gray-600">{district.bn_name}</p>
+                      <p className="text-xs text-gray-500">ID: {district.id}</p>
+                      {district.url && (
+                        <p className="text-xs text-blue-500 truncate">{district.url}</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -527,23 +656,16 @@ const LocationManagement = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                  {filteredUpazilas.map(upazila => {
-                    const assignedUser = users.find(u => u.accessScope?.upazila_id === upazila.id);
-                    return (
-                      <div key={upazila.id} className="border rounded-lg p-4">
-                        <h3 className="font-medium">{upazila.name}</h3>
-                        <p className="text-sm text-gray-600">{upazila.bn_name}</p>
-                        <p className="text-xs text-gray-500">ID: {upazila.id}</p>
-                        {assignedUser ? (
-                          <Badge variant="default" className="mt-2">
-                            বরাদ্দকৃত: {assignedUser.displayName}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="mt-2">অবরাদ্দকৃত</Badge>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {filteredUpazilas.map(upazila => (
+                    <div key={upazila.id} className="border rounded-lg p-4">
+                      <h3 className="font-medium">{upazila.name}</h3>
+                      <p className="text-sm text-gray-600">{upazila.bn_name}</p>
+                      <p className="text-xs text-gray-500">ID: {upazila.id}</p>
+                      {upazila.url && (
+                        <p className="text-xs text-blue-500 truncate">{upazila.url}</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -556,23 +678,16 @@ const LocationManagement = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                  {filteredUnions.map(union => {
-                    const assignedUser = users.find(u => u.accessScope?.union_id === union.id);
-                    return (
-                      <div key={union.id} className="border rounded-lg p-4">
-                        <h3 className="font-medium">{union.name}</h3>
-                        <p className="text-sm text-gray-600">{union.bn_name}</p>
-                        <p className="text-xs text-gray-500">ID: {union.id}</p>
-                        {assignedUser ? (
-                          <Badge variant="default" className="mt-2">
-                            বরাদ্দকৃত: {assignedUser.displayName}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="mt-2">অবরাদ্দকৃত</Badge>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {filteredUnions.map(union => (
+                    <div key={union.id} className="border rounded-lg p-4">
+                      <h3 className="font-medium">{union.name}</h3>
+                      <p className="text-sm text-gray-600">{union.bn_name}</p>
+                      <p className="text-xs text-gray-500">ID: {union.id}</p>
+                      {union.url && (
+                        <p className="text-xs text-blue-500 truncate">{union.url}</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -585,30 +700,20 @@ const LocationManagement = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                  {filteredVillages.map(village => {
-                    const assignedUser = users.find(u => u.accessScope?.village_id === village.id);
-                    return (
-                      <div key={village.id} className="border rounded-lg p-4">
-                        <h3 className="font-medium">{village.name}</h3>
-                        <p className="text-sm text-gray-600">{village.bn_name}</p>
-                        <p className="text-xs text-gray-500">ID: {village.id}</p>
-                        {assignedUser ? (
-                          <Badge variant="default" className="mt-2">
-                            বরাদ্দকৃত: {assignedUser.displayName}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="mt-2">অবরাদ্দকৃত</Badge>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {filteredVillages.map(village => (
+                    <div key={village.id} className="border rounded-lg p-4">
+                      <h3 className="font-medium">{village.name}</h3>
+                      <p className="text-sm text-gray-600">{village.bn_name}</p>
+                      <p className="text-xs text-gray-500">ID: {village.id}</p>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
-    </RoleBasedSidebar>
+    </ResponsiveSidebar>
   );
 };
 
