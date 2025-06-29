@@ -1,719 +1,820 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Building, Users, BarChart3, Plus, Download, Trash2 } from 'lucide-react';
-import ResponsiveSidebar from '@/components/layout/ResponsiveSidebar';
-import { usePageTitle } from '@/lib/usePageTitle';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Trash2, Download, Plus, MapPin, Building, Users, Home, Map } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { loadLocationData } from '@/lib/locationUtils';
+import { Division, District, Upazila, Union, Village } from '@/lib/types';
+import AdminLayout from '@/components/layout/AdminLayout';
+import { usePageTitle } from '@/lib/usePageTitle';
 
-// Location cache
-const locationCache = {
-  divisions: null as any[] | null,
-  districts: null as any[] | null,
-  upazilas: null as any[] | null,
-  unions: null as any[] | null,
-  villages: null as any[] | null,
-};
-
-const loadLocationData = async (type: string) => {
-  if (locationCache[type as keyof typeof locationCache]) {
-    return locationCache[type as keyof typeof locationCache];
-  }
+const LocationManagement = () => {
+  usePageTitle('এলাকা ব্যবস্থাপনা');
   
-  try {
-    const response = await fetch(`/data/${type}.json`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch ${type}`);
-    }
-    const data = await response.json();
-    locationCache[type as keyof typeof locationCache] = data;
-    return data;
-  } catch (error) {
-    console.error(`Error loading ${type}:`, error);
-    return [];
-  }
-};
-
-// Generic Location Builder Dialog
-const LocationBuilderDialog = ({ 
-  type, 
-  locationData, 
-  onLocationAdded 
-}: { 
-  type: 'division' | 'district' | 'upazila' | 'union' | 'village';
-  locationData: any;
-  onLocationAdded: () => void;
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [newLocation, setNewLocation] = useState({
-    name: '',
-    bn_name: '',
-    division_id: '',
-    district_id: '',
-    upazila_id: '',
-    union_id: '',
-    url: ''
+  const [locationData, setLocationData] = useState({
+    divisions: [] as Division[],
+    districts: [] as District[],
+    upazilas: [] as Upazila[],
+    unions: [] as Union[],
+    villages: [] as Village[]
   });
+
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const getTypeConfig = () => {
-    switch (type) {
-      case 'division':
-        return {
-          title: 'নতুন বিভাগ তৈরি করুন',
-          fields: ['name', 'bn_name', 'url'],
-          requiredFields: ['name', 'bn_name']
-        };
-      case 'district':
-        return {
-          title: 'নতুন জেলা তৈরি করুন',
-          fields: ['name', 'bn_name', 'division_id', 'url'],
-          requiredFields: ['name', 'bn_name', 'division_id']
-        };
-      case 'upazila':
-        return {
-          title: 'নতুন উপজেলা তৈরি করুন',
-          fields: ['name', 'bn_name', 'district_id', 'url'],
-          requiredFields: ['name', 'bn_name', 'district_id']
-        };
-      case 'union':
-        return {
-          title: 'নতুন ইউনিয়ন তৈরি করুন',
-          fields: ['name', 'bn_name', 'upazila_id', 'url'],
-          requiredFields: ['name', 'bn_name', 'upazila_id']
-        };
-      case 'village':
-        return {
-          title: 'নতুন গ্রাম তৈরি করুন',
-          fields: ['name', 'bn_name', 'union_id'],
-          requiredFields: ['name', 'bn_name', 'union_id']
-        };
-      default:
-        return { title: '', fields: [], requiredFields: [] };
-    }
-  };
+  // Form states for each location type
+  const [newDivision, setNewDivision] = useState({ name: '', bn_name: '', url: '' });
+  const [newDistrict, setNewDistrict] = useState({ name: '', bn_name: '', division_id: '', lat: '', lon: '', url: '' });
+  const [newUpazila, setNewUpazila] = useState({ name: '', bn_name: '', district_id: '', url: '' });
+  const [newUnion, setNewUnion] = useState({ name: '', bn_name: '', upazila_id: '', url: '' });
+  const [newVillage, setNewVillage] = useState({ name: '', bn_name: '', union_id: '', upazila_id: '', district_id: '', division_id: '' });
 
-  const config = getTypeConfig();
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await loadLocationData();
+        setLocationData({
+          divisions: data.divisions || [],
+          districts: data.districts || [],
+          upazilas: data.upazilas || [],
+          unions: data.unions || [],
+          villages: []
+        });
+      } catch (error) {
+        console.error('Error loading location data:', error);
+        toast({
+          title: 'ত্রুটি',
+          description: 'লোকেশন ডেটা লোড করতে সমস্যা হয়েছে',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const handleLocationChange = (field: string, value: string) => {
-    const updated = { ...newLocation, [field]: value };
-    
-    // Auto-fill parent locations for hierarchical data
-    if (field === 'union_id' && value) {
-      const union = locationData.unions?.find((u: any) => u.id === value);
-      if (union) {
-        updated.upazila_id = union.upazilla_id;
-        const upazila = locationData.upazilas?.find((u: any) => u.id === union.upazilla_id);
-        if (upazila) {
-          updated.district_id = upazila.district_id;
-          const district = locationData.districts?.find((d: any) => d.id === upazila.district_id);
-          if (district) {
-            updated.division_id = district.division_id;
-          }
-        }
-      }
-    } else if (field === 'upazila_id' && value) {
-      const upazila = locationData.upazilas?.find((u: any) => u.id === value);
-      if (upazila) {
-        updated.district_id = upazila.district_id;
-        const district = locationData.districts?.find((d: any) => d.id === upazila.district_id);
-        if (district) {
-          updated.division_id = district.division_id;
-        }
-      }
-    } else if (field === 'district_id' && value) {
-      const district = locationData.districts?.find((d: any) => d.id === value);
-      if (district) {
-        updated.division_id = district.division_id;
-      }
-    }
-    
-    setNewLocation(updated);
-  };
+    loadData();
+  }, [toast]);
 
-  const handleAddLocation = () => {
-    const missingFields = config.requiredFields.filter(field => !newLocation[field as keyof typeof newLocation]);
-    
-    if (missingFields.length > 0) {
+  // Helper functions
+  const generateId = () => Date.now().toString();
+
+  const addDivision = () => {
+    if (!newDivision.name || !newDivision.bn_name) {
       toast({
         title: 'ত্রুটি',
-        description: 'সকল প্রয়োজনীয় তথ্য পূরণ করুন',
-        variant: 'destructive',
+        description: 'নাম এবং বাংলা নাম আবশ্যক',
+        variant: 'destructive'
       });
       return;
     }
 
-    // Add to local cache
-    const newLocationData = {
-      id: `${type}_${Date.now()}`,
-      ...newLocation
+    const division: Division = {
+      id: generateId(),
+      ...newDivision
     };
 
-    // Special handling for union (uses upazilla_id instead of upazila_id)
-    if (type === 'union') {
-      newLocationData.upazilla_id = newLocation.upazila_id;
-      delete newLocationData.upazila_id;
-    }
+    setLocationData(prev => ({
+      ...prev,
+      divisions: [...prev.divisions, division]
+    }));
 
-    const cacheKey = `${type}s` as keyof typeof locationCache;
-    if (locationCache[cacheKey]) {
-      locationCache[cacheKey]!.push(newLocationData);
-    } else {
-      locationCache[cacheKey] = [newLocationData];
-    }
-
+    setNewDivision({ name: '', bn_name: '', url: '' });
     toast({
-      title: 'সফল',
-      description: `নতুন ${type === 'division' ? 'বিভাগ' : type === 'district' ? 'জেলা' : type === 'upazila' ? 'উপজেলা' : type === 'union' ? 'ইউনিয়ন' : 'গ্রাম'} যোগ করা হয়েছে`,
+      title: 'সফল', 
+      description: 'নতুন বিভাগ যোগ করা হয়েছে'
     });
-
-    // Reset form
-    setNewLocation({
-      name: '',
-      bn_name: '',
-      division_id: '',
-      district_id: '',
-      upazila_id: '',
-      union_id: '',
-      url: ''
-    });
-    setIsOpen(false);
-    onLocationAdded();
   };
 
-  const downloadJSON = () => {
-    const cacheKey = `${type}s` as keyof typeof locationCache;
-    const dataStr = JSON.stringify(locationCache[cacheKey] || [], null, 2);
+  const addDistrict = () => {
+    if (!newDistrict.name || !newDistrict.bn_name || !newDistrict.division_id) {
+      toast({
+        title: 'ত্রুটি',
+        description: 'সকল আবশ্যক তথ্য পূরণ করুন',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const district: District = {
+      id: generateId(),
+      ...newDistrict
+    };
+
+    setLocationData(prev => ({
+      ...prev,
+      districts: [...prev.districts, district]
+    }));
+
+    setNewDistrict({ name: '', bn_name: '', division_id: '', lat: '', lon: '', url: '' });
+    toast({
+      title: 'সফল',
+      description: 'নতুন জেলা যোগ করা হয়েছে'
+    });
+  };
+
+  const addUpazila = () => {
+    if (!newUpazila.name || !newUpazila.bn_name || !newUpazila.district_id) {
+      toast({
+        title: 'ত্রুটি',
+        description: 'সকল আবশ্যক তথ্য পূরণ করুন',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const upazila: Upazila = {
+      id: generateId(),
+      ...newUpazila
+    };
+
+    setLocationData(prev => ({
+      ...prev,
+      upazilas: [...prev.upazilas, upazila]
+    }));
+
+    setNewUpazila({ name: '', bn_name: '', district_id: '', url: '' });
+    toast({
+      title: 'সফল',
+      description: 'নতুন উপজেলা যোগ করা হয়েছে'
+    });
+  };
+
+  const addUnion = () => {
+    if (!newUnion.name || !newUnion.bn_name || !newUnion.upazila_id) {
+      toast({
+        title: 'ত্রুটি',
+        description: 'সকল আবশ্যক তথ্য পূরণ করুন',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const union: Union = {
+      id: generateId(),
+      upazilla_id: newUnion.upazila_id, // Fixed property name
+      name: newUnion.name,
+      bn_name: newUnion.bn_name,
+      url: newUnion.url
+    };
+
+    setLocationData(prev => ({
+      ...prev,
+      unions: [...prev.unions, union]
+    }));
+
+    setNewUnion({ name: '', bn_name: '', upazila_id: '', url: '' });
+    toast({
+      title: 'সফল',
+      description: 'নতুন ইউনিয়ন যোগ করা হয়েছে'
+    });
+  };
+
+  const addVillage = () => {
+    if (!newVillage.name || !newVillage.bn_name || !newVillage.union_id) {
+      toast({
+        title: 'ত্রুটি',
+        description: 'সকল আবশ্যক তথ্য পূরণ করুন',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Auto-fill hierarchical data
+    const selectedUnion = locationData.unions.find(u => u.id === newVillage.union_id);
+    const selectedUpazila = selectedUnion ? locationData.upazilas.find(up => up.id === selectedUnion.upazilla_id) : null;
+    const selectedDistrict = selectedUpazila ? locationData.districts.find(d => d.id === selectedUpazila.district_id) : null;
+
+    const village: Village = {
+      id: generateId(),
+      ...newVillage,
+      upazila_id: selectedUpazila?.id || '',
+      district_id: selectedDistrict?.id || '',
+      division_id: selectedDistrict?.division_id || ''
+    };
+
+    setLocationData(prev => ({
+      ...prev,
+      villages: [...prev.villages, village]
+    }));
+
+    setNewVillage({ name: '', bn_name: '', union_id: '', upazila_id: '', district_id: '', division_id: '' });
+    toast({
+      title: 'সফল',
+      description: 'নতুন গ্রাম যোগ করা হয়েছে'
+    });
+  };
+
+  // Delete functions
+  const deleteDivision = (id: string) => {
+    setLocationData(prev => ({
+      ...prev,
+      divisions: prev.divisions.filter(d => d.id !== id)
+    }));
+    toast({ title: 'সফল', description: 'বিভাগ মুছে ফেলা হয়েছে' });
+  };
+
+  const deleteDistrict = (id: string) => {
+    setLocationData(prev => ({
+      ...prev,
+      districts: prev.districts.filter(d => d.id !== id)
+    }));
+    toast({ title: 'সফল', description: 'জেলা মুছে ফেলা হয়েছে' });
+  };
+
+  const deleteUpazila = (id: string) => {
+    setLocationData(prev => ({
+      ...prev,
+      upazilas: prev.upazilas.filter(u => u.id !== id)
+    }));
+    toast({ title: 'সফল', description: 'উপজেলা মুছে ফেলা হয়েছে' });
+  };
+
+  const deleteUnion = (id: string) => {
+    setLocationData(prev => ({
+      ...prev,
+      unions: prev.unions.filter(u => u.id !== id)
+    }));
+    toast({ title: 'সফল', description: 'ইউনিয়ন মুছে ফেলা হয়েছে' });
+  };
+
+  const deleteVillage = (id: string) => {
+    setLocationData(prev => ({
+      ...prev,
+      villages: prev.villages.filter(v => v.id !== id)
+    }));
+    toast({ title: 'সফল', description: 'গ্রাম মুছে ফেলা হয়েছে' });
+  };
+
+  // Download function
+  const downloadJSON = (type: string, data: any[]) => {
+    const dataStr = JSON.stringify(data, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
-    const exportFileDefaultName = `${type}s.json`;
+    const exportFileDefaultName = `${type}.json`;
     
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
+    
+    toast({ title: 'সফল', description: `${type} ডাটা ডাউনলোড শুরু হয়েছে` });
   };
 
-  const getFilteredOptions = (optionType: string) => {
-    switch (optionType) {
-      case 'divisions':
-        return locationData.divisions || [];
-      case 'districts':
-        return newLocation.division_id 
-          ? (locationData.districts || []).filter((d: any) => d.division_id === newLocation.division_id)
-          : locationData.districts || [];
-      case 'upazilas':
-        return newLocation.district_id 
-          ? (locationData.upazilas || []).filter((u: any) => u.district_id === newLocation.district_id)
-          : locationData.upazilas || [];
-      case 'unions':
-        return newLocation.upazila_id 
-          ? (locationData.unions || []).filter((u: any) => u.upazilla_id === newLocation.upazila_id)
-          : locationData.unions || [];
-      default:
-        return [];
-    }
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button className="bg-green-600 hover:bg-green-700">
-          <Plus className="w-4 h-4 mr-2" />
-          নতুন {type === 'division' ? 'বিভাগ' : type === 'district' ? 'জেলা' : type === 'upazila' ? 'উপজেলা' : type === 'union' ? 'ইউনিয়ন' : 'গ্রাম'} যোগ করুন
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{config.title}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          {config.fields.includes('name') && (
-            <div>
-              <Label>নাম (ইংরেজি) *</Label>
-              <Input
-                value={newLocation.name}
-                onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
-                placeholder="Name in English"
-              />
-            </div>
-          )}
-          
-          {config.fields.includes('bn_name') && (
-            <div>
-              <Label>নাম (বাংলা) *</Label>
-              <Input
-                value={newLocation.bn_name}
-                onChange={(e) => setNewLocation({ ...newLocation, bn_name: e.target.value })}
-                placeholder="নাম বাংলায়"
-              />
-            </div>
-          )}
-
-          {config.fields.includes('division_id') && (
-            <div>
-              <Label>বিভাগ *</Label>
-              <Select value={newLocation.division_id} onValueChange={(value) => handleLocationChange('division_id', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
-                </SelectTrigger>
-                <SelectContent>
-                  {getFilteredOptions('divisions').map((division: any) => (
-                    <SelectItem key={division.id} value={division.id}>
-                      {division.name} ({division.bn_name})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {config.fields.includes('district_id') && (
-            <div>
-              <Label>জেলা *</Label>
-              <Select value={newLocation.district_id} onValueChange={(value) => handleLocationChange('district_id', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="জেলা নির্বাচন করুন" />
-                </SelectTrigger>
-                <SelectContent>
-                  {getFilteredOptions('districts').map((district: any) => (
-                    <SelectItem key={district.id} value={district.id}>
-                      {district.name} ({district.bn_name})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {config.fields.includes('upazila_id') && (
-            <div>
-              <Label>উপজেলা *</Label>
-              <Select value={newLocation.upazila_id} onValueChange={(value) => handleLocationChange('upazila_id', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="উপজেলা নির্বাচন করুন" />
-                </SelectTrigger>
-                <SelectContent>
-                  {getFilteredOptions('upazilas').map((upazila: any) => (
-                    <SelectItem key={upazila.id} value={upazila.id}>
-                      {upazila.name} ({upazila.bn_name})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {config.fields.includes('union_id') && (
-            <div>
-              <Label>ইউনিয়ন *</Label>
-              <Select value={newLocation.union_id} onValueChange={(value) => handleLocationChange('union_id', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="ইউনিয়ন নির্বাচন করুন" />
-                </SelectTrigger>
-                <SelectContent>
-                  {getFilteredOptions('unions').map((union: any) => (
-                    <SelectItem key={union.id} value={union.id}>
-                      {union.name} ({union.bn_name})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {config.fields.includes('url') && (
-            <div>
-              <Label>ওয়েবসাইট URL</Label>
-              <Input
-                value={newLocation.url}
-                onChange={(e) => setNewLocation({ ...newLocation, url: e.target.value })}
-                placeholder="www.example.gov.bd"
-              />
-            </div>
-          )}
-
-          <div className="flex justify-between">
-            <Button variant="outline" onClick={downloadJSON}>
-              <Download className="w-4 h-4 mr-2" />
-              JSON ডাউনলোড
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsOpen(false)}>
-                বাতিল
-              </Button>
-              <Button onClick={handleAddLocation}>
-                যোগ করুন
-              </Button>
-            </div>
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-green-600 mx-auto"></div>
+            <p className="mt-4 text-lg text-gray-600">ডেটা লোড হচ্ছে...</p>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-const LocationManagement = () => {
-  usePageTitle('এলাকা ব্যবস্থাপনা - অ্যাডমিন প্যানেল');
-  
-  const [locationData, setLocationData] = useState({
-    divisions: [] as any[],
-    districts: [] as any[],
-    upazilas: [] as any[],
-    unions: [] as any[],
-    villages: [] as any[]
-  });
-
-  const [selectedLocation, setSelectedLocation] = useState({
-    division_id: '',
-    district_id: '',
-    upazila_id: '',
-    union_id: ''
-  });
-
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
-
-  // Load all location data
-  React.useEffect(() => {
-    const loadData = async () => {
-      try {
-        console.log('Loading location data...');
-        const [divisions, districts, upazilas, unions, villages] = await Promise.all([
-          loadLocationData('divisions'),
-          loadLocationData('districts'),
-          loadLocationData('upazilas'),
-          loadLocationData('unions'),
-          loadLocationData('villages')
-        ]);
-        
-        console.log('Location data loaded:', { divisions: divisions.length, districts: districts.length });
-        
-        setLocationData({ divisions, districts, upazilas, unions, villages });
-        setIsDataLoaded(true);
-      } catch (error) {
-        console.error('Error loading location data:', error);
-        setIsDataLoaded(true);
-      }
-    };
-    loadData();
-  }, []);
-
-  const refreshData = () => {
-    setLocationData({
-      divisions: locationCache.divisions || [],
-      districts: locationCache.districts || [],
-      upazilas: locationCache.upazilas || [],
-      unions: locationCache.unions || [],
-      villages: locationCache.villages || []
-    });
-  };
-
-  const getLocationStats = () => {
-    const stats = {
-      totalDivisions: locationData.divisions.length,
-      totalDistricts: locationData.districts.length,
-      totalUpazilas: locationData.upazilas.length,
-      totalUnions: locationData.unions.length,
-      totalVillages: locationData.villages.length
-    };
-    return stats;
-  };
-
-  const stats = getLocationStats();
-
-  // Filter data based on selection
-  const getFilteredData = () => {
-    let filteredDistricts = locationData.districts;
-    let filteredUpazilas = locationData.upazilas;
-    let filteredUnions = locationData.unions;
-    let filteredVillages = locationData.villages;
-
-    if (selectedLocation.division_id) {
-      filteredDistricts = locationData.districts.filter(d => d.division_id === selectedLocation.division_id);
-    }
-    if (selectedLocation.district_id) {
-      filteredUpazilas = locationData.upazilas.filter(u => u.district_id === selectedLocation.district_id);
-    }
-    if (selectedLocation.upazila_id) {
-      filteredUnions = locationData.unions.filter(u => u.upazilla_id === selectedLocation.upazila_id);
-    }
-    if (selectedLocation.union_id) {
-      filteredVillages = locationData.villages.filter(v => v.union_id === selectedLocation.union_id);
-    }
-
-    return { filteredDistricts, filteredUpazilas, filteredUnions, filteredVillages };
-  };
-
-  const { filteredDistricts, filteredUpazilas, filteredUnions, filteredVillages } = getFilteredData();
-
-  if (!isDataLoaded) {
-    return (
-      <ResponsiveSidebar>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">লোডিং হচ্ছে...</div>
-        </div>
-      </ResponsiveSidebar>
+      </AdminLayout>
     );
   }
 
   return (
-    <ResponsiveSidebar>
-      <div className="space-y-6">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl lg:text-3xl font-bold">এলাকা ব্যবস্থাপনা</h1>
-              <p className="mt-2 text-blue-100">প্রশাসনিক এলাকা তৈরি ও ব্যবস্থাপনা</p>
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              <LocationBuilderDialog type="division" locationData={locationData} onLocationAdded={refreshData} />
-              <LocationBuilderDialog type="district" locationData={locationData} onLocationAdded={refreshData} />
-              <LocationBuilderDialog type="upazila" locationData={locationData} onLocationAdded={refreshData} />
-              <LocationBuilderDialog type="union" locationData={locationData} onLocationAdded={refreshData} />
-              <LocationBuilderDialog type="village" locationData={locationData} onLocationAdded={refreshData} />
-            </div>
+    <AdminLayout>
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold text-gray-900">এলাকা ব্যবস্থাপনা</h1>
+          <div className="flex gap-2">
+            <Badge variant="outline" className="text-sm">
+              বিভাগ: {locationData.divisions.length}
+            </Badge>
+            <Badge variant="outline" className="text-sm">
+              জেলা: {locationData.districts.length}
+            </Badge>
+            <Badge variant="outline" className="text-sm">
+              উপজেলা: {locationData.upazilas.length}
+            </Badge>
+            <Badge variant="outline" className="text-sm">
+              ইউনিয়ন: {locationData.unions.length}
+            </Badge>
+            <Badge variant="outline" className="text-sm">
+              গ্রাম: {locationData.villages.length}
+            </Badge>
           </div>
         </div>
 
-        {/* Location Filter */}
-        <Card>
-          <CardHeader>
-            <CardTitle>এলাকা ফিল্টার</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <Label>বিভাগ</Label>
-                <Select value={selectedLocation.division_id} onValueChange={(value) => setSelectedLocation({ division_id: value === 'all' ? '' : value, district_id: '', upazila_id: '', union_id: '' })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="সব বিভাগ" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">সব বিভাগ</SelectItem>
-                    {locationData.divisions.map(division => (
-                      <SelectItem key={division.id} value={division.id}>
-                        {division.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>জেলা</Label>
-                <Select value={selectedLocation.district_id} onValueChange={(value) => setSelectedLocation({ ...selectedLocation, district_id: value === 'all' ? '' : value, upazila_id: '', union_id: '' })} disabled={!selectedLocation.division_id}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="সব জেলা" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">সব জেলা</SelectItem>
-                    {filteredDistricts.map(district => (
-                      <SelectItem key={district.id} value={district.id}>
-                        {district.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>উপজেলা</Label>
-                <Select value={selectedLocation.upazila_id} onValueChange={(value) => setSelectedLocation({ ...selectedLocation, upazila_id: value === 'all' ? '' : value, union_id: '' })} disabled={!selectedLocation.district_id}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="সব উপজেলা" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">সব উপজেলা</SelectItem>
-                    {filteredUpazilas.map(upazila => (
-                      <SelectItem key={upazila.id} value={upazila.id}>
-                        {upazila.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>ইউনিয়ন</Label>
-                <Select value={selectedLocation.union_id} onValueChange={(value) => setSelectedLocation({ ...selectedLocation, union_id: value === 'all' ? '' : value })} disabled={!selectedLocation.upazila_id}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="সব ইউনিয়ন" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">সব ইউনিয়ন</SelectItem>
-                    {filteredUnions.map(union => (
-                      <SelectItem key={union.id} value={union.id}>
-                        {union.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Overview Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="p-4">
-              <div className="text-lg font-bold text-blue-700">{stats.totalDivisions}</div>
-              <div className="text-xs text-blue-600">মোট বিভাগ</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-green-50 border-green-200">
-            <CardContent className="p-4">
-              <div className="text-lg font-bold text-green-700">{selectedLocation.division_id ? filteredDistricts.length : stats.totalDistricts}</div>
-              <div className="text-xs text-green-600">{selectedLocation.division_id ? 'ফিল্টার করা জেলা' : 'মোট জেলা'}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-purple-50 border-purple-200">
-            <CardContent className="p-4">
-              <div className="text-lg font-bold text-purple-700">{selectedLocation.district_id ? filteredUpazilas.length : stats.totalUpazilas}</div>
-              <div className="text-xs text-purple-600">{selectedLocation.district_id ? 'ফিল্টার করা উপজেলা' : 'মোট উপজেলা'}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-orange-50 border-orange-200">
-            <CardContent className="p-4">
-              <div className="text-lg font-bold text-orange-700">{selectedLocation.upazila_id ? filteredUnions.length : stats.totalUnions}</div>
-              <div className="text-xs text-orange-600">{selectedLocation.upazila_id ? 'ফিল্টার করা ইউনিয়ন' : 'মোট ইউনিয়ন'}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-red-50 border-red-200">
-            <CardContent className="p-4">
-              <div className="text-lg font-bold text-red-700">{selectedLocation.union_id ? filteredVillages.length : stats.totalVillages}</div>
-              <div className="text-xs text-red-600">{selectedLocation.union_id ? 'ফিল্টার করা গ্রাম' : 'মোট গ্রাম'}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Location Details */}
         <Tabs defaultValue="divisions" className="space-y-4">
           <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="divisions">বিভাগ</TabsTrigger>
-            <TabsTrigger value="districts">জেলা</TabsTrigger>
-            <TabsTrigger value="upazilas">উপজেলা</TabsTrigger>
-            <TabsTrigger value="unions">ইউনিয়ন</TabsTrigger>
-            <TabsTrigger value="villages">গ্রাম</TabsTrigger>
+            <TabsTrigger value="divisions" className="flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              বিভাগ
+            </TabsTrigger>
+            <TabsTrigger value="districts" className="flex items-center gap-2">
+              <Building className="w-4 h-4" />
+              জেলা
+            </TabsTrigger>
+            <TabsTrigger value="upazilas" className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              উপজেলা
+            </TabsTrigger>
+            <TabsTrigger value="unions" className="flex items-center gap-2">
+              <Home className="w-4 h-4" />
+              ইউনিয়ন
+            </TabsTrigger>
+            <TabsTrigger value="villages" className="flex items-center gap-2">
+              <Map className="w-4 h-4" />
+              গ্রাম
+            </TabsTrigger>
           </TabsList>
 
+          {/* Divisions Tab */}
           <TabsContent value="divisions">
-            <Card>
-              <CardHeader>
-                <CardTitle>বিভাগ তালিকা</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {locationData.divisions.map(division => (
-                    <div key={division.id} className="border rounded-lg p-4">
-                      <h3 className="font-medium">{division.name}</h3>
-                      <p className="text-sm text-gray-600">{division.bn_name}</p>
-                      <p className="text-xs text-gray-500">ID: {division.id}</p>
-                      {division.url && (
-                        <p className="text-xs text-blue-500 truncate">{division.url}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Plus className="w-5 h-5" />
+                    নতুন বিভাগ যোগ করুন
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="div-name">ইংরেজি নাম *</Label>
+                    <Input
+                      id="div-name"
+                      value={newDivision.name}
+                      onChange={(e) => setNewDivision({...newDivision, name: e.target.value})}
+                      placeholder="Division name in English"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="div-bn-name">বাংলা নাম *</Label>
+                    <Input
+                      id="div-bn-name"
+                      value={newDivision.bn_name}
+                      onChange={(e) => setNewDivision({...newDivision, bn_name: e.target.value})}
+                      placeholder="বিভাগের বাংলা নাম"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="div-url">URL</Label>
+                    <Input
+                      id="div-url"
+                      value={newDivision.url}
+                      onChange={(e) => setNewDivision({...newDivision, url: e.target.value})}
+                      placeholder="www.example.gov.bd"
+                    />
+                  </div>
+                  <Button onClick={addDivision} className="w-full">
+                    <Plus className="w-4 h-4 mr-2" />
+                    বিভাগ যোগ করুন
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>বিভাগ তালিকা ({locationData.divisions.length})</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => downloadJSON('divisions', locationData.divisions)}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    ডাউনলোড
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {locationData.divisions.map((division) => (
+                      <div key={division.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                        <div>
+                          <p className="font-medium">{division.bn_name}</p>
+                          <p className="text-sm text-gray-600">{division.name}</p>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deleteDivision(division.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
+          {/* Districts Tab */}
           <TabsContent value="districts">
-            <Card>
-              <CardHeader>
-                <CardTitle>জেলা তালিকা ({filteredDistricts.length}টি)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                  {filteredDistricts.map(district => (
-                    <div key={district.id} className="border rounded-lg p-4">
-                      <h3 className="font-medium">{district.name}</h3>
-                      <p className="text-sm text-gray-600">{district.bn_name}</p>
-                      <p className="text-xs text-gray-500">ID: {district.id}</p>
-                      {district.url && (
-                        <p className="text-xs text-blue-500 truncate">{district.url}</p>
-                      )}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Plus className="w-5 h-5" />
+                    নতুন জেলা যোগ করুন
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>বিভাগ নির্বাচন করুন *</Label>
+                    <Select value={newDistrict.division_id} onValueChange={(value) => setNewDistrict({...newDistrict, division_id: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locationData.divisions.map((division) => (
+                          <SelectItem key={division.id} value={division.id}>
+                            {division.bn_name} ({division.name})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="dist-name">ইংরেজি নাম *</Label>
+                    <Input
+                      id="dist-name"
+                      value={newDistrict.name}
+                      onChange={(e) => setNewDistrict({...newDistrict, name: e.target.value})}
+                      placeholder="District name in English"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="dist-bn-name">বাংলা নাম *</Label>
+                    <Input
+                      id="dist-bn-name"
+                      value={newDistrict.bn_name}
+                      onChange={(e) => setNewDistrict({...newDistrict, bn_name: e.target.value})}
+                      placeholder="জেলার বাংলা নাম"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label htmlFor="dist-lat">অক্ষাংশ</Label>
+                      <Input
+                        id="dist-lat"
+                        value={newDistrict.lat}
+                        onChange={(e) => setNewDistrict({...newDistrict, lat: e.target.value})}
+                        placeholder="Latitude"
+                      />
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    <div>
+                      <Label htmlFor="dist-lon">দ্রাঘিমাংশ</Label>
+                      <Input
+                        id="dist-lon"
+                        value={newDistrict.lon}
+                        onChange={(e) => setNewDistrict({...newDistrict, lon: e.target.value})}
+                        placeholder="Longitude"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="dist-url">URL</Label>
+                    <Input
+                      id="dist-url"
+                      value={newDistrict.url}
+                      onChange={(e) => setNewDistrict({...newDistrict, url: e.target.value})}
+                      placeholder="www.example.gov.bd"
+                    />
+                  </div>
+                  <Button onClick={addDistrict} className="w-full">
+                    <Plus className="w-4 h-4 mr-2" />
+                    জেলা যোগ করুন
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>জেলা তালিকা ({locationData.districts.length})</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => downloadJSON('districts', locationData.districts)}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    ডাউনলোড
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {locationData.districts.map((district) => {
+                      const division = locationData.divisions.find(d => d.id === district.division_id);
+                      return (
+                        <div key={district.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                          <div>
+                            <p className="font-medium">{district.bn_name}</p>
+                            <p className="text-sm text-gray-600">{district.name}</p>
+                            <p className="text-xs text-gray-500">বিভাগ: {division?.bn_name}</p>
+                          </div>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteDistrict(district.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
+          {/* Upazilas Tab */}
           <TabsContent value="upazilas">
-            <Card>
-              <CardHeader>
-                <CardTitle>উপজেলা তালিকা ({filteredUpazilas.length}টি)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                  {filteredUpazilas.map(upazila => (
-                    <div key={upazila.id} className="border rounded-lg p-4">
-                      <h3 className="font-medium">{upazila.name}</h3>
-                      <p className="text-sm text-gray-600">{upazila.bn_name}</p>
-                      <p className="text-xs text-gray-500">ID: {upazila.id}</p>
-                      {upazila.url && (
-                        <p className="text-xs text-blue-500 truncate">{upazila.url}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Plus className="w-5 h-5" />
+                    নতুন উপজেলা যোগ করুন
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>জেলা নির্বাচন করুন *</Label>
+                    <Select value={newUpazila.district_id} onValueChange={(value) => setNewUpazila({...newUpazila, district_id: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="জেলা নির্বাচন করুন" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locationData.districts.map((district) => (
+                          <SelectItem key={district.id} value={district.id}>
+                            {district.bn_name} ({district.name})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="up-name">ইংরেজি নাম *</Label>
+                    <Input
+                      id="up-name"
+                      value={newUpazila.name}
+                      onChange={(e) => setNewUpazila({...newUpazila, name: e.target.value})}
+                      placeholder="Upazila name in English"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="up-bn-name">বাংলা নাম *</Label>
+                    <Input
+                      id="up-bn-name"
+                      value={newUpazila.bn_name}
+                      onChange={(e) => setNewUpazila({...newUpazila, bn_name: e.target.value})}
+                      placeholder="উপজেলার বাংলা নাম"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="up-url">URL</Label>
+                    <Input
+                      id="up-url"
+                      value={newUpazila.url}
+                      onChange={(e) => setNewUpazila({...newUpazila, url: e.target.value})}
+                      placeholder="www.example.gov.bd"
+                    />
+                  </div>
+                  <Button onClick={addUpazila} className="w-full">
+                    <Plus className="w-4 h-4 mr-2" />
+                    উপজেলা যোগ করুন
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>উপজেলা তালিকা ({locationData.upazilas.length})</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => downloadJSON('upazilas', locationData.upazilas)}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    ডাউনলোড
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {locationData.upazilas.map((upazila) => {
+                      const district = locationData.districts.find(d => d.id === upazila.district_id);
+                      return (
+                        <div key={upazila.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                          <div>
+                            <p className="font-medium">{upazila.bn_name}</p>
+                            <p className="text-sm text-gray-600">{upazila.name}</p>
+                            <p className="text-xs text-gray-500">জেলা: {district?.bn_name}</p>
+                          </div>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteUpazila(upazila.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
+          {/* Unions Tab */}
           <TabsContent value="unions">
-            <Card>
-              <CardHeader>
-                <CardTitle>ইউনিয়ন তালিকা ({filteredUnions.length}টি)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                  {filteredUnions.map(union => (
-                    <div key={union.id} className="border rounded-lg p-4">
-                      <h3 className="font-medium">{union.name}</h3>
-                      <p className="text-sm text-gray-600">{union.bn_name}</p>
-                      <p className="text-xs text-gray-500">ID: {union.id}</p>
-                      {union.url && (
-                        <p className="text-xs text-blue-500 truncate">{union.url}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Plus className="w-5 h-5" />
+                    নতুন ইউনিয়ন যোগ করুন
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>উপজেলা নির্বাচন করুন *</Label>
+                    <Select value={newUnion.upazila_id} onValueChange={(value) => setNewUnion({...newUnion, upazila_id: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="উপজেলা নির্বাচন করুন" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locationData.upazilas.map((upazila) => (
+                          <SelectItem key={upazila.id} value={upazila.id}>
+                            {upazila.bn_name} ({upazila.name})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="union-name">ইংরেজি নাম *</Label>
+                    <Input
+                      id="union-name"
+                      value={newUnion.name}
+                      onChange={(e) => setNewUnion({...newUnion, name: e.target.value})}
+                      placeholder="Union name in English"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="union-bn-name">বাংলা নাম *</Label>
+                    <Input
+                      id="union-bn-name"
+                      value={newUnion.bn_name}
+                      onChange={(e) => setNewUnion({...newUnion, bn_name: e.target.value})}
+                      placeholder="ইউনিয়নের বাংলা নাম"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="union-url">URL</Label>
+                    <Input
+                      id="union-url"
+                      value={newUnion.url}
+                      onChange={(e) => setNewUnion({...newUnion, url: e.target.value})}
+                      placeholder="www.example.gov.bd"
+                    />
+                  </div>
+                  <Button onClick={addUnion} className="w-full">
+                    <Plus className="w-4 h-4 mr-2" />
+                    ইউনিয়ন যোগ করুন
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>ইউনিয়ন তালিকা ({locationData.unions.length})</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => downloadJSON('unions', locationData.unions)}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    ডাউনলোড
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {locationData.unions.map((union) => {
+                      const upazila = locationData.upazilas.find(u => u.id === union.upazilla_id);
+                      return (
+                        <div key={union.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                          <div>
+                            <p className="font-medium">{union.bn_name}</p>
+                            <p className="text-sm text-gray-600">{union.name}</p>
+                            <p className="text-xs text-gray-500">উপজেলা: {upazila?.bn_name}</p>
+                          </div>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteUnion(union.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
+          {/* Villages Tab */}
           <TabsContent value="villages">
-            <Card>
-              <CardHeader>
-                <CardTitle>গ্রাম তালিকা ({filteredVillages.length}টি)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                  {filteredVillages.map(village => (
-                    <div key={village.id} className="border rounded-lg p-4">
-                      <h3 className="font-medium">{village.name}</h3>
-                      <p className="text-sm text-gray-600">{village.bn_name}</p>
-                      <p className="text-xs text-gray-500">ID: {village.id}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Plus className="w-5 h-5" />
+                    নতুন গ্রাম যোগ করুন
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>ইউনিয়ন নির্বাচন করুন *</Label>
+                    <Select value={newVillage.union_id} onValueChange={(value) => setNewVillage({...newVillage, union_id: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="ইউনিয়ন নির্বাচন করুন" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locationData.unions.map((union) => (
+                          <SelectItem key={union.id} value={union.id}>
+                            {union.bn_name} ({union.name})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="village-name">ইংরেজি নাম *</Label>
+                    <Input
+                      id="village-name"
+                      value={newVillage.name}
+                      onChange={(e) => setNewVillage({...newVillage, name: e.target.value})}
+                      placeholder="Village name in English"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="village-bn-name">বাংলা নাম *</Label>
+                    <Input
+                      id="village-bn-name"
+                      value={newVillage.bn_name}
+                      onChange={(e) => setNewVillage({...newVillage, bn_name: e.target.value})}
+                      placeholder="গ্রামের বাংলা নাম"
+                    />
+                  </div>
+                  <Button onClick={addVillage} className="w-full">
+                    <Plus className="w-4 h-4 mr-2" />
+                    গ্রাম যোগ করুন
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>গ্রাম তালিকা ({locationData.villages.length})</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => downloadJSON('villages', locationData.villages)}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    ডাউনলোড
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {locationData.villages.map((village) => {
+                      const union = locationData.unions.find(u => u.id === village.union_id);
+                      return (
+                        <div key={village.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                          <div>
+                            <p className="font-medium">{village.bn_name}</p>
+                            <p className="text-sm text-gray-600">{village.name}</p>
+                            <p className="text-xs text-gray-500">ইউনিয়ন: {union?.bn_name}</p>
+                          </div>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteVillage(village.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
-    </ResponsiveSidebar>
+    </AdminLayout>
   );
 };
 

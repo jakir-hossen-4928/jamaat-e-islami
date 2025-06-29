@@ -9,13 +9,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from '@/components/ui/dialog'; // Added DialogHeader, DialogTitle
-import { ArrowLeft, Save, User, Phone, Vote, Info, CheckCircle, Upload, Settings } from 'lucide-react';
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ArrowLeft, Save, User, Phone, Vote, Info, CheckCircle, Upload, Settings, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { Checkbox } from '@/components/ui/checkbox';
 import BulkVoterUpload from './BulkVoterUpload';
+import { useAuth } from '@/hooks/useAuth';
+import { loadLocationData } from '@/lib/locationUtils';
 
 // Updated VoterData interface
 export interface VoterData {
@@ -46,16 +48,41 @@ export interface VoterData {
   Collector?: string;
   'Collection Date'?: string;
   'Last Updated'?: string;
+  // Location fields
+  division_id?: string;
+  district_id?: string;
+  upazila_id?: string;
+  union_id?: string;
+  village_id?: string;
 }
 
 const AddVoters = () => {
   usePageTitle('বাংলাদেশ জামায়াতে ইসলামী');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { userProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isColumnSettingsOpen, setIsColumnSettingsOpen] = useState(false);
+
+  // Location data state
+  const [locationData, setLocationData] = useState({
+    divisions: [],
+    districts: [],
+    upazilas: [],
+    unions: [],
+    villages: []
+  });
+
+  // Location selection state
+  const [selectedLocation, setSelectedLocation] = useState({
+    division_id: '',
+    district_id: '',
+    upazila_id: '',
+    union_id: '',
+    village_id: ''
+  });
 
   // State for form data
   const [formData, setFormData] = useState({
@@ -93,6 +120,28 @@ const AddVoters = () => {
         );
   });
 
+  // Load location data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = await loadLocationData();
+        setLocationData({
+          divisions: data.divisions || [],
+          districts: data.districts || [],
+          upazilas: data.upazilas || [],
+          unions: data.unions || [],
+          villages: []
+        });
+      } catch (error) {
+        console.error('Error loading location data:', error);
+      }
+    };
+
+    if (userProfile?.role === 'super_admin') {
+      loadData();
+    }
+  }, [userProfile]);
+
   // Save selected columns to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('voterFormColumns', JSON.stringify(selectedColumns));
@@ -125,11 +174,64 @@ const AddVoters = () => {
     { key: 'Remarks', label: 'মন্তব্য' },
   ];
 
+  // Location change handlers
+  const handleLocationChange = (field: string, value: string) => {
+    const updated = { ...selectedLocation };
+    
+    // Clear dependent fields when parent changes
+    if (field === 'division_id') {
+      updated.district_id = '';
+      updated.upazila_id = '';
+      updated.union_id = '';
+      updated.village_id = '';
+    } else if (field === 'district_id') {
+      updated.upazila_id = '';
+      updated.union_id = '';
+      updated.village_id = '';
+    } else if (field === 'upazila_id') {
+      updated.union_id = '';
+      updated.village_id = '';
+    } else if (field === 'union_id') {
+      updated.village_id = '';
+    }
+    
+    updated[field as keyof typeof updated] = value;
+    setSelectedLocation(updated);
+  };
+
+  // Filter data based on selections
+  const getFilteredDistricts = () => {
+    if (!selectedLocation.division_id) return locationData.districts;
+    return locationData.districts.filter((d: any) => d.division_id === selectedLocation.division_id);
+  };
+
+  const getFilteredUpazilas = () => {
+    if (!selectedLocation.district_id) return locationData.upazilas;
+    return locationData.upazilas.filter((u: any) => u.district_id === selectedLocation.district_id);
+  };
+
+  const getFilteredUnions = () => {
+    if (!selectedLocation.upazila_id) return locationData.unions;
+    return locationData.unions.filter((u: any) => u.upazilla_id === selectedLocation.upazila_id);
+  };
+
+  const getFilteredVillages = () => {
+    if (!selectedLocation.union_id) return locationData.villages;
+    return locationData.villages.filter((v: any) => v.union_id === selectedLocation.union_id);
+  };
+
   const addSingleVoterMutation = useMutation({
     mutationFn: async (voter: Partial<VoterData>) => {
       try {
         if (!voter['Voter Name']?.trim()) {
           throw new Error('ভোটারের নাম আবশ্যক');
+        }
+
+        // For super admin, require location selection
+        if (userProfile?.role === 'super_admin') {
+          if (!selectedLocation.division_id || !selectedLocation.district_id || !selectedLocation.upazila_id) {
+            throw new Error('বিভাগ, জেলা এবং উপজেলা নির্বাচন আবশ্যক');
+          }
         }
 
         const votersRef = collection(db, 'voters');
@@ -140,6 +242,25 @@ const AddVoters = () => {
           'Last Updated': new Date().toISOString(),
           Collector: 'Admin'
         } as VoterData;
+
+        // Add location data for super admin
+        if (userProfile?.role === 'super_admin') {
+          voterData.division_id = selectedLocation.division_id;
+          voterData.district_id = selectedLocation.district_id;
+          voterData.upazila_id = selectedLocation.upazila_id;
+          voterData.union_id = selectedLocation.union_id || undefined;
+          voterData.village_id = selectedLocation.village_id || undefined;
+        } else {
+          // For other roles, use their access scope
+          const scope = userProfile?.accessScope;
+          if (scope) {
+            voterData.division_id = scope.division_id;
+            voterData.district_id = scope.district_id;
+            voterData.upazila_id = scope.upazila_id;
+            voterData.union_id = scope.union_id;
+            voterData.village_id = scope.village_id;
+          }
+        }
 
         if (voter.Age) voterData.Age = parseInt(voter.Age.toString());
         if (voter['Vote Probability (%)']) voterData['Vote Probability (%)'] = parseInt(voter['Vote Probability (%)'].toString());
@@ -212,6 +333,13 @@ const AddVoters = () => {
       'Has Disability': '',
       'Is Migrated': '',
       Remarks: ''
+    });
+    setSelectedLocation({
+      division_id: '',
+      district_id: '',
+      upazila_id: '',
+      union_id: '',
+      village_id: ''
     });
     setShowSuccess(false);
   };
@@ -388,6 +516,117 @@ const AddVoters = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+            {/* Location Selection for Super Admin */}
+            {userProfile?.role === 'super_admin' && (
+              <Card className="shadow-lg">
+                <CardHeader className="bg-blue-50">
+                  <CardTitle className="flex items-center gap-2 text-blue-800 text-base sm:text-lg">
+                    <MapPin className="w-5 h-5" />
+                    এলাকা নির্বাচন করুন
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div>
+                      <Label>বিভাগ *</Label>
+                      <Select value={selectedLocation.division_id} onValueChange={(value) => handleLocationChange('division_id', value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {locationData.divisions.map((division: any) => (
+                            <SelectItem key={division.id} value={division.id}>
+                              {division.bn_name} ({division.name})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>জেলা *</Label>
+                      <Select 
+                        value={selectedLocation.district_id} 
+                        onValueChange={(value) => handleLocationChange('district_id', value)}
+                        disabled={!selectedLocation.division_id}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="জেলা নির্বাচন করুন" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getFilteredDistricts().map((district: any) => (
+                            <SelectItem key={district.id} value={district.id}>
+                              {district.bn_name} ({district.name})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>উপজেলা *</Label>
+                      <Select 
+                        value={selectedLocation.upazila_id} 
+                        onValueChange={(value) => handleLocationChange('upazila_id', value)}
+                        disabled={!selectedLocation.district_id}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="উপজেলা নির্বাচন করুন" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getFilteredUpazilas().map((upazila: any) => (
+                            <SelectItem key={upazila.id} value={upazila.id}>
+                              {upazila.bn_name} ({upazila.name})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>ইউনিয়ন</Label>
+                      <Select 
+                        value={selectedLocation.union_id} 
+                        onValueChange={(value) => handleLocationChange('union_id', value)}
+                        disabled={!selectedLocation.upazila_id}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="ইউনিয়ন নির্বাচন করুন" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getFilteredUnions().map((union: any) => (
+                            <SelectItem key={union.id} value={union.id}>
+                              {union.bn_name} ({union.name})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label>গ্রাম</Label>
+                      <Select 
+                        value={selectedLocation.village_id} 
+                        onValueChange={(value) => handleLocationChange('village_id', value)}
+                        disabled={!selectedLocation.union_id}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="গ্রাম নির্বাচন করুন" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getFilteredVillages().map((village: any) => (
+                            <SelectItem key={village.id} value={village.id}>
+                              {village.bn_name} ({village.name})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Personal Information */}
             <Card className="shadow-lg">
               <CardHeader className="bg-green-50">
