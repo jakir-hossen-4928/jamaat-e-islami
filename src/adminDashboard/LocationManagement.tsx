@@ -32,6 +32,9 @@ const loadLocationData = async (type: string) => {
   
   try {
     const response = await fetch(`/data/${type}.json`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch ${type}`);
+    }
     const data = await response.json();
     locationCache[type as keyof typeof locationCache] = data;
     return data;
@@ -57,14 +60,14 @@ const VillageBuilderDialog = ({ locationData }: { locationData: any }) => {
     const updated = { ...newVillage, [level]: value };
     
     // Auto-fill parent locations
-    if (level === 'union_id') {
-      const union = locationData.unions.find((u: any) => u.id === value);
+    if (level === 'union_id' && value) {
+      const union = locationData.unions?.find((u: any) => u.id === value);
       if (union) {
         updated.upazila_id = union.upazilla_id;
-        const upazila = locationData.upazilas.find((u: any) => u.id === union.upazilla_id);
+        const upazila = locationData.upazilas?.find((u: any) => u.id === union.upazilla_id);
         if (upazila) {
           updated.district_id = upazila.district_id;
-          const district = locationData.districts.find((d: any) => d.id === upazila.district_id);
+          const district = locationData.districts?.find((d: any) => d.id === upazila.district_id);
           if (district) {
             updated.division_id = district.division_id;
           }
@@ -93,6 +96,8 @@ const VillageBuilderDialog = ({ locationData }: { locationData: any }) => {
 
     if (locationCache.villages) {
       locationCache.villages.push(newVillageData);
+    } else {
+      locationCache.villages = [newVillageData];
     }
 
     toast({
@@ -124,9 +129,9 @@ const VillageBuilderDialog = ({ locationData }: { locationData: any }) => {
     linkElement.click();
   };
 
-  const filteredUnions = locationData.unions.filter((u: any) => 
+  const filteredUnions = locationData.unions?.filter((u: any) => 
     !newVillage.upazila_id || u.upazilla_id === newVillage.upazila_id
-  );
+  ) || [];
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -210,18 +215,29 @@ const LocationManagement = () => {
     union_id: ''
   });
 
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
   // Load all location data
   React.useEffect(() => {
     const loadData = async () => {
-      const [divisions, districts, upazilas, unions, villages] = await Promise.all([
-        loadLocationData('divisions'),
-        loadLocationData('districts'),
-        loadLocationData('upazilas'),
-        loadLocationData('unions'),
-        loadLocationData('villages')
-      ]);
-      
-      setLocationData({ divisions, districts, upazilas, unions, villages });
+      try {
+        console.log('Loading location data...');
+        const [divisions, districts, upazilas, unions, villages] = await Promise.all([
+          loadLocationData('divisions'),
+          loadLocationData('districts'),
+          loadLocationData('upazilas'),
+          loadLocationData('unions'),
+          loadLocationData('villages')
+        ]);
+        
+        console.log('Location data loaded:', { divisions: divisions.length, districts: districts.length });
+        
+        setLocationData({ divisions, districts, upazilas, unions, villages });
+        setIsDataLoaded(true);
+      } catch (error) {
+        console.error('Error loading location data:', error);
+        setIsDataLoaded(true);
+      }
     };
     loadData();
   }, []);
@@ -230,12 +246,17 @@ const LocationManagement = () => {
   const { data: users = [] } = useQuery({
     queryKey: ['users-location'],
     queryFn: async () => {
-      const usersRef = collection(db, 'users');
-      const snapshot = await getDocs(usersRef);
-      return snapshot.docs.map(doc => ({ 
-        uid: doc.id, 
-        ...doc.data() 
-      } as User));
+      try {
+        const usersRef = collection(db, 'users');
+        const snapshot = await getDocs(usersRef);
+        return snapshot.docs.map(doc => ({ 
+          uid: doc.id, 
+          ...doc.data() 
+        } as User));
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        return [];
+      }
     }
   });
 
@@ -282,6 +303,16 @@ const LocationManagement = () => {
 
   const { filteredDistricts, filteredUpazilas, filteredUnions, filteredVillages } = getFilteredData();
 
+  if (!isDataLoaded) {
+    return (
+      <RoleBasedSidebar>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">লোডিং হচ্ছে...</div>
+        </div>
+      </RoleBasedSidebar>
+    );
+  }
+
   return (
     <RoleBasedSidebar>
       <div className="space-y-6">
@@ -309,7 +340,7 @@ const LocationManagement = () => {
                     <SelectValue placeholder="সব বিভাগ" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">সব বিভাগ</SelectItem>
+                    <SelectItem value="all">সব বিভাগ</SelectItem>
                     {locationData.divisions.map(division => (
                       <SelectItem key={division.id} value={division.id}>
                         {division.name}
@@ -325,7 +356,7 @@ const LocationManagement = () => {
                     <SelectValue placeholder="সব জেলা" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">সব জেলা</SelectItem>
+                    <SelectItem value="all">সব জেলা</SelectItem>
                     {filteredDistricts.map(district => (
                       <SelectItem key={district.id} value={district.id}>
                         {district.name}
@@ -341,7 +372,7 @@ const LocationManagement = () => {
                     <SelectValue placeholder="সব উপজেলা" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">সব উপজেলা</SelectItem>
+                    <SelectItem value="all">সব উপজেলা</SelectItem>
                     {filteredUpazilas.map(upazila => (
                       <SelectItem key={upazila.id} value={upazila.id}>
                         {upazila.name}
@@ -357,7 +388,7 @@ const LocationManagement = () => {
                     <SelectValue placeholder="সব ইউনিয়ন" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">সব ইউনিয়ন</SelectItem>
+                    <SelectItem value="all">সব ইউনিয়ন</SelectItem>
                     {filteredUnions.map(union => (
                       <SelectItem key={union.id} value={union.id}>
                         {union.name}
@@ -374,8 +405,8 @@ const LocationManagement = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <Card className="bg-blue-50 border-blue-200">
             <CardContent className="p-4">
-              <div className="text-lg font-bold text-blue-700">{selectedLocation.division_id ? filteredDistricts.length : stats.totalDivisions}</div>
-              <div className="text-xs text-blue-600">{selectedLocation.division_id ? 'ফিল্টার করা বিভাগ' : 'মোট বিভাগ'}</div>
+              <div className="text-lg font-bold text-blue-700">{stats.totalDivisions}</div>
+              <div className="text-xs text-blue-600">মোট বিভাগ</div>
               <div className="text-xs text-green-600">{stats.assignedDivisions} বরাদ্দকৃত</div>
             </CardContent>
           </Card>

@@ -137,13 +137,13 @@ const AppSidebar = () => {
                       asChild 
                       isActive={isActive}
                       className={`
-                        text-white hover:bg-gray-400 hover:text-white transition-all duration-200 rounded-lg
+                        text-white bg-transparent transition-all duration-200 rounded-lg
                         data-[active=true]:bg-gray-700 data-[active=true]:text-white
                         data-[active=true]:border-l-4 data-[active=true]:border-white data-[active=true]:shadow-lg
                         font-medium
                       `}
                     >
-                      <Link to={item.path} className="flex items-center space-x-3 px-3 py-2 w-full">
+                      <Link to={item.path} className="flex items-center space-x-3 px-3 py-2 w-full text-white">
                         <Icon className="w-5 h-5 flex-shrink-0 text-white" />
                         <span className="truncate text-white">{item.label}</span>
                       </Link>
@@ -232,4 +232,3 @@ export const ResponsiveSidebar = ({ children }: ResponsiveSidebarProps) => {
 };
 
 export default ResponsiveSidebar;
-
