@@ -41,7 +41,7 @@ const DataHub = () => {
       if (!userProfile) return [];
       
       const votersRef = collection(db, 'voters');
-      let votersQuery = votersRef;
+      let votersQuery = query(votersRef);
 
       // Apply location-based filtering for non-super admins
       if (userProfile.role !== 'super_admin') {
