@@ -1,21 +1,47 @@
+# 🇧🇩 জামায়াতে ইসলামী ভোটার ব্যবস্থাপনা সিস্টেম
 
-# Welcome to your Lovable project
+## 📦 প্রকল্প পরিচিতি
 
-## Project info
+**লাইভ ডেমো:** [lovable.dev](https://lovable.dev/projects/a21c8f4b-17f4-4109-947f-35cf548ff4ce)
 
-**URL**: https://lovable.dev/projects/a21c8f4b-17f4-4109-947f-35cf548ff4ce
+বাংলাদেশ জামায়াতে ইসলামী (কাকৈর খোলা, চৌদ্দগ্রাম শাখা) - আধুনিক ভোটার তথ্য সংগ্রহ, বিশ্লেষণ ও প্রচারণা সিস্টেম।
 
-## Security Setup
+---
 
-### Environment Variables
+## 🚀 প্রযুক্তি
 
-Before running this project, you need to set up your environment variables:
+- **React 18 + TypeScript**
+- **Vite** (Fast build tool)
+- **Tailwind CSS** (UI Styling)
+- **shadcn/ui** (UI Components)
+- **Firebase** (Authentication & Firestore)
+- **Framer Motion** (Animation)
+- **Lovable** (AI-powered code editing)
 
-1. Copy `.env.example` to `.env`
-2. Fill in your actual Firebase configuration values
-3. **Never commit the `.env` file to version control**
+---
 
-For production deployment, set these environment variables in your hosting platform:
+## ⚙️ কনফিগারেশন ও নিরাপত্তা
+
+### .env ফাইল ব্যবস্থাপনা
+
+**.env এবং .env.example ফাইল অবশ্যই গিটে কমিট করবেন না!**
+
+আপনার `.gitignore` ফাইলে নিচের লাইন দুটি যোগ করুন:
+
+```
+# .env files
+.env
+.env.*
+.env.example
+```
+
+### পরিবেশ ভেরিয়েবল সেটআপ
+
+1. `.env.example` ফাইলটি কপি করে `.env` নাম দিন。
+2. আপনার প্রকৃত Firebase ও অন্যান্য কনফিগারেশন মান বসান。
+3. কখনোই `.env` বা `.env.example` গিটে কমিট করবেন না।
+
+#### .env ফাইলের নমুনা
 
 ```
 VITE_FIREBASE_API_KEY=your_actual_api_key
@@ -29,96 +55,75 @@ VITE_API_BASE_URL=https://your-api-domain.com
 VITE_SMS_API_BASE_URL=https://your-sms-api-domain.com
 ```
 
-### Security Features
+---
 
-This project includes several security enhancements:
+## 🛡️ নিরাপত্তা ফিচার
 
-- **Rate Limiting**: Prevents brute force attacks on login/registration
-- **Password Validation**: Enforces strong password requirements
-- **Generic Error Messages**: Prevents information leakage
-- **Security Logging**: Monitors authentication events and suspicious activities
-- **Environment Variable Protection**: Sensitive credentials are not exposed in code
+- 🔒 **Rate Limiting**: বারবার লগইন/রেজিস্ট্রেশন চেষ্টায় ব্রুট ফোর্স প্রতিরোধ
+- 🔑 **Strong Password Validation**: শক্তিশালী পাসওয়ার্ড বাধ্যতামূলক
+- 🕵️ **Generic Error Messages**: তথ্য ফাঁস রোধে জেনেরিক বার্তা
+- 📋 **Security Logging**: সন্দেহজনক কার্যক্রম মনিটরিং
+- 🔐 **Firebase Security Rules**: ডেটা নিরাপত্তা ও অ্যাক্সেস কন্ট্রোল
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## 📝 কিভাবে কোড এডিট করবেন?
 
-**Use Lovable**
+### 1️⃣ Lovable ব্যবহার করুন
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/a21c8f4b-17f4-4109-947f-35cf548ff4ce) and start prompting.
+- [Lovable Project](https://lovable.dev/projects/a21c8f4b-17f4-4109-947f-35cf548ff4ce) এ যান。
+- প্রম্পট লিখে কোড পরিবর্তন করুন。
+- পরিবর্তন স্বয়ংক্রিয়ভাবে গিটে কমিট হবে।
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+### 2️⃣ লোকাল ডেভেলপমেন্ট
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
 git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Set up environment variables (see Security Setup above)
-
-# Step 5: Start the development server with auto-reloading and an instant preview.
+npm install
+# .env ফাইল কনফিগার করুন (উপরের নির্দেশনা দেখুন)
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### 3️⃣ GitHub-এ সরাসরি এডিট
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- ফাইল ওপেন করুন, Edit (✏️) বাটনে ক্লিক করুন, পরিবর্তন করুন ও কমিট করুন।
 
-**Use GitHub Codespaces**
+### 4️⃣ GitHub Codespaces
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- "Code" > "Codespaces" > "New codespace" > কোড এডিট করুন ও কমিট করুন।
 
-## What technologies are used for this project?
+---
 
-This project is built with:
+## 🌐 ডিপ্লয়মেন্ট
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-- Firebase (Authentication & Firestore)
-- Framer Motion (Animations)
+- [Lovable](https://lovable.dev/projects/a21c8f4b-17f4-4109-947f-35cf548ff4ce) থেকে Share > Publish করুন。
+- ডিপ্লয় করার আগে `.env` কনফিগার করুন。
+- কাস্টম ডোমেইন সংযোগ: Project > Settings > Domains > Connect Domain
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/a21c8f4b-17f4-4109-947f-35cf548ff4ce) and click on Share -> Publish.
+## 📚 ডকুমেন্টেশন
 
-**Important**: Make sure to set up your environment variables in your deployment platform before publishing.
+- [ডকুমেন্টেশন](https://lovable.dev/projects/a21c8f4b-17f4-4109-947f-35cf548ff4ce/docs)
+- অথবা অ্যাপে `/docs` রুটে যান।
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
+## 🧑‍💻 ডেভেলপার
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- Developed with ❤️ by [Jakir Hossen](https://www.facebook.com/jakir.hossen.4928)
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+---
 
-## Security Considerations
+## ⚠️ নিরাপত্তা টিপস
 
-1. **Remove sensitive files from Git history** if they were previously committed
-2. **Set up environment variables** in your deployment platform
-3. **Monitor security logs** for suspicious activities
-4. **Keep dependencies updated** regularly
-5. **Use HTTPS** in production
-6. **Configure Firebase Security Rules** appropriately
+1. **.env ও .env.example গিটে রাখবেন না**
+2. **Firebase Security Rules আপডেট রাখুন**
+3. **নিয়মিত ডিপেন্ডেন্সি আপডেট করুন**
+4. **HTTPS ব্যবহার করুন**
+5. **সন্দেহজনক লগ মনিটর করুন**
 
+---
+
+> ✨ সফল ভোটার ব্যবস্থাপনা ও নিরাপদ ডেটা সুরক্ষার জন্য আমাদের সিস্টেম ব্যবহার করুন!

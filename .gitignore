@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 .env
+.env.example
 .vite.config.ts
 
 # Editor directories and files
