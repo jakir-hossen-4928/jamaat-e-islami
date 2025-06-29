@@ -1,7 +1,7 @@
 
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import VerificationLoading from '../authentication/VerificationLoading';
+import VerificationLoading from '../auth/VerificationLoading';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

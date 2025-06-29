@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -82,7 +83,7 @@ const App = () => {
                     </ProtectedRoute>
                   } />
 
-                  {/* Admin Routes - Updated to use new role system */}
+                  {/* Admin Routes */}
                   <Route path="/admin" element={
                     <ProtectedRoute>
                       <AdminDashboard />
