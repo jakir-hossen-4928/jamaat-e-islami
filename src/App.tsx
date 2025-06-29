@@ -83,7 +83,7 @@ const App = () => {
                     </ProtectedRoute>
                   } />
 
-                  {/* Admin Routes */}
+                  {/* Admin Routes with user-friendly names */}
                   <Route path="/admin" element={
                     <ProtectedRoute>
                       <AdminDashboard />

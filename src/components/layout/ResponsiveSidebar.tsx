@@ -106,8 +106,8 @@ const AppSidebar = () => {
   const menuItems = getMenuItems();
 
   return (
-    <Sidebar className="bg-gradient-to-b from-green-800 to-green-900 text-white border-r border-green-700 shadow-xl">
-      <SidebarHeader className="bg-gradient-to-r from-green-900 to-green-800 p-4 border-b border-green-700">
+    <Sidebar className="bg-gradient-to-b from-green-700 to-green-900 text-white border-r border-green-600 shadow-xl">
+      <SidebarHeader className="bg-gradient-to-r from-green-800 to-green-700 p-4 border-b border-green-600">
         <div className="flex items-center space-x-3">
           <img
             src="https://i.ibb.co/6Rt79ScS/bangladesh-jamaat-e-islami-seeklogo.png"
@@ -123,7 +123,7 @@ const AppSidebar = () => {
 
       <SidebarContent className="px-2 py-4">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-green-300 font-semibold text-sm mb-2 px-2">
+          <SidebarGroupLabel className="text-green-200 font-semibold text-sm mb-2 px-2">
             প্রধান মেনু
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -137,9 +137,9 @@ const AppSidebar = () => {
                       asChild 
                       isActive={isActive}
                       className={`
-                        text-white hover:bg-green-700 hover:text-white transition-all duration-200 rounded-lg
-                        data-[active=true]:bg-gradient-to-r data-[active=true]:from-green-600 data-[active=true]:to-green-700 
-                        data-[active=true]:border-l-4 data-[active=true]:border-green-300 data-[active=true]:shadow-lg
+                        text-white hover:bg-green-600 hover:text-white transition-all duration-200 rounded-lg
+                        data-[active=true]:bg-gradient-to-r data-[active=true]:from-green-500 data-[active=true]:to-green-600 
+                        data-[active=true]:border-l-4 data-[active=true]:border-green-200 data-[active=true]:shadow-lg
                         data-[active=true]:text-white font-medium
                       `}
                     >
@@ -156,8 +156,8 @@ const AppSidebar = () => {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-green-700">
-        <div className="bg-gradient-to-r from-green-700 to-green-800 rounded-lg p-4 mb-4 shadow-inner border border-green-600">
+      <SidebarFooter className="p-4 border-t border-green-600">
+        <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-lg p-4 mb-4 shadow-inner border border-green-500">
           <div className="space-y-1">
             <p className="text-white text-sm font-semibold truncate" title={userProfile?.displayName}>
               {userProfile?.displayName}
@@ -169,7 +169,7 @@ const AppSidebar = () => {
               {getRoleDisplayName(userProfile?.role)}
             </p>
             {userProfile.accessScope && userProfile.role !== 'super_admin' && (
-              <div className="mt-2 text-green-200 text-xs space-y-0.5 border-t border-green-600 pt-2">
+              <div className="mt-2 text-green-200 text-xs space-y-0.5 border-t border-green-500 pt-2">
                 {userProfile.accessScope.division_name && (
                   <p className="truncate">বিভাগ: {userProfile.accessScope.division_name}</p>
                 )}
@@ -192,7 +192,7 @@ const AppSidebar = () => {
         <Button
           onClick={handleLogout}
           variant="outline"
-          className="w-full text-green-800 border-green-300 bg-white hover:bg-green-50 hover:border-green-400 transition-colors font-medium"
+          className="w-full text-green-800 border-green-200 bg-white hover:bg-green-50 hover:border-green-300 transition-colors font-medium"
         >
           <LogOut className="w-4 h-4 mr-2" />
           লগআউট
