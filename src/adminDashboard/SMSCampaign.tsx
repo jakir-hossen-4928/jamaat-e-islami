@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
@@ -37,14 +38,14 @@ const SMSCampaign = () => {
   const [smsLogs, setSmsLogs] = useState<SMSLog[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({
-    willVote: '',
-    gender: '',
+    willVote: 'all',
+    gender: 'all',
     minAge: '',
     maxAge: '',
-    maritalStatus: '',
-    student: '',
-    hasDisability: '',
-    isMigrated: '',
+    maritalStatus: 'all',
+    student: 'all',
+    hasDisability: 'all',
+    isMigrated: 'all',
   });
 
   // Fetch voters with role-based access control
@@ -150,19 +151,19 @@ const SMSCampaign = () => {
       voter.Phone?.includes(searchTerm) ||
       voter.ID?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Advanced filters
-    const matchesWillVote = !filters.willVote || voter['Will Vote'] === filters.willVote;
-    const matchesGender = !filters.gender || voter.Gender === filters.gender;
+    // Advanced filters - using 'all' instead of empty string
+    const matchesWillVote = filters.willVote === 'all' || voter['Will Vote'] === filters.willVote;
+    const matchesGender = filters.gender === 'all' || voter.Gender === filters.gender;
     
     const matchesMinAge = !filters.minAge || 
       (voter.Age !== undefined && voter.Age >= parseInt(filters.minAge));
     const matchesMaxAge = !filters.maxAge || 
       (voter.Age !== undefined && voter.Age <= parseInt(filters.maxAge));
       
-    const matchesMaritalStatus = !filters.maritalStatus || voter['Marital Status'] === filters.maritalStatus;
-    const matchesStudent = !filters.student || voter.Student === filters.student;
-    const matchesHasDisability = !filters.hasDisability || voter['Has Disability'] === filters.hasDisability;
-    const matchesIsMigrated = !filters.isMigrated || voter['Is Migrated'] === filters.isMigrated;
+    const matchesMaritalStatus = filters.maritalStatus === 'all' || voter['Marital Status'] === filters.maritalStatus;
+    const matchesStudent = filters.student === 'all' || voter.Student === filters.student;
+    const matchesHasDisability = filters.hasDisability === 'all' || voter['Has Disability'] === filters.hasDisability;
+    const matchesIsMigrated = filters.isMigrated === 'all' || voter['Is Migrated'] === filters.isMigrated;
 
     return (
       matchesSearch &&
@@ -301,14 +302,14 @@ const SMSCampaign = () => {
 
   const resetFilters = () => {
     setFilters({
-      willVote: '',
-      gender: '',
+      willVote: 'all',
+      gender: 'all',
       minAge: '',
       maxAge: '',
-      maritalStatus: '',
-      student: '',
-      hasDisability: '',
-      isMigrated: '',
+      maritalStatus: 'all',
+      student: 'all',
+      hasDisability: 'all',
+      isMigrated: 'all',
     });
   };
 
@@ -452,7 +453,7 @@ const SMSCampaign = () => {
                             <SelectValue placeholder="সবাই" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">সবাই</SelectItem>
+                            <SelectItem value="all">সবাই</SelectItem>
                             <SelectItem value="Yes">হ্যাঁ</SelectItem>
                             <SelectItem value="No">না</SelectItem>
                           </SelectContent>
@@ -468,7 +469,7 @@ const SMSCampaign = () => {
                             <SelectValue placeholder="সবাই" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">সবাই</SelectItem>
+                            <SelectItem value="all">সবাই</SelectItem>
                             <SelectItem value="Male">পুরুষ</SelectItem>
                             <SelectItem value="Female">মহিলা</SelectItem>
                             <SelectItem value="Other">অন্যান্য</SelectItem>
@@ -485,7 +486,7 @@ const SMSCampaign = () => {
                             <SelectValue placeholder="সবাই" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">সবাই</SelectItem>
+                            <SelectItem value="all">সবাই</SelectItem>
                             <SelectItem value="Married">বিবাহিত</SelectItem>
                             <SelectItem value="Unmarried">অবিবাহিত</SelectItem>
                             <SelectItem value="Widowed">বিধবা</SelectItem>
@@ -503,7 +504,7 @@ const SMSCampaign = () => {
                             <SelectValue placeholder="সবাই" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">সবাই</SelectItem>
+                            <SelectItem value="all">সবাই</SelectItem>
                             <SelectItem value="Yes">হ্যাঁ</SelectItem>
                             <SelectItem value="No">না</SelectItem>
                           </SelectContent>
@@ -519,7 +520,7 @@ const SMSCampaign = () => {
                             <SelectValue placeholder="সবাই" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">সবাই</SelectItem>
+                            <SelectItem value="all">সবাই</SelectItem>
                             <SelectItem value="Yes">হ্যাঁ</SelectItem>
                             <SelectItem value="No">না</SelectItem>
                           </SelectContent>
@@ -535,7 +536,7 @@ const SMSCampaign = () => {
                             <SelectValue placeholder="সবাই" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">সবাই</SelectItem>
+                            <SelectItem value="all">সবাই</SelectItem>
                             <SelectItem value="Yes">হ্যাঁ</SelectItem>
                             <SelectItem value="No">না</SelectItem>
                           </SelectContent>
