@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
@@ -126,7 +125,7 @@ const AllVoters = () => {
     },
     enabled: !!userProfile,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes to reduce Firebase reads
-    cacheTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes (renamed from cacheTime)
   });
 
   // Filter voters based on search and tab

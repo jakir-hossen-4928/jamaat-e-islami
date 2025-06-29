@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +21,7 @@ import {
 
 const Index = () => {
   usePageTitle('বাংলাদেশ জামায়াতে ইসলামী - ভোটার ব্যবস্থাপনা সিস্টেম');
-  const { user, userProfile } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const navigate = useNavigate();
 
   const features = [
@@ -96,7 +95,7 @@ const Index = () => {
                 <BookOpen className="w-4 h-4" />
                 <span>ডকুমেন্টেশন</span>
               </Link>
-              {user ? (
+              {currentUser ? (
                 <Button 
                   onClick={() => navigate('/dashboard')}
                   className="bg-green-600 hover:bg-green-700"
@@ -123,7 +122,7 @@ const Index = () => {
 
             {/* Mobile menu button */}
             <div className="md:hidden">
-              {user ? (
+              {currentUser ? (
                 <Button 
                   size="sm"
                   onClick={() => navigate('/dashboard')}
@@ -167,7 +166,7 @@ const Index = () => {
             আধুনিক প্রযুক্তির মাধ্যমে ভোটার তথ্য সংগ্রহ, সংরক্ষণ এবং বিশ্লেষণের জন্য একটি সম্পূর্ণ সমাধান
           </p>
 
-          {!user && (
+          {!currentUser && (
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
               <Button 
                 size="lg" 
@@ -187,10 +186,10 @@ const Index = () => {
             </div>
           )}
 
-          {user && (
+          {currentUser && (
             <div className="mb-16">
               <Badge variant="secondary" className="mb-4 text-lg px-4 py-2">
-                স্বাগতম, {userProfile?.displayName || user.email}
+                স্বাগতম, {userProfile?.displayName || currentUser.email}
               </Badge>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button 
