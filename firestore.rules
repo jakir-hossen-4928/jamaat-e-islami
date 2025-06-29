@@ -1,0 +1,175 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+    
+    function isApproved() {
+      return isAuthenticated() && getUserData().approved == true;
+    }
+    
+    function canAccessLocation(voterData) {
+      let userData = getUserData();
+      
+      // Super admin can access everything
+      if (userData.role == 'super_admin') {
+        return true;
+      }
+      
+      // Check location-based access based on user role
+      return (
+        (userData.role == 'division_admin' && voterData.division_id == userData.accessScope.division_id) ||
+        (userData.role == 'district_admin' && voterData.district_id == userData.accessScope.district_id) ||
+        (userData.role == 'upazila_admin' && voterData.upazila_id == userData.accessScope.upazila_id) ||
+        (userData.role == 'union_admin' && voterData.union_id == userData.accessScope.union_id) ||
+        (userData.role == 'village_admin' && voterData.village_id == userData.accessScope.village_id)
+      );
+    }
+    
+    function canCreateVoterInLocation(voterData) {
+      let userData = getUserData();
+      
+      // Super admin can create anywhere
+      if (userData.role == 'super_admin') {
+        return true;
+      }
+      
+      // Other roles can only create in their assigned locations
+      return (
+        (userData.role == 'division_admin' && voterData.division_id == userData.accessScope.division_id) ||
+        (userData.role == 'district_admin' && voterData.district_id == userData.accessScope.district_id) ||
+        (userData.role == 'upazila_admin' && voterData.upazila_id == userData.accessScope.upazila_id) ||
+        (userData.role == 'union_admin' && voterData.union_id == userData.accessScope.union_id) ||
+        (userData.role == 'village_admin' && voterData.village_id == userData.accessScope.village_id)
+      );
+    }
+    
+    function canVerifyUser(targetUserData) {
+      let userData = getUserData();
+      
+      // Super admin can verify all
+      if (userData.role == 'super_admin') {
+        return true;
+      }
+      
+      // Role hierarchy verification
+      let canVerifyRoles = (
+        (userData.role == 'division_admin' && targetUserData.role in ['district_admin', 'upazila_admin', 'union_admin', 'village_admin']) ||
+        (userData.role == 'district_admin' && targetUserData.role in ['upazila_admin', 'union_admin', 'village_admin']) ||
+        (userData.role == 'upazila_admin' && targetUserData.role in ['union_admin', 'village_admin']) ||
+        (userData.role == 'union_admin' && targetUserData.role == 'village_admin')
+      );
+      
+      // Location scope check
+      let sameLocationScope = (
+        (userData.role == 'division_admin' && targetUserData.accessScope.division_id == userData.accessScope.division_id) ||
+        (userData.role == 'district_admin' && targetUserData.accessScope.district_id == userData.accessScope.district_id) ||
+        (userData.role == 'upazila_admin' && targetUserData.accessScope.upazila_id == userData.accessScope.upazila_id) ||
+        (userData.role == 'union_admin' && targetUserData.accessScope.union_id == userData.accessScope.union_id)
+      );
+      
+      return canVerifyRoles && sameLocationScope;
+    }
+
+    // Users collection rules - optimized to reduce reads
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Users can create their own profile during registration
+      allow create: if isAuthenticated() && request.auth.uid == userId && 
+                   resource.data.approved == false && 
+                   resource.data.role in ['union_admin', 'village_admin'];
+      
+      // Super admin can read all users
+      allow read: if hasRole('super_admin') && isApproved();
+      
+      // Admins can read users in their location scope (limited scope to reduce reads)
+      allow read: if isAuthenticated() && isApproved() && 
+                 getUserData().role in ['division_admin', 'district_admin', 'upazila_admin', 'union_admin'];
+      
+      // Super admin can update/delete any user
+      allow write: if hasRole('super_admin') && isApproved();
+      
+      // Admins can verify users in their hierarchy and location scope
+      allow update: if isAuthenticated() && isApproved() && 
+                   canVerifyUser(resource.data) &&
+                   // Only allow updating specific fields to reduce write operations
+                   request.resource.data.diff(resource.data).affectedKeys().hasOnly(['approved', 'verifiedBy', 'lastLogin']);
+    }
+
+    // Voters collection rules - heavily optimized for cost reduction
+    match /voters/{voterId} {
+      // Read access - scoped queries reduce read operations
+      allow read: if isAuthenticated() && isApproved() && canAccessLocation(resource.data);
+      
+      // Create access - batch writes recommended
+      allow create: if isAuthenticated() && isApproved() && 
+                   canCreateVoterInLocation(request.resource.data) &&
+                   // Ensure required fields only
+                   request.resource.data.keys().hasAll(['Voter Name', 'ID', 'Last Updated']) &&
+                   // Validate location hierarchy
+                   (hasRole('super_admin') || 
+                    (request.resource.data.division_id == getUserData().accessScope.division_id));
+      
+      // Update access - limited to reduce write costs
+      allow update: if isAuthenticated() && isApproved() && 
+                   (hasRole('super_admin') || hasRole('division_admin')) &&
+                   canAccessLocation(resource.data) &&
+                   // Prevent unnecessary location updates
+                   (hasRole('super_admin') || 
+                    (request.resource.data.division_id == resource.data.division_id));
+      
+      // Delete access - restricted to minimize operations
+      allow delete: if hasRole('super_admin') && isApproved();
+    }
+
+    // SMS Campaigns collection rules - optimized for batch operations
+    match /sms_campaigns/{campaignId} {
+      // Read access - limited scope
+      allow read: if isAuthenticated() && isApproved() && 
+                 (hasRole('super_admin') || resource.data.createdBy == request.auth.uid);
+      
+      // Create access - batch campaign creation
+      allow create: if isAuthenticated() && isApproved() && 
+                   getUserData().role in ['super_admin', 'division_admin', 'district_admin'] &&
+                   request.resource.data.createdBy == request.auth.uid;
+      
+      // Update access - minimal updates
+      allow update: if isAuthenticated() && isApproved() && 
+                   (hasRole('super_admin') || resource.data.createdBy == request.auth.uid) &&
+                   // Only allow status updates to reduce writes
+                   request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'sentCount']);
+      
+      // Delete access - restricted
+      allow delete: if hasRole('super_admin') && isApproved();
+    }
+
+    // System logs - minimal access to reduce costs
+    match /system_logs/{logId} {
+      allow read, write: if hasRole('super_admin') && isApproved();
+    }
+    
+    // Cache collection for optimized reads
+    match /cache/{cacheId} {
+      allow read, write: if isAuthenticated() && isApproved();
+    }
+    
+    // Analytics - aggregated data to reduce query costs
+    match /analytics/{analyticsId} {
+      allow read: if isAuthenticated() && isApproved();
+      allow write: if hasRole('super_admin') && isApproved();
+    }
+  }
+}

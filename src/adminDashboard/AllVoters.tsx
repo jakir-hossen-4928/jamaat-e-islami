@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,85 +49,74 @@ const AllVoters = () => {
     isLoading: locationLoading
   } = useLocationFilter();
 
-  // Create optimized query with limits
+  // Create optimized query without limits to reduce complexity
   const createVotersQuery = () => {
     if (!userProfile) return null;
     
     const votersCollection = collection(db, 'voters');
     
-    // Apply role-based filtering with limits to reduce reads
+    // Apply role-based filtering without limits for better performance
     if (userProfile.role !== 'super_admin') {
       const userScope = userProfile.accessScope;
       if (userScope.village_id) {
         return query(votersCollection, 
           where('village_id', '==', userScope.village_id), 
-          orderBy('Last Updated', 'desc'),
-          limit(1000)
+          orderBy('Last Updated', 'desc')
         );
       } else if (userScope.union_id) {
         return query(votersCollection, 
           where('union_id', '==', userScope.union_id), 
-          orderBy('Last Updated', 'desc'),
-          limit(2000)
+          orderBy('Last Updated', 'desc')
         );
       } else if (userScope.upazila_id) {
         return query(votersCollection, 
           where('upazila_id', '==', userScope.upazila_id), 
-          orderBy('Last Updated', 'desc'),
-          limit(5000)
+          orderBy('Last Updated', 'desc')
         );
       } else if (userScope.district_id) {
         return query(votersCollection, 
           where('district_id', '==', userScope.district_id), 
-          orderBy('Last Updated', 'desc'),
-          limit(10000)
+          orderBy('Last Updated', 'desc')
         );
       } else if (userScope.division_id) {
         return query(votersCollection, 
           where('division_id', '==', userScope.division_id), 
-          orderBy('Last Updated', 'desc'),
-          limit(15000)
+          orderBy('Last Updated', 'desc')
         );
       }
     } else {
-      // For super admin, apply selected location filters with limits
+      // For super admin, apply selected location filters
       if (selectedLocation.village_id) {
         return query(votersCollection, 
           where('village_id', '==', selectedLocation.village_id), 
-          orderBy('Last Updated', 'desc'),
-          limit(1000)
+          orderBy('Last Updated', 'desc')
         );
       } else if (selectedLocation.union_id) {
         return query(votersCollection, 
           where('union_id', '==', selectedLocation.union_id), 
-          orderBy('Last Updated', 'desc'),
-          limit(2000)
+          orderBy('Last Updated', 'desc')
         );
       } else if (selectedLocation.upazila_id) {
         return query(votersCollection, 
           where('upazila_id', '==', selectedLocation.upazila_id), 
-          orderBy('Last Updated', 'desc'),
-          limit(5000)
+          orderBy('Last Updated', 'desc')
         );
       } else if (selectedLocation.district_id) {
         return query(votersCollection, 
           where('district_id', '==', selectedLocation.district_id), 
-          orderBy('Last Updated', 'desc'),
-          limit(10000)
+          orderBy('Last Updated', 'desc')
         );
       } else if (selectedLocation.division_id) {
         return query(votersCollection, 
           where('division_id', '==', selectedLocation.division_id), 
-          orderBy('Last Updated', 'desc'),
-          limit(15000)
+          orderBy('Last Updated', 'desc')
         );
       }
     }
     
-    // Default query with limit
+    // Default query
     return query(votersCollection, 
-      orderBy('Last Updated', 'desc'),
-      limit(20000)
+      orderBy('Last Updated', 'desc')
     );
   };
 
@@ -143,11 +132,14 @@ const AllVoters = () => {
   };
 
   // Optimized Firebase query with caching
-  const { data: allVoters = [], isLoading, error } = useVotersQuery({
+  const { data: queryData, isLoading, error } = useVotersQuery({
     query: votersQuery!,
     queryKey: createQueryKey(),
     enabled: !!userProfile && !!votersQuery,
   });
+
+  // Ensure allVoters is always an array
+  const allVoters: VoterData[] = Array.isArray(queryData) ? queryData : [];
 
   // Load location names efficiently using static data
   React.useEffect(() => {
@@ -191,7 +183,7 @@ const AllVoters = () => {
 
   // Filter voters based on search and tab with optimizations
   const filteredVoters = useMemo(() => {
-    if (!allVoters) return [];
+    if (!Array.isArray(allVoters)) return [];
     
     let filtered = allVoters;
 
@@ -229,7 +221,7 @@ const AllVoters = () => {
 
   // Statistics with memoization
   const stats = useMemo(() => {
-    if (!allVoters) return { total: 0, willVote: 0, wontVote: 0, highProbability: 0, withPhone: 0 };
+    if (!Array.isArray(allVoters)) return { total: 0, willVote: 0, wontVote: 0, highProbability: 0, withPhone: 0 };
     
     const total = allVoters.length;
     const willVote = allVoters.filter(v => v['Will Vote'] === 'Yes').length;
@@ -243,7 +235,7 @@ const AllVoters = () => {
   }, [allVoters]);
 
   const handleExportToPDF = () => {
-    if (!filteredVoters || filteredVoters.length === 0) {
+    if (!Array.isArray(filteredVoters) || filteredVoters.length === 0) {
       toast({
         title: 'সতর্কতা',
         description: 'পিডিএফ তৈরি করার জন্য কোন ভোটার নেই',
@@ -440,7 +432,7 @@ const AllVoters = () => {
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <div className="grid gap-3 lg:gap-4 p-4 lg:p-6">
-                        {!filteredVoters || filteredVoters.length === 0 ? (
+                        {!Array.isArray(filteredVoters) || filteredVoters.length === 0 ? (
                           <div className="text-center py-8">
                             <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                             <p className="text-gray-600">কোন ভোটার পাওয়া যায়নি</p>
