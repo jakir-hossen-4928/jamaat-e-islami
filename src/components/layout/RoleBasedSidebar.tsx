@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,7 +18,8 @@ import {
   Upload,
   Settings,
   MapPin,
-  Shield
+  Shield,
+  BookOpen
 } from 'lucide-react';
 
 interface RoleBasedSidebarProps {
@@ -89,6 +89,9 @@ const RoleBasedSidebar = ({ children }: RoleBasedSidebarProps) => {
     if (permissions.canAssignRoles.length > 0) {
       baseItems.push({ icon: UserCheck, label: 'ব্যবহারকারী ব্যবস্থাপনা', path: '/admin/verify-users' });
     }
+
+    // Add documentation link for all users
+    baseItems.push({ icon: BookOpen, label: 'ডকুমেন্টেশন', path: '/docs' });
 
     return baseItems;
   };
@@ -202,6 +205,22 @@ const RoleBasedSidebar = ({ children }: RoleBasedSidebarProps) => {
               >
                 ডকুমেন্টেশন
               </Link>
+              {userProfile.role === 'super_admin' && (
+                <>
+                  <Link
+                    to="/admin/location-management"
+                    className="text-sm text-green-600 hover:text-green-800"
+                  >
+                    এলাকা ব্যবস্থাপনা
+                  </Link>
+                  <Link
+                    to="/admin/system-settings"
+                    className="text-sm text-purple-600 hover:text-purple-800"
+                  >
+                    সেটিংস
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

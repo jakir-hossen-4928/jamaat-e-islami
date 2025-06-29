@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -100,6 +99,16 @@ const DocumentationLayout = ({ children }: DocumentationLayoutProps) => {
               <span className="text-lg font-medium text-gray-700 hidden sm:block">ডকুমেন্টেশন</span>
             </div>
             <div className="flex items-center space-x-4">
+              <Link to="/admin/location-management">
+                <Button variant="outline" size="sm">
+                  এলাকা ব্যবস্থাপনা
+                </Button>
+              </Link>
+              <Link to="/admin/system-settings">
+                <Button variant="outline" size="sm">
+                  সিস্টেম সেটিংস
+                </Button>
+              </Link>
               <Link to="/dashboard">
                 <Button variant="outline">
                   ড্যাশবোর্ডে ফিরুন
@@ -131,7 +140,7 @@ const DocumentationLayout = ({ children }: DocumentationLayoutProps) => {
       {/* Footer */}
       <footer className="bg-white border-t mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">সিস্টেম</h3>
               <ul className="space-y-2">
@@ -149,11 +158,24 @@ const DocumentationLayout = ({ children }: DocumentationLayoutProps) => {
               </ul>
             </div>
             <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">প্রশাসন</h3>
+              <ul className="space-y-2">
+                <li><Link to="/admin/location-management" className="text-gray-600 hover:text-gray-900">এলাকা ব্যবস্থাপনা</Link></li>
+                <li><Link to="/admin/system-settings" className="text-gray-600 hover:text-gray-900">সিস্টেম সেটিংস</Link></li>
+                <li><Link to="/admin/data-hub" className="text-gray-600 hover:text-gray-900">ডেটা হাব</Link></li>
+              </ul>
+            </div>
+            <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">যোগাযোগ</h3>
               <p className="text-gray-600">
                 জামায়াতে ইসলামী বাংলাদেশ<br />
                 ভোটার ব্যবস্থাপনা সিস্টেম
               </p>
+              <div className="mt-4">
+                <Link to="/docs" className="text-blue-600 hover:text-blue-800">
+                  সহায়তা ডকুমেন্টেশন
+                </Link>
+              </div>
             </div>
           </div>
         </div>
