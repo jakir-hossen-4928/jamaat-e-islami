@@ -16,7 +16,7 @@
 - **shadcn/ui** (UI Components)
 - **Firebase** (Authentication & Firestore)
 - **Framer Motion** (Animation)
-- **Lovable** (AI-powered code editing)
+
 
 ---
 
