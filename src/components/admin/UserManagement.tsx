@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, getDocs, doc, updateDoc, query, orderBy } from 'firebase/firestore';
@@ -28,7 +27,7 @@ const loadLocationData = async (type: string) => {
   if (locationCache[type as keyof typeof locationCache]) {
     return locationCache[type as keyof typeof locationCache];
   }
-  
+
   try {
     const response = await fetch(`/data/${type}.json`);
     const data = await response.json();
@@ -40,12 +39,12 @@ const loadLocationData = async (type: string) => {
   }
 };
 
-const UserAssignmentDialog = ({ 
-  user, 
-  onUpdate, 
-  currentUserProfile 
-}: { 
-  user: User; 
+const UserAssignmentDialog = ({
+  user,
+  onUpdate,
+  currentUserProfile
+}: {
+  user: User;
   onUpdate: (userId: string, updates: Partial<User>) => void;
   currentUserProfile: User;
 }) => {
@@ -80,7 +79,7 @@ const UserAssignmentDialog = ({
             loadLocationData('unions'),
             loadLocationData('villages')
           ]);
-          
+
           setLocationData({ divisions, districts, upazilas, unions, villages });
         } catch (error) {
           console.error('Error loading location data:', error);
@@ -90,28 +89,28 @@ const UserAssignmentDialog = ({
     }
   }, [isOpen]);
 
-  const filteredDistricts = locationData.districts.filter(d => 
+  const filteredDistricts = locationData.districts.filter(d =>
     !selectedLocation.division_id || d.division_id === selectedLocation.division_id
   );
 
-  const filteredUpazilas = locationData.upazilas.filter(u => 
+  const filteredUpazilas = locationData.upazilas.filter(u =>
     !selectedLocation.district_id || u.district_id === selectedLocation.district_id
   );
 
-  const filteredUnions = locationData.unions.filter(u => 
+  const filteredUnions = locationData.unions.filter(u =>
     !selectedLocation.upazila_id || u.upazilla_id === selectedLocation.upazila_id
   );
 
-  const filteredVillages = locationData.villages.filter(v => 
+  const filteredVillages = locationData.villages.filter(v =>
     !selectedLocation.union_id || v.union_id === selectedLocation.union_id
   );
 
   const handleLocationChange = (level: string, value: string) => {
     const newLocation = { ...selectedLocation };
-    
+
     // Set the selected value
     newLocation[level as keyof typeof selectedLocation] = value;
-    
+
     // Clear dependent fields
     if (level === 'division_id') {
       newLocation.district_id = '';
@@ -128,7 +127,7 @@ const UserAssignmentDialog = ({
     } else if (level === 'union_id') {
       newLocation.village_id = '';
     }
-    
+
     setSelectedLocation(newLocation);
   };
 
@@ -200,7 +199,7 @@ const UserAssignmentDialog = ({
 
   const isValidAssignment = () => {
     if (!selectedRole) return false;
-    
+
     const requiredLocation = getLocationRequirement(selectedRole);
     if (!requiredLocation) return true; // super_admin doesn't need location
     return selectedLocation[requiredLocation as keyof typeof selectedLocation];
@@ -341,21 +340,21 @@ const UserAssignmentDialog = ({
   );
 };
 
-const UserManagement = () => {
+const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // Fetch all users ordered by creation date (newest first)
   const { data: allUsers = [], isLoading } = useQuery({
-    queryKey: ['users'],
+    queryKey: ['users', refreshKey],
     queryFn: async () => {
       const usersRef = collection(db, 'users');
       const q = query(usersRef, orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ 
-        uid: doc.id, 
-        ...doc.data() 
+      return snapshot.docs.map(doc => ({
+        uid: doc.id,
+        ...doc.data()
       } as User));
     },
     staleTime: 5 * 60 * 1000,
@@ -364,14 +363,14 @@ const UserManagement = () => {
   // For super admin, show all users. For others, filter by location scope
   const filteredUsers = React.useMemo(() => {
     if (!userProfile) return [];
-    
+
     if (userProfile.role === 'super_admin') {
       return allUsers;
     }
 
     return allUsers.filter(user => {
       if (!user.accessScope || !userProfile.accessScope) return false;
-      
+
       const userScope = userProfile.accessScope;
       const targetScope = user.accessScope;
 
@@ -403,7 +402,7 @@ const UserManagement = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      
+
       if (variables.updates.role) {
         toast({
           title: 'সফল',
@@ -511,7 +510,7 @@ const UserManagement = () => {
                         )}
                       </div>
                       <p className="text-sm text-gray-600">{user.email}</p>
-                      
+
                       {user.accessScope && user.role !== 'super_admin' && (
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                           <MapPin className="w-4 h-4" />
@@ -524,7 +523,7 @@ const UserManagement = () => {
                           </span>
                         </div>
                       )}
-                      
+
                       <div className="text-xs text-gray-400">
                         <p>যোগদান: {new Date(user.createdAt).toLocaleDateString('bn-BD')}</p>
                         {user.lastLogin && (
@@ -555,7 +554,7 @@ const UserManagement = () => {
                               অনুমোদন
                             </Button>
                           )}
-                          
+
                           {user.approved && (
                             <Button
                               size="sm"

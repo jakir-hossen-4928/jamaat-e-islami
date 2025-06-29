@@ -1,15 +1,14 @@
-
 import React from 'react';
 import DocumentationLayout from '@/components/layout/DocumentationLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { 
-  Users, 
-  MapPin, 
-  BarChart3, 
-  Database, 
+import {
+  Users,
+  MapPin,
+  BarChart3,
+  Database,
   Settings,
   ArrowRight,
   BookOpen,
@@ -25,28 +24,28 @@ const Documentation = () => {
       icon: Users,
       title: 'ভোটার ব্যবস্থাপনা',
       description: 'ভোটার তথ্য যোগ, সম্পাদনা এবং ব্যবস্থাপনা',
-      path: '/voters',
+      path: '/documentation/voter-management',
       badge: 'মূল ফিচার'
     },
     {
       icon: MapPin,
       title: 'এলাকা ব্যবস্থাপনা',
       description: 'বিভাগ, জেলা, উপজেলা, ইউনিয়ন ও গ্রাম ব্যবস্থাপনা',
-      path: '/locations',
+      path: '/documentation/location-management',
       badge: 'প্রশাসনিক'
     },
     {
       icon: BarChart3,
       title: 'বিশ্লেষণ সিস্টেম',
       description: 'ভোটার ডেটা বিশ্লেষণ ও রিপোর্ট তৈরি',
-      path: '/analytics',
+      path: '/documentation/analytics-system',
       badge: 'রিপোর্টিং'
     },
     {
       icon: Database,
       title: 'ডেটা ব্যবস্থাপনা',
       description: 'ডেটা আমদানি/রপ্তানি ও ব্যাকআপ',
-      path: '/data-hub',
+      path: '/documentation/data-hub',
       badge: 'ডেটা'
     }
   ];
@@ -70,7 +69,7 @@ const Documentation = () => {
             </h1>
           </div>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            জামায়াতে ইসলামী বাংলাদেশের জন্য একটি সম্পূর্ণ ভোটার ব্যবস্থাপনা ও বিশ্লেষণ সিস্টেম। 
+            জামায়াতে ইসলামী বাংলাদেশের জন্য একটি সম্পূর্ণ ভোটার ব্যবস্থাপনা ও বিশ্লেষণ সিস্টেম।
             এই সিস্টেম দিয়ে আপনি ভোটার তথ্য সংগ্রহ, সংরক্ষণ, বিশ্লেষণ করতে পারবেন।
           </p>
         </div>

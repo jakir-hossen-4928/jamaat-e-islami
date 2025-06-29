@@ -1,4 +1,3 @@
-
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { Users, BarChart3, MessageSquare, Shield, Phone, Mail, MapPin, Menu, X, LayoutDashboard, CheckCircle, Star } from 'lucide-react';
@@ -9,7 +8,7 @@ import { usePageTitle } from '@/lib/usePageTitle';
 
 const Index = () => {
   usePageTitle('জামায়াতে ইসলামী বাংলাদেশ, কাকৈর খোলা, চৌদ্দগ্রাম শাখা');
-  
+
   const { currentUser } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -41,7 +40,7 @@ const Index = () => {
     {
       icon: <Shield className="w-12 h-12 text-red-600" />,
       title: 'নিরাপত্তা ও গোপনীয়তা',
-      desc: 'উচ্চ নিরাপত্তা ব্যবস্থায় সকল তথ্য সুরক্ষিত রাখুন। এনক্রিপশন ও নিরাপদ ডেটাবেস ব্যবহার করুন।',  
+      desc: 'উচ্চ নিরাপত্তা ব্যবস্থায় সকল তথ্য সুরক্ষিত রাখুন। এনক্রিপশন ও নিরাপদ ডেটাবেস ব্যবহার করুন।',
       color: 'from-red-500 to-red-600'
     }
   ];
@@ -49,7 +48,8 @@ const Index = () => {
   const navItems = [
     { name: 'হোম', href: '#home' },
     { name: 'বৈশিষ্ট্য', href: '#features' },
-    { name: 'যোগাযোগ', href: '#contact' }
+    { name: 'যোগাযোগ', href: '#contact' },
+    { name: 'ডকুমেন্টেশন', href: '/docs' }, // Added documentation link
   ];
 
   const containerVariants = {
@@ -82,7 +82,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 sm:h-20">
             {/* Logo */}
-            <motion.div 
+            <motion.div
               className="flex items-center space-x-2 sm:space-x-3"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -113,6 +113,8 @@ const Index = () => {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
+                  // If it's an external link (starts with /), use Link, else use <a>
+                  {...(item.href.startsWith('/') ? { as: Link, to: item.href } : {})}
                 >
                   {item.name}
                   <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-600 transition-all duration-200 group-hover:w-full"></span>
@@ -158,14 +160,25 @@ const Index = () => {
             >
               <div className="space-y-3">
                 {navItems.map((item) => (
-                  <a
-                    key={item.name}
-                    href={item.href}
-                    className="block py-3 px-4 text-gray-700 hover:text-green-600 hover:bg-green-50 font-medium rounded-lg transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {item.name}
-                  </a>
+                  item.href.startsWith('/') ? (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      className="block py-3 px-4 text-gray-700 hover:text-green-600 hover:bg-green-50 font-medium rounded-lg transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {item.name}
+                    </Link>
+                  ) : (
+                    <a
+                      key={item.name}
+                      href={item.href}
+                      className="block py-3 px-4 text-gray-700 hover:text-green-600 hover:bg-green-50 font-medium rounded-lg transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {item.name}
+                    </a>
+                  )
                 ))}
                 <div className="px-4 pt-4 border-t space-y-3">
                   {!currentUser ? (
@@ -319,7 +332,7 @@ const Index = () => {
       {/* Features Section */}
       <section id="features" className="py-16 sm:py-24 px-4 bg-gradient-to-br from-gray-50 to-white">
         <div className="max-w-7xl mx-auto">
-          <motion.div 
+          <motion.div
             className="text-center mb-12 sm:mb-16"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -378,7 +391,7 @@ const Index = () => {
       {/* Contact Section */}
       <section id="contact" className="py-16 sm:py-24 px-4 bg-gradient-to-br from-green-50 via-white to-blue-50">
         <div className="max-w-6xl mx-auto">
-          <motion.div 
+          <motion.div
             className="text-center mb-12 sm:mb-16"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -438,7 +451,7 @@ const Index = () => {
                 </div>
                 <h3 className="text-xl sm:text-2xl font-bold mb-3 text-gray-900">{contact.title}</h3>
                 {contact.href ? (
-                  <a 
+                  <a
                     href={contact.href}
                     className="text-lg sm:text-xl font-semibold text-gray-800 hover:text-green-600 transition-colors block mb-2 break-all"
                   >
@@ -495,6 +508,7 @@ const Index = () => {
                 <li><Link to="/register" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center"><span className="mr-2">→</span>নিবন্ধন</Link></li>
                 <li><a href="#features" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center"><span className="mr-2">→</span>বৈশিষ্ট্য</a></li>
                 <li><a href="#contact" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center"><span className="mr-2">→</span>যোগাযোগ</a></li>
+                <li><Link to="/docs" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center"><span className="mr-2">→</span>ডকুমেন্টেশন</Link></li>
               </ul>
             </div>
 
@@ -534,9 +548,9 @@ const Index = () => {
               </p>
               <p className="text-sm text-gray-500 text-center sm:text-right">
                 Developed with ❤️ by{' '}
-                <a 
-                  href="https://www.facebook.com/jakir.hossen.4928" 
-                  target="_blank" 
+                <a
+                  href="https://www.facebook.com/jakir.hossen.4928"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-green-400 hover:text-green-300 transition-colors font-medium"
                 >

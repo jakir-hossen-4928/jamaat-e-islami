@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -8,11 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Search, 
-  Download, 
-  FileText, 
-  Users, 
+import {
+  Search,
+  Download,
+  FileText,
+  Users,
   Eye,
   Phone,
   MapPin,
@@ -33,15 +32,15 @@ import { getFullLocationHierarchy } from '@/lib/locationUtils';
 
 const AllVoters = () => {
   usePageTitle('সকল ভোটার - অ্যাডমিন প্যানেল');
-  
+
   const { userProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('all');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [locationNames, setLocationNames] = useState<{[key: string]: string}>({});
-  
+  const [locationNames, setLocationNames] = useState<{ [key: string]: string }>({});
+
   const {
     locationData,
     selectedLocation,
@@ -52,70 +51,70 @@ const AllVoters = () => {
   // Create optimized query without limits to reduce complexity
   const createVotersQuery = () => {
     if (!userProfile) return null;
-    
+
     const votersCollection = collection(db, 'voters');
-    
+
     // Apply role-based filtering without limits for better performance
     if (userProfile.role !== 'super_admin') {
       const userScope = userProfile.accessScope;
       if (userScope.village_id) {
-        return query(votersCollection, 
-          where('village_id', '==', userScope.village_id), 
+        return query(votersCollection,
+          where('village_id', '==', userScope.village_id),
           orderBy('Last Updated', 'desc')
         );
       } else if (userScope.union_id) {
-        return query(votersCollection, 
-          where('union_id', '==', userScope.union_id), 
+        return query(votersCollection,
+          where('union_id', '==', userScope.union_id),
           orderBy('Last Updated', 'desc')
         );
       } else if (userScope.upazila_id) {
-        return query(votersCollection, 
-          where('upazila_id', '==', userScope.upazila_id), 
+        return query(votersCollection,
+          where('upazila_id', '==', userScope.upazila_id),
           orderBy('Last Updated', 'desc')
         );
       } else if (userScope.district_id) {
-        return query(votersCollection, 
-          where('district_id', '==', userScope.district_id), 
+        return query(votersCollection,
+          where('district_id', '==', userScope.district_id),
           orderBy('Last Updated', 'desc')
         );
       } else if (userScope.division_id) {
-        return query(votersCollection, 
-          where('division_id', '==', userScope.division_id), 
+        return query(votersCollection,
+          where('division_id', '==', userScope.division_id),
           orderBy('Last Updated', 'desc')
         );
       }
     } else {
       // For super admin, apply selected location filters
       if (selectedLocation.village_id) {
-        return query(votersCollection, 
-          where('village_id', '==', selectedLocation.village_id), 
+        return query(votersCollection,
+          where('village_id', '==', selectedLocation.village_id),
           orderBy('Last Updated', 'desc')
         );
       } else if (selectedLocation.union_id) {
-        return query(votersCollection, 
-          where('union_id', '==', selectedLocation.union_id), 
+        return query(votersCollection,
+          where('union_id', '==', selectedLocation.union_id),
           orderBy('Last Updated', 'desc')
         );
       } else if (selectedLocation.upazila_id) {
-        return query(votersCollection, 
-          where('upazila_id', '==', selectedLocation.upazila_id), 
+        return query(votersCollection,
+          where('upazila_id', '==', selectedLocation.upazila_id),
           orderBy('Last Updated', 'desc')
         );
       } else if (selectedLocation.district_id) {
-        return query(votersCollection, 
-          where('district_id', '==', selectedLocation.district_id), 
+        return query(votersCollection,
+          where('district_id', '==', selectedLocation.district_id),
           orderBy('Last Updated', 'desc')
         );
       } else if (selectedLocation.division_id) {
-        return query(votersCollection, 
-          where('division_id', '==', selectedLocation.division_id), 
+        return query(votersCollection,
+          where('division_id', '==', selectedLocation.division_id),
           orderBy('Last Updated', 'desc')
         );
       }
     }
-    
+
     // Default query
-    return query(votersCollection, 
+    return query(votersCollection,
       orderBy('Last Updated', 'desc')
     );
   };
@@ -145,13 +144,13 @@ const AllVoters = () => {
   React.useEffect(() => {
     const loadLocationNames = async () => {
       if (!allVoters || allVoters.length === 0) return;
-      
-      const names: {[key: string]: string} = {};
-      
+
+      const names: { [key: string]: string } = {};
+
       try {
         // Get unique location combinations to reduce API calls
-        const uniqueVoters = allVoters.filter((voter, index, self) => 
-          index === self.findIndex(v => 
+        const uniqueVoters = allVoters.filter((voter, index, self) =>
+          index === self.findIndex(v =>
             v.division_id === voter.division_id &&
             v.district_id === voter.district_id &&
             v.upazila_id === voter.upazila_id &&
@@ -167,11 +166,11 @@ const AllVoters = () => {
             upazila_id: voter.upazila_id,
             union_id: voter.union_id
           });
-          
+
           const locationKey = `${voter.division_id}_${voter.district_id}_${voter.upazila_id}_${voter.union_id}`;
           names[locationKey] = [hierarchy.union, hierarchy.upazila, hierarchy.district].filter(Boolean).join(', ');
         }
-        
+
         setLocationNames(names);
       } catch (error) {
         console.error('Error loading location names:', error);
@@ -184,7 +183,7 @@ const AllVoters = () => {
   // Filter voters based on search and tab with optimizations
   const filteredVoters = useMemo(() => {
     if (!Array.isArray(allVoters)) return [];
-    
+
     let filtered = allVoters;
 
     // Search filter with early return
@@ -204,7 +203,7 @@ const AllVoters = () => {
     } else if (selectedTab === 'wont-vote') {
       filtered = filtered.filter(voter => voter['Will Vote'] === 'No');
     } else if (selectedTab === 'high-probability') {
-      filtered = filtered.filter(voter => 
+      filtered = filtered.filter(voter =>
         voter['Vote Probability (%)'] && voter['Vote Probability (%)'] >= 70
       );
     } else if (selectedTab === 'with-phone') {
@@ -222,15 +221,15 @@ const AllVoters = () => {
   // Statistics with memoization
   const stats = useMemo(() => {
     if (!Array.isArray(allVoters)) return { total: 0, willVote: 0, wontVote: 0, highProbability: 0, withPhone: 0 };
-    
+
     const total = allVoters.length;
     const willVote = allVoters.filter(v => v['Will Vote'] === 'Yes').length;
     const wontVote = allVoters.filter(v => v['Will Vote'] === 'No').length;
-    const highProbability = allVoters.filter(v => 
+    const highProbability = allVoters.filter(v =>
       v['Vote Probability (%)'] && v['Vote Probability (%)'] >= 70
     ).length;
     const withPhone = allVoters.filter(v => v.Phone).length;
-    
+
     return { total, willVote, wontVote, highProbability, withPhone };
   }, [allVoters]);
 
@@ -467,6 +466,7 @@ const AllVoters = () => {
                                         সমর্থন: {voter['Political Support']}
                                       </p>
                                     )}
+                                    {/* No Priority Level or WhatsApp shown */}
                                   </div>
                                 </div>
                                 <div className="flex flex-col lg:flex-row items-end lg:items-center space-y-2 lg:space-y-0 lg:space-x-2">

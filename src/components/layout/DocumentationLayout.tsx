@@ -3,13 +3,13 @@ import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { 
-  Book, 
-  FileText, 
-  Settings, 
-  Users, 
-  MapPin, 
-  BarChart3, 
+import {
+  Book,
+  FileText,
+  Settings,
+  Users,
+  MapPin,
+  BarChart3,
   MessageSquare,
   Database,
   Home,
@@ -27,13 +27,13 @@ const DocumentationLayout = ({ children }: DocumentationLayoutProps) => {
 
   const navigationItems = [
     { icon: Home, label: 'শুরু করুন', path: '/docs' },
-    { icon: Users, label: 'ভোটার ব্যবস্থাপনা', path: '/docs/voter-management' },
-    { icon: MapPin, label: 'এলাকা ব্যবস্থাপনা', path: '/docs/location-management' },
-    { icon: BarChart3, label: 'বিশ্লেষণ সিস্টেম', path: '/docs/analytics' },
-    { icon: MessageSquare, label: 'SMS ক্যাম্পেইন', path: '/docs/sms-campaign' },
-    { icon: Database, label: 'ডেটা হাব', path: '/docs/data-hub' },
-    { icon: Settings, label: 'সিস্টেম সেটিংস', path: '/docs/system-settings' },
-    { icon: Code, label: 'API রেফারেন্স', path: '/docs/api-reference' }
+    { icon: Users, label: 'ভোটার ব্যবস্থাপনা', path: '/documentation/voter-management' },
+    { icon: MapPin, label: 'এলাকা ব্যবস্থাপনা', path: '/documentation/location-management' },
+    { icon: BarChart3, label: 'বিশ্লেষণ সিস্টেম', path: '/documentation/analytics-system' },
+    { icon: MessageSquare, label: 'SMS ক্যাম্পেইন', path: '/documentation/sms-campaigns' },
+    { icon: Database, label: 'ডেটা হাব', path: '/documentation/data-hub' },
+    { icon: Settings, label: 'সিস্টেম সেটিংস', path: '/documentation/system-settings' },
+    { icon: Code, label: 'API রেফারেন্স', path: '/documentation/api-reference' }
   ];
 
   const NavigationContent = () => (
@@ -46,11 +46,10 @@ const DocumentationLayout = ({ children }: DocumentationLayoutProps) => {
             key={item.path}
             to={item.path}
             onClick={() => setSidebarOpen(false)}
-            className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              isActive
-                ? 'bg-green-100 text-green-800'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-            }`}
+            className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
+              ? 'bg-green-100 text-green-800'
+              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
           >
             <Icon className="w-4 h-4 mr-3" />
             {item.label}
@@ -104,11 +103,7 @@ const DocumentationLayout = ({ children }: DocumentationLayoutProps) => {
                   এলাকা ব্যবস্থাপনা
                 </Button>
               </Link>
-              <Link to="/admin/system-settings">
-                <Button variant="outline" size="sm">
-                  সিস্টেম সেটিংস
-                </Button>
-              </Link>
+
               <Link to="/dashboard">
                 <Button variant="outline">
                   ড্যাশবোর্ডে ফিরুন
@@ -145,16 +140,16 @@ const DocumentationLayout = ({ children }: DocumentationLayoutProps) => {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">সিস্টেম</h3>
               <ul className="space-y-2">
                 <li><Link to="/docs" className="text-gray-600 hover:text-gray-900">ডকুমেন্টেশন</Link></li>
-                <li><Link to="/docs/api-reference" className="text-gray-600 hover:text-gray-900">API রেফারেন্স</Link></li>
+                <li><Link to="/documentation/api-reference" className="text-gray-600 hover:text-gray-900">API রেফারেন্স</Link></li>
                 <li><Link to="/dashboard" className="text-gray-600 hover:text-gray-900">ড্যাশবোর্ড</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">ফিচার</h3>
               <ul className="space-y-2">
-                <li><Link to="/docs/voter-management" className="text-gray-600 hover:text-gray-900">ভোটার ব্যবস্থাপনা</Link></li>
-                <li><Link to="/docs/location-management" className="text-gray-600 hover:text-gray-900">এলাকা ব্যবস্থাপনা</Link></li>
-                <li><Link to="/docs/analytics" className="text-gray-600 hover:text-gray-900">বিশ্লেষণ</Link></li>
+                <li><Link to="/documentation/voter-management" className="text-gray-600 hover:text-gray-900">ভোটার ব্যবস্থাপনা</Link></li>
+                <li><Link to="/documentation/location-management" className="text-gray-600 hover:text-gray-900">এলাকা ব্যবস্থাপনা</Link></li>
+                <li><Link to="/documentation/analytics-system" className="text-gray-600 hover:text-gray-900">বিশ্লেষণ</Link></li>
               </ul>
             </div>
             <div>

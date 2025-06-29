@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSecureAuth } from "@/hooks/useSecureAuth";
@@ -11,10 +10,12 @@ import { useToast } from "@/hooks/use-toast";
 import { usePageTitle } from "@/lib/usePageTitle";
 import { Eye, EyeOff, UserPlus, ArrowLeft } from "lucide-react";
 import { passwordValidation } from "@/lib/security";
+import { db } from "@/lib/firebase";
+import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const SignUp = () => {
   usePageTitle('রেজিস্টার - জামায়াতে ইসলামী');
-  
+
   const [formData, setFormData] = useState({
     displayName: "",
     email: "",
@@ -25,7 +26,7 @@ const SignUp = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
-  
+
   const { secureRegister, loading } = useSecureAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -46,7 +47,7 @@ const SignUp = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.displayName || !formData.email || !formData.password || !formData.confirmPassword) {
       setError("সব ফিল্ড পূরণ করুন");
       return;
@@ -67,8 +68,21 @@ const SignUp = () => {
     try {
       setError("");
       const result = await secureRegister(formData.email, formData.password);
-      
-      if (result.success) {
+
+      if (result.success && result.user) {
+        // Store user in Firestore users collection
+        const user = result.user;
+        await setDoc(doc(collection(db, "users"), user.uid), {
+          uid: user.uid,
+          displayName: formData.displayName,
+          email: user.email,
+          role: null,
+          approved: false,
+          createdAt: serverTimestamp(),
+          lastLogin: null,
+          accessScope: {},
+        });
+
         toast({
           title: "✅ সফল",
           description: "অ্যাকাউন্ট তৈরি হয়েছে। অনুমোদনের অপেক্ষায় রয়েছে।",
@@ -115,7 +129,7 @@ const SignUp = () => {
               জামায়াতে ইসলামী ভোটার ব্যবস্থাপনায় যোগ দিন
             </p>
           </CardHeader>
-          
+
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
@@ -123,7 +137,7 @@ const SignUp = () => {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-              
+
               <div className="space-y-2">
                 <Label htmlFor="displayName">পূর্ণ নাম</Label>
                 <Input
@@ -137,7 +151,7 @@ const SignUp = () => {
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="email">ইমেইল</Label>
                 <Input
@@ -151,7 +165,7 @@ const SignUp = () => {
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="password">পাসওয়ার্ড</Label>
                 <div className="relative">
@@ -179,7 +193,7 @@ const SignUp = () => {
                     )}
                   </Button>
                 </div>
-                
+
                 {/* Password requirements */}
                 {passwordErrors.length > 0 && (
                   <div className="text-xs text-red-600 space-y-1">
@@ -189,7 +203,7 @@ const SignUp = () => {
                   </div>
                 )}
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">পাসওয়ার্ড নিশ্চিত করুন</Label>
                 <div className="relative">
@@ -218,7 +232,7 @@ const SignUp = () => {
                   </Button>
                 </div>
               </div>
-              
+
               <Button
                 type="submit"
                 className="w-full bg-green-600 hover:bg-green-700"
@@ -237,7 +251,7 @@ const SignUp = () => {
                 )}
               </Button>
             </form>
-            
+
             <div className="mt-6 text-center">
               <div className="text-sm text-gray-600">
                 ইতিমধ্যে অ্যাকাউন্ট আছে?{' '}

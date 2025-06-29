@@ -34,7 +34,6 @@ export interface VoterData {
   Education?: string;
   Religion?: string;
   Phone?: string;
-  WhatsApp?: 'Yes' | 'No';
   NID?: string;
   'Is Voter'?: 'Yes' | 'No';
   'Will Vote'?: 'Yes' | 'No';
@@ -97,11 +96,10 @@ const AddVoters = () => {
     Education: '',
     Religion: '',
     Phone: '',
-    WhatsApp: '' as 'Yes' | 'No' | '',
     NID: '',
     'Is Voter': '' as 'Yes' | 'No' | '',
     'Will Vote': '' as 'Yes' | 'No' | '',
-    'Voted Before': '' as 'Yes' | 'No' | '',
+    'Voted Before': '' as 'Yes' | 'No' | '', // <-- Remove the ?
     'Vote Probability (%)': '',
     'Political Support': '',
     'Priority Level': 'Medium' as 'Low' | 'Medium' | 'High',
@@ -114,10 +112,10 @@ const AddVoters = () => {
   const [selectedColumns, setSelectedColumns] = useState<string[]>(() => {
     const saved = localStorage.getItem('voterFormColumns');
     return saved
-      ? JSON.parse(saved)
+      ? JSON.parse(saved).filter((col: string) => col !== 'WhatsApp' && col !== 'Priority Level')
       : Object.keys(formData).filter(
-          (key) => key !== 'Voter Name' // Ensure 'Voter Name' is always included
-        );
+        (key) => key !== 'Voter Name' && key !== 'WhatsApp' && key !== 'Priority Level'
+      );
   });
 
   // Load location data
@@ -161,14 +159,12 @@ const AddVoters = () => {
     { key: 'Education', label: 'শিক্ষা' },
     { key: 'Religion', label: 'ধর্ম' },
     { key: 'Phone', label: 'ফোন' },
-    { key: 'WhatsApp', label: 'হোয়াটসঅ্যাপ' },
     { key: 'NID', label: 'NID' },
     { key: 'Is Voter', label: 'ভোটার কিনা' },
     { key: 'Will Vote', label: 'ভোট দেবেন' },
     { key: 'Voted Before', label: 'আগে ভোট দিয়েছেন' },
     { key: 'Vote Probability (%)', label: 'ভোট দেওয়ার সম্ভাবনা (%)' },
     { key: 'Political Support', label: 'রাজনৈতিক সমর্থন' },
-    { key: 'Priority Level', label: 'অগ্রাধিকার স্তর' },
     { key: 'Has Disability', label: 'প্রতিবন্ধী কিনা' },
     { key: 'Is Migrated', label: 'প্রবাসী কিনা' },
     { key: 'Remarks', label: 'মন্তব্য' },
@@ -177,7 +173,7 @@ const AddVoters = () => {
   // Location change handlers
   const handleLocationChange = (field: string, value: string) => {
     const updated = { ...selectedLocation };
-    
+
     // Clear dependent fields when parent changes
     if (field === 'division_id') {
       updated.district_id = '';
@@ -194,7 +190,7 @@ const AddVoters = () => {
     } else if (field === 'union_id') {
       updated.village_id = '';
     }
-    
+
     updated[field as keyof typeof updated] = value;
     setSelectedLocation(updated);
   };
@@ -322,7 +318,6 @@ const AddVoters = () => {
       Education: '',
       Religion: '',
       Phone: '',
-      WhatsApp: '',
       NID: '',
       'Is Voter': '',
       'Will Vote': '',
@@ -370,14 +365,12 @@ const AddVoters = () => {
         Education: formData.Education || undefined,
         Religion: formData.Religion || undefined,
         Phone: formData.Phone || undefined,
-        WhatsApp: formData.WhatsApp || undefined,
         NID: formData.NID || undefined,
         'Is Voter': formData['Is Voter'] || undefined,
         'Will Vote': formData['Will Vote'] || undefined,
         'Voted Before': formData['Voted Before'] || undefined,
         'Vote Probability (%)': formData['Vote Probability (%)'] ? parseInt(formData['Vote Probability (%)']) : undefined,
         'Political Support': formData['Political Support'] || undefined,
-        'Priority Level': formData['Priority Level'],
         'Has Disability': formData['Has Disability'] || undefined,
         'Is Migrated': formData['Is Migrated'] || undefined,
         Remarks: formData.Remarks || undefined,
@@ -545,8 +538,8 @@ const AddVoters = () => {
 
                     <div>
                       <Label>জেলা *</Label>
-                      <Select 
-                        value={selectedLocation.district_id} 
+                      <Select
+                        value={selectedLocation.district_id}
                         onValueChange={(value) => handleLocationChange('district_id', value)}
                         disabled={!selectedLocation.division_id}
                       >
@@ -565,8 +558,8 @@ const AddVoters = () => {
 
                     <div>
                       <Label>উপজেলা *</Label>
-                      <Select 
-                        value={selectedLocation.upazila_id} 
+                      <Select
+                        value={selectedLocation.upazila_id}
                         onValueChange={(value) => handleLocationChange('upazila_id', value)}
                         disabled={!selectedLocation.district_id}
                       >
@@ -585,8 +578,8 @@ const AddVoters = () => {
 
                     <div>
                       <Label>ইউনিয়ন</Label>
-                      <Select 
-                        value={selectedLocation.union_id} 
+                      <Select
+                        value={selectedLocation.union_id}
                         onValueChange={(value) => handleLocationChange('union_id', value)}
                         disabled={!selectedLocation.upazila_id}
                       >
@@ -605,8 +598,8 @@ const AddVoters = () => {
 
                     <div>
                       <Label>গ্রাম</Label>
-                      <Select 
-                        value={selectedLocation.village_id} 
+                      <Select
+                        value={selectedLocation.village_id}
                         onValueChange={(value) => handleLocationChange('village_id', value)}
                         disabled={!selectedLocation.union_id}
                       >
@@ -785,7 +778,7 @@ const AddVoters = () => {
             </Card>
 
             {/* Contact Information */}
-            {(selectedColumns.includes('Phone') || selectedColumns.includes('WhatsApp') || selectedColumns.includes('NID')) && (
+            {(selectedColumns.includes('Phone') || selectedColumns.includes('NID')) && (
               <Card className="shadow-lg">
                 <CardHeader className="bg-blue-50">
                   <CardTitle className="flex items-center gap-2 text-blue-800 text-base sm:text-lg">
@@ -808,21 +801,6 @@ const AddVoters = () => {
                       </div>
                     )}
 
-                    {selectedColumns.includes('WhatsApp') && (
-                      <div>
-                        <Label htmlFor="whatsapp" className="text-sm font-medium">হোয়াটসঅ্যাপ</Label>
-                        <Select value={formData.WhatsApp} onValueChange={(value) => handleInputChange('WhatsApp', value)}>
-                          <SelectTrigger className="mt-1">
-                            <SelectValue placeholder="হোয়াটসঅ্যাপ আছে?" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
-                            <SelectItem value="No">না</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-
                     {selectedColumns.includes('NID') && (
                       <div>
                         <Label htmlFor="nid" className="text-sm font-medium">NID</Label>
@@ -841,7 +819,7 @@ const AddVoters = () => {
             )}
 
             {/* Political Information */}
-            {(selectedColumns.includes('Is Voter') || selectedColumns.includes('Will Vote') || selectedColumns.includes('Voted Before') || selectedColumns.includes('Vote Probability (%)') || selectedColumns.includes('Political Support') || selectedColumns.includes('Priority Level') || selectedColumns.includes('Has Disability') || selectedColumns.includes('Is Migrated')) && (
+            {(selectedColumns.includes('Is Voter') || selectedColumns.includes('Will Vote') || selectedColumns.includes('Voted Before') || selectedColumns.includes('Vote Probability (%)') || selectedColumns.includes('Political Support') || selectedColumns.includes('Has Disability') || selectedColumns.includes('Is Migrated')) && (
               <Card className="shadow-lg">
                 <CardHeader className="bg-orange-50">
                   <CardTitle className="flex items-center gap-2 text-orange-800 text-base sm:text-lg">
@@ -922,22 +900,6 @@ const AddVoters = () => {
                           placeholder="রাজনৈতিক দল বা প্রার্থী"
                           className="mt-1"
                         />
-                      </div>
-                    )}
-
-                    {selectedColumns.includes('Priority Level') && (
-                      <div>
-                        <Label htmlFor="priorityLevel" className="text-sm font-medium">অগ্রাধিকার স্তর</Label>
-                        <Select value={formData['Priority Level']} onValueChange={(value) => handleInputChange('Priority Level', value)}>
-                          <SelectTrigger className="mt-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="High">উচ্চ</SelectItem>
-                            <SelectItem value="Medium">মাঝারি</SelectItem>
-                            <SelectItem value="Low">নিম্ন</SelectItem>
-                          </SelectContent>
-                        </Select>
                       </div>
                     )}
 
