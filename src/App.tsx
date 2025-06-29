@@ -32,7 +32,7 @@ import LocationManagement from "./adminDashboard/LocationManagement";
 import SystemSettings from "./adminDashboard/SystemSettings";
 import Documentation from "./pages/Documentation";
 import VoterManagement from "./pages/docs/VoterManagement";
-import LocationDocumentation from "./components/documentation/LocationDocumentation";
+import LocationDocumentation from "./pages/docs/LocationManagement";
 import AnalyticsSystem from "./pages/docs/AnalyticsSystem";
 import SMSCampaignDocs from "./pages/docs/SMSCampaign";
 import DataHubDocs from "./pages/docs/DataHub";
@@ -68,13 +68,13 @@ const App = () => {
 
                   {/* Documentation Routes */}
                   <Route path="/docs" element={<Documentation />} />
-                  <Route path="/docs/voter-management" element={<VoterManagement />} />
-                  <Route path="/docs/location-management" element={<LocationDocumentation />} />
-                  <Route path="/docs/analytics" element={<AnalyticsSystem />} />
-                  <Route path="/docs/sms-campaign" element={<SMSCampaignDocs />} />
-                  <Route path="/docs/data-hub" element={<DataHubDocs />} />
-                  <Route path="/docs/system-settings" element={<SystemSettingsDocs />} />
-                  <Route path="/docs/api-reference" element={<APIReference />} />
+                  <Route path="/documentation/voter-management" element={<VoterManagement />} />
+                  <Route path="/documentation/location-management" element={<LocationDocumentation />} />
+                  <Route path="/documentation/analytics-system" element={<AnalyticsSystem />} />
+                  <Route path="/documentation/sms-campaigns" element={<SMSCampaignDocs />} />
+                  <Route path="/documentation/data-hub" element={<DataHubDocs />} />
+                  <Route path="/documentation/system-settings" element={<SystemSettingsDocs />} />
+                  <Route path="/documentation/api-reference" element={<APIReference />} />
 
                   {/* Main Dashboard Route - Role-based routing */}
                   <Route path="/dashboard" element={
@@ -90,13 +90,13 @@ const App = () => {
                     </ProtectedRoute>
                   } />
 
-                  <Route path="/admin/dashboard" element={
+                  <Route path="/admin/home" element={
                     <ProtectedRoute>
                       <AdminDashboard />
                     </ProtectedRoute>
                   } />
 
-                  <Route path="/admin/voters" element={
+                  <Route path="/admin/all-voters" element={
                     <ProtectedRoute>
                       <AllVoters />
                     </ProtectedRoute>
@@ -108,37 +108,37 @@ const App = () => {
                     </ProtectedRoute>
                   } />
 
-                  <Route path="/admin/add-voter" element={
+                  <Route path="/admin/add-new-voter" element={
                     <ProtectedRoute>
                       <AddVoters />
                     </ProtectedRoute>
                   } />
 
-                  <Route path="/admin/google-form" element={
+                  <Route path="/admin/google-forms" element={
                     <ProtectedRoute>
                       <GoogleForm />
                     </ProtectedRoute>
                   } />
 
-                  <Route path="/admin/analytics" element={
+                  <Route path="/admin/analytics-reports" element={
                     <ProtectedRoute>
                       <Analytics />
                     </ProtectedRoute>
                   } />
 
-                  <Route path="/admin/sms-campaign" element={
+                  <Route path="/admin/sms-campaigns" element={
                     <ProtectedRoute requiredRole="division_admin">
                       <SMSCampaign />
                     </ProtectedRoute>
                   } />
 
-                  <Route path="/admin/data-hub" element={
+                  <Route path="/admin/data-management" element={
                     <ProtectedRoute requiredRole="super_admin">
                       <DataHub />
                     </ProtectedRoute>
                   } />
 
-                  <Route path="/admin/verify-users" element={
+                  <Route path="/admin/user-verification" element={
                     <ProtectedRoute requiredRole="super_admin">
                       <UserVerify />
                     </ProtectedRoute>
@@ -150,7 +150,7 @@ const App = () => {
                     </ProtectedRoute>
                   } />
 
-                  <Route path="/admin/system-settings" element={
+                  <Route path="/admin/system-configuration" element={
                     <ProtectedRoute requiredRole="super_admin">
                       <SystemSettings />
                     </ProtectedRoute>
