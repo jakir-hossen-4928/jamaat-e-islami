@@ -1,3 +1,5 @@
+
+import Hero from "@/components/Hero";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -65,7 +67,7 @@ const Index = () => {
       rating: 5
     },
     {
-      name: "আব্দুল করিম",
+      name: "আব্দুল করিম",  
       role: "উপজেলা সংগঠক",
       content: "SMS ক্যাম্পেইন ফিচার খুবই উপকারী। একসাথে অনেক মানুষের কাছে পৌঁছাতে পারি।",
       rating: 5
@@ -80,7 +82,7 @@ const Index = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
               <img
-                src="https://i.ibb.co/6Rt79ScS/bangladesh-jamaat-e-islami-seeklogo.png"
+                src="/bangladesh-jamaat-e-islami-seeklogo.svg"
                 alt="জামায়াতে ইসলামী"
                 className="w-10 h-10"
               />
@@ -144,75 +146,8 @@ const Index = () => {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="py-12 lg:py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="flex justify-center mb-8">
-            <img
-              src="https://i.ibb.co/6Rt79ScS/bangladesh-jamaat-e-islami-seeklogo.png"
-              alt="জামায়াতে ইসলামী"
-              className="w-24 h-24 lg:w-32 lg:h-32"
-            />
-          </div>
-          
-          <h1 className="text-3xl lg:text-5xl font-bold text-gray-900 mb-6">
-            বাংলাদেশ জামায়াতে ইসলামী
-          </h1>
-          <h2 className="text-xl lg:text-3xl font-semibold text-green-600 mb-8">
-            ভোটার ব্যবস্থাপনা সিস্টেম
-          </h2>
-          
-          <p className="text-lg lg:text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
-            আধুনিক প্রযুক্তির মাধ্যমে ভোটার তথ্য সংগ্রহ, সংরক্ষণ এবং বিশ্লেষণের জন্য একটি সম্পূর্ণ সমাধান
-          </p>
-
-          {!currentUser && (
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-              <Button 
-                size="lg" 
-                onClick={() => navigate('/register')}
-                className="bg-green-600 hover:bg-green-700 text-lg px-8 py-3"
-              >
-                এখনই শুরু করুন
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline" 
-                onClick={() => navigate('/login')}
-                className="text-lg px-8 py-3 border-green-600 text-green-600 hover:bg-green-50"
-              >
-                লগইন করুন
-              </Button>
-            </div>
-          )}
-
-          {currentUser && (
-            <div className="mb-16">
-              <Badge variant="secondary" className="mb-4 text-lg px-4 py-2">
-                স্বাগতম, {userProfile?.displayName || currentUser.email}
-              </Badge>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button 
-                  size="lg" 
-                  onClick={() => navigate('/dashboard')}
-                  className="bg-green-600 hover:bg-green-700 text-lg px-8 py-3"
-                >
-                  ড্যাশবোর্ডে যান
-                </Button>
-                <Button 
-                  size="lg" 
-                  variant="outline" 
-                  onClick={() => navigate('/docs')}
-                  className="text-lg px-8 py-3 border-green-600 text-green-600 hover:bg-green-50"
-                >
-                  <BookOpen className="w-5 h-5 mr-2" />
-                  ডকুমেন্টেশন
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
+      {/* Hero Section with original design */}
+      <Hero />
 
       {/* Features Section */}
       <section className="py-16 bg-white">
@@ -363,9 +298,9 @@ const Index = () => {
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center space-x-3 mb-4">
                 <img
-                  src="https://i.ibb.co/6Rt79ScS/bangladesh-jamaat-e-islami-seeklogo.png"
-                  alt="জামায়াতে ইসলামী"
-                  className="w-10 h-10"
+                  src="/bangladesh-jamaat-e-islami-seeklogo.svg"
+                  alt="জামায়াতে ইসলামী"  
+                  className="w-10 h-10 filter brightness-0 invert"
                 />
                 <div>
                   <h3 className="text-xl font-bold">বাংলাদেশ জামায়াতে ইসলামী</h3>
@@ -425,7 +360,7 @@ const Index = () => {
                 <li>
                   <Link to="/docs/system-settings" className="text-gray-400 hover:text-white transition-colors flex items-center space-x-2">
                     <Settings className="w-4 h-4" />
-                    <span>সিস্টেম সেটিংস</span>
+                    <span>সিস্টেম সেটিংস</span>  
                   </Link>
                 </li>
                 <li>
