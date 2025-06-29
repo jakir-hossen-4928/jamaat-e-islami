@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, writeBatch, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -9,254 +9,143 @@ import { Label } from '@/components/ui/label';
 import { DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import Papa from 'papaparse';
-import { Download, Upload, X, FileSpreadsheet, AlertCircle, CheckCircle } from 'lucide-react';
+import { Download, Upload, X, FileSpreadsheet, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { VoterData } from '@/lib/types';
-
-interface ValidationError {
-  row: number;
-  field: string;
-  message: string;
-}
+import { BulkUploadValidator, ValidationResult } from '@/components/voter/BulkUploadValidator';
+import BulkUploadProgress from '@/components/voter/BulkUploadProgress';
 
 const BulkVoterUpload = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // File and data states
   const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
   const [previewData, setPreviewData] = useState<any[]>([]);
-  const [previewVisible, setPreviewVisible] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [totalRows, setTotalRows] = useState(0);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  
+  // UI states
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Upload progress states
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentBatch, setCurrentBatch] = useState(0);
+  const [totalBatches, setTotalBatches] = useState(0);
+  const [uploadedCount, setUploadedCount] = useState(0);
+  const [uploadErrors, setUploadErrors] = useState<string[]>([]);
 
-  // All possible CSV columns (flexible - not all required)
-  const possibleColumns = [
-    'Voter Name', // This is the only required field
-    'House Name',
-    'FatherOrHusband',
-    'Age',
-    'Gender',
-    'Marital Status',
-    'Student',
-    'Occupation',
-    'Education',
-    'Religion',
-    'Phone',
-    'WhatsApp',
-    'NID',
-    'Is Voter',
-    'Will Vote',
-    'Voted Before',
-    'Vote Probability (%)',
-    'Political Support',
-    'Priority Level',
-    'Has Disability',
-    'Is Migrated',
-    'Remarks'
+  // Template columns
+  const templateColumns = [
+    'Voter Name', 'Age', 'Gender', 'Phone', 'NID', 'Village Name',
+    'Will Vote', 'Vote Probability (%)', 'Occupation', 'Education',
+    'Political Support', 'Remarks'
   ];
 
-  // Enhanced validation rules
-  const validationRules: { [key: string]: (value: any, rowIndex: number) => ValidationError | null } = {
-    'Voter Name': (value, rowIndex) => {
-      if (!value || value.toString().trim() === '') {
-        return { row: rowIndex + 2, field: 'Voter Name', message: 'Voter Name is required and cannot be empty' };
-      }
-      if (value.toString().length < 2) {
-        return { row: rowIndex + 2, field: 'Voter Name', message: 'Voter Name must be at least 2 characters long' };
-      }
-      return null;
-    },
-    Age: (value, rowIndex) => {
-      if (value && value !== '') {
-        const age = parseInt(value.toString());
-        if (isNaN(age) || age < 0 || age > 120) {
-          return { row: rowIndex + 2, field: 'Age', message: 'Age must be a valid number between 0 and 120' };
-        }
-      }
-      return null;
-    },
-    Gender: (value, rowIndex) => {
-      if (value && !['Male', 'Female', 'Other', 'male', 'female', 'other'].includes(value.toString())) {
-        return { row: rowIndex + 2, field: 'Gender', message: 'Gender must be Male, Female, or Other' };
-      }
-      return null;
-    },
-    'Marital Status': (value, rowIndex) => {
-      if (value && !['Married', 'Unmarried', 'Widowed', 'Divorced', 'married', 'unmarried', 'widowed', 'divorced'].includes(value.toString())) {
-        return { row: rowIndex + 2, field: 'Marital Status', message: 'Marital Status must be Married, Unmarried, Widowed, or Divorced' };
-      }
-      return null;
-    },
-    Phone: (value, rowIndex) => {
-      if (value && value !== '') {
-        const phone = value.toString().replace(/\D/g, '');
-        if (phone.length < 10 || phone.length > 15) {
-          return { row: rowIndex + 2, field: 'Phone', message: 'Phone number must be between 10-15 digits' };
-        }
-      }
-      return null;
-    },
-    'Vote Probability (%)': (value, rowIndex) => {
-      if (value && value !== '') {
-        const prob = parseInt(value.toString());
-        if (isNaN(prob) || prob < 0 || prob > 100) {
-          return { row: rowIndex + 2, field: 'Vote Probability (%)', message: 'Vote Probability must be a number between 0 and 100' };
-        }
-      }
-      return null;
-    },
-    'Priority Level': (value, rowIndex) => {
-      if (value && !['Low', 'Medium', 'High', 'low', 'medium', 'high'].includes(value.toString())) {
-        return { row: rowIndex + 2, field: 'Priority Level', message: 'Priority Level must be Low, Medium, or High' };
-      }
-      return null;
-    },
-  };
-
-  // Generate template with all possible columns
-  const downloadTemplate = () => {
-    const csvContent = Papa.unparse([possibleColumns], { header: true });
+  const downloadTemplate = useCallback(() => {
+    const csvContent = Papa.unparse([templateColumns], { header: true });
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', 'voter_template.csv');
+    link.setAttribute('download', 'voter_upload_template.csv');
     link.click();
     URL.revokeObjectURL(url);
-  };
+  }, []);
 
-  // Normalize column names (handle case variations)
-  const normalizeColumnName = (columnName: string): string => {
-    const normalized = columnName.trim();
-    // Handle common variations
-    const mappings: { [key: string]: string } = {
-      'voter name': 'Voter Name',
-      'name': 'Voter Name',
-      'full name': 'Voter Name',
-      'house name': 'House Name',
-      'father or husband': 'FatherOrHusband',
-      'father/husband': 'FatherOrHusband',
-      'age': 'Age',
-      'gender': 'Gender',
-      'sex': 'Gender',
-      'marital status': 'Marital Status',
-      'student': 'Student',
-      'occupation': 'Occupation',
-      'job': 'Occupation',
-      'education': 'Education',
-      'religion': 'Religion',
-      'phone': 'Phone',
-      'mobile': 'Phone',
-      'phone number': 'Phone',
-      'whatsapp': 'WhatsApp',
-      'nid': 'NID',
-      'national id': 'NID',
-      'is voter': 'Is Voter',
-      'will vote': 'Will Vote',
-      'voted before': 'Voted Before',
-      'vote probability': 'Vote Probability (%)',
-      'vote probability (%)': 'Vote Probability (%)',
-      'political support': 'Political Support',
-      'priority level': 'Priority Level',
-      'priority': 'Priority Level',
-      'has disability': 'Has Disability',
-      'disability': 'Has Disability',
-      'is migrated': 'Is Migrated',
-      'migrated': 'Is Migrated',
-      'remarks': 'Remarks',
-      'comment': 'Remarks',
-      'notes': 'Remarks'
-    };
-    
-    return mappings[normalized.toLowerCase()] || normalized;
-  };
+  const resetState = useCallback(() => {
+    setCsvFile(null);
+    setPreviewData([]);
+    setPreviewVisible(false);
+    setValidationResult(null);
+    setCsvHeaders([]);
+    setTotalRows(0);
+    setUploadProgress(0);
+    setCurrentBatch(0);
+    setTotalBatches(0);
+    setUploadedCount(0);
+    setUploadErrors([]);
+  }, []);
 
-  // Validate all data
-  const validateData = (data: any[]): ValidationError[] => {
-    const errors: ValidationError[] = [];
-    
-    data.forEach((row, index) => {
-      Object.keys(row).forEach((key) => {
-        const normalizedKey = normalizeColumnName(key);
-        const rule = validationRules[normalizedKey];
-        if (rule) {
-          const error = rule(row[key], index);
-          if (error) {
-            errors.push(error);
-          }
-        }
-      });
-    });
-    
-    return errors;
-  };
-
-  // Parse and preview CSV
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setIsProcessing(true);
     setCsvFile(file);
-    setValidationErrors([]);
+    setValidationResult(null);
     
     Papa.parse(file, {
       header: true,
-      preview: 10, // Show first 10 rows for preview
+      preview: 10,
+      skipEmptyLines: true,
       complete: (results) => {
-        console.log('CSV Parse Results:', results);
-        
-        const headers = results.meta.fields || [];
-        setCsvHeaders(headers);
-        
-        if (headers.length === 0) {
-          toast({
-            title: 'Invalid CSV',
-            description: 'CSV file appears to be empty or has no headers',
-            variant: 'destructive',
-          });
-          setPreviewData([]);
-          setPreviewVisible(false);
-          return;
-        }
+        try {
+          const headers = results.meta.fields || [];
+          setCsvHeaders(headers);
+          
+          if (headers.length === 0) {
+            toast({
+              title: 'Invalid CSV File',
+              description: 'CSV file appears to be empty or has no headers',
+              variant: 'destructive',
+            });
+            setIsProcessing(false);
+            return;
+          }
 
-        // Check if at least 'Voter Name' exists (case insensitive)
-        const hasVoterName = headers.some(header => 
-          normalizeColumnName(header.toLowerCase()) === 'Voter Name'
-        );
-
-        if (!hasVoterName) {
-          toast({
-            title: 'Missing Required Column',
-            description: 'CSV must contain a "Voter Name" column (case insensitive). Other columns are optional.',
-            variant: 'destructive',
-          });
-          setPreviewData([]);
-          setPreviewVisible(false);
-          return;
-        }
-
-        const data = results.data as any[];
-        const validData = data.filter((row) => {
-          // Find voter name column (case insensitive)
-          const voterNameKey = Object.keys(row).find(key => 
-            normalizeColumnName(key.toLowerCase()) === 'Voter Name'
+          // Check for required columns
+          const hasVoterName = headers.some(header => 
+            BulkUploadValidator.normalizeColumnName(header.toLowerCase()) === 'Voter Name'
           );
-          return voterNameKey && row[voterNameKey] && row[voterNameKey].toString().trim() !== '';
-        });
 
-        setTotalRows(validData.length);
-        const errors = validateData(validData.slice(0, 10));
-        setValidationErrors(errors);
-        setPreviewData(validData.slice(0, 10));
-        setPreviewVisible(true);
+          if (!hasVoterName) {
+            toast({
+              title: 'Missing Required Column',
+              description: 'CSV must contain a "Voter Name" column. Other columns are optional.',
+              variant: 'destructive',
+            });
+            setIsProcessing(false);
+            return;
+          }
 
-        toast({
-          title: 'CSV Loaded Successfully',
-          description: `Found ${validData.length} valid rows with voter names. ${errors.length} validation issues found in preview.`,
-        });
+          const data = results.data as any[];
+          const filteredData = data.filter(row => {
+            const voterNameKey = Object.keys(row).find(key => 
+              BulkUploadValidator.normalizeColumnName(key.toLowerCase()) === 'Voter Name'
+            );
+            return voterNameKey && row[voterNameKey] && row[voterNameKey].toString().trim() !== '';
+          });
+
+          setTotalRows(filteredData.length);
+          
+          // Validate preview data
+          const validation = BulkUploadValidator.validateData(filteredData.slice(0, 10));
+          setValidationResult(validation);
+          
+          setPreviewData(filteredData.slice(0, 10));
+          setPreviewVisible(true);
+
+          toast({
+            title: 'CSV File Processed',
+            description: `Found ${filteredData.length} valid rows. ${validation.errors.length} errors and ${validation.warnings.length} warnings detected.`,
+          });
+
+        } catch (error) {
+          console.error('CSV processing error:', error);
+          toast({
+            title: 'Processing Error',
+            description: 'Failed to process CSV file. Please check the file format.',
+            variant: 'destructive',
+          });
+        } finally {
+          setIsProcessing(false);
+        }
       },
       error: (error) => {
         console.error('CSV Parse Error:', error);
@@ -265,11 +154,10 @@ const BulkVoterUpload = () => {
           description: 'Failed to read CSV file. Please check file format.',
           variant: 'destructive',
         });
-        setPreviewData([]);
-        setPreviewVisible(false);
+        setIsProcessing(false);
       },
     });
-  };
+  }, [toast]);
 
   const uploadMutation = useMutation({
     mutationFn: async () => {
@@ -278,135 +166,121 @@ const BulkVoterUpload = () => {
       return new Promise<void>((resolve, reject) => {
         Papa.parse(csvFile, {
           header: true,
+          skipEmptyLines: true,
           complete: async (results) => {
             try {
-              console.log('Starting full CSV processing...');
-              
-              const headers = results.meta.fields || [];
+              setUploadProgress(0);
+              setUploadedCount(0);
+              setUploadErrors([]);
+
               const data = results.data as any[];
-              
-              // Filter valid data
-              const validData = data.filter((row) => {
+              const filteredData = data.filter(row => {
                 const voterNameKey = Object.keys(row).find(key => 
-                  normalizeColumnName(key.toLowerCase()) === 'Voter Name'
+                  BulkUploadValidator.normalizeColumnName(key.toLowerCase()) === 'Voter Name'
                 );
                 return voterNameKey && row[voterNameKey] && row[voterNameKey].toString().trim() !== '';
               });
 
-              console.log(`Processing ${validData.length} valid rows...`);
-
-              // Validate all data
-              const allErrors = validateData(validData);
-              
-              if (allErrors.length > 0) {
-                console.log('Validation errors found:', allErrors);
-                reject(new Error(`Found ${allErrors.length} validation errors. Please fix data and try again.`));
-                return;
+              // Final validation
+              const finalValidation = BulkUploadValidator.validateData(filteredData);
+              if (!finalValidation.isValid) {
+                throw new Error(`Validation failed: ${finalValidation.errors.length} errors found`);
               }
 
-              // Process data in batches (Firestore limit is 500 operations per batch)
-              const batchSize = 450;
+              // Process in batches
+              const batchSize = 400; // Reduced for safety
               const batches = [];
+              const errors: string[] = [];
               
-              for (let i = 0; i < validData.length; i += batchSize) {
-                const batch = writeBatch(db);
-                const batchData = validData.slice(i, i + batchSize);
+              for (let i = 0; i < filteredData.length; i += batchSize) {
+                batches.push(filteredData.slice(i, i + batchSize));
+              }
+
+              setTotalBatches(batches.length);
+
+              // Process each batch
+              for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+                setCurrentBatch(batchIndex + 1);
                 
-                batchData.forEach((voter) => {
-                  const docRef = doc(collection(db, 'voters'));
+                try {
+                  const batch = writeBatch(db);
+                  const batchData = batches[batchIndex];
                   
-                  // Normalize and map the data
-                  const normalizedData: any = {};
-                  Object.keys(voter).forEach(key => {
-                    const normalizedKey = normalizeColumnName(key);
-                    let value = voter[key];
-                    
-                    // Clean and format values
-                    if (value !== null && value !== undefined && value !== '') {
-                      // Convert string values to proper case where needed
-                      if (['Gender', 'Marital Status', 'Priority Level'].includes(normalizedKey)) {
-                        value = value.toString().charAt(0).toUpperCase() + value.toString().slice(1).toLowerCase();
-                      }
+                  batchData.forEach((voter, index) => {
+                    try {
+                      const docRef = doc(collection(db, 'voters'));
+                      const transformedData = BulkUploadValidator.transformRowData(voter);
                       
-                      // Convert Yes/No values
-                      if (['Student', 'WhatsApp', 'Is Voter', 'Will Vote', 'Voted Before', 'Has Disability', 'Is Migrated'].includes(normalizedKey)) {
-                        value = ['yes', 'true', '1'].includes(value.toString().toLowerCase()) ? 'Yes' : 
-                               ['no', 'false', '0'].includes(value.toString().toLowerCase()) ? 'No' : value;
-                      }
-                      
-                      // Convert numbers
-                      if (['Age', 'Vote Probability (%)'].includes(normalizedKey)) {
-                        const num = parseInt(value.toString());
-                        value = isNaN(num) ? undefined : num;
-                      }
-                      
-                      if (value !== undefined) {
-                        normalizedData[normalizedKey] = value;
-                      }
+                      const voterData: VoterData = {
+                        ...transformedData,
+                        ID: docRef.id,
+                        'Collection Date': new Date().toISOString(),
+                        'Last Updated': new Date().toISOString(),
+                        Collector: 'Bulk Upload System',
+                      } as VoterData;
+
+                      batch.set(docRef, voterData);
+                    } catch (error) {
+                      errors.push(`Row ${batchIndex * batchSize + index + 2}: ${error.message}`);
                     }
                   });
-
-                  // Add required fields
-                  const voterData: VoterData = {
-                    ...normalizedData,
-                    ID: docRef.id, // Use Firestore document ID
-                    'Collection Date': new Date().toISOString(),
-                    'Last Updated': new Date().toISOString(),
-                    Collector: 'Bulk Upload',
-                  };
-
-                  console.log('Adding voter data:', voterData);
-                  batch.set(docRef, voterData);
-                });
+                  
+                  await batch.commit();
+                  setUploadedCount(prev => prev + batchData.length);
+                  
+                } catch (error) {
+                  console.error(`Batch ${batchIndex + 1} failed:`, error);
+                  errors.push(`Batch ${batchIndex + 1} failed: ${error.message}`);
+                }
                 
-                batches.push(batch);
+                // Update progress
+                const progress = ((batchIndex + 1) / batches.length) * 100;
+                setUploadProgress(progress);
+                
+                // Small delay to prevent overwhelming Firestore
+                if (batchIndex < batches.length - 1) {
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                }
               }
 
-              // Execute all batches
-              console.log(`Executing ${batches.length} batches...`);
-              await Promise.all(batches.map(batch => batch.commit()));
+              setUploadErrors(errors);
               
-              console.log('Upload completed successfully');
+              if (errors.length > 0) {
+                console.warn('Upload completed with errors:', errors);
+              }
+              
               resolve();
             } catch (error) {
-              console.error('Upload error:', error);
+              console.error('Upload process failed:', error);
               reject(error);
             }
           },
           error: (error) => {
-            console.error('CSV parsing error:', error);
-            reject(new Error('Failed to parse CSV file'));
+            console.error('CSV parsing failed:', error);
+            reject(new Error('Failed to parse CSV file for upload'));
           },
         });
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voters'] });
+      const successCount = uploadedCount - uploadErrors.length;
       toast({
-        title: 'Upload Successful!',
-        description: `Successfully uploaded ${totalRows} voters to the database.`,
+        title: 'Upload Completed!',
+        description: `Successfully uploaded ${successCount} voters. ${uploadErrors.length > 0 ? `${uploadErrors.length} errors occurred.` : ''}`,
       });
-      setCsvFile(null);
-      setPreviewData([]);
-      setPreviewVisible(false);
-      setValidationErrors([]);
-      setCsvHeaders([]);
-      setTotalRows(0);
     },
     onError: (error: any) => {
-      console.error('Upload mutation error:', error);
+      console.error('Upload failed:', error);
       toast({
         title: 'Upload Failed',
         description: error.message || 'Failed to upload voter data. Please try again.',
         variant: 'destructive',
       });
     },
-    onSettled: () => {
-      setIsUploading(false);
-    },
   });
 
-  const handleUpload = () => {
+  const handleUpload = useCallback(() => {
     if (!csvFile) {
       toast({
         title: 'No File Selected',
@@ -416,61 +290,69 @@ const BulkVoterUpload = () => {
       return;
     }
 
-    if (validationErrors.length > 0) {
+    if (validationResult && validationResult.errors.length > 0) {
       toast({
         title: 'Validation Errors Found',
-        description: `Please fix ${validationErrors.length} validation errors before uploading`,
+        description: `Please fix ${validationResult.errors.length} validation errors before uploading`,
         variant: 'destructive',
       });
       return;
     }
 
-    setIsUploading(true);
     uploadMutation.mutate();
-  };
+  }, [csvFile, validationResult, uploadMutation, toast]);
 
   return (
-    <DialogContent className="w-full max-w-[95vw] sm:max-w-4xl lg:max-w-6xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+    <DialogContent className="w-full max-w-[95vw] sm:max-w-6xl p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle className="text-lg sm:text-xl flex items-center gap-2">
           <Upload className="w-5 h-5" />
-          Bulk Voter Upload
+          Production-Ready Bulk Voter Upload
         </DialogTitle>
       </DialogHeader>
       
       <div className="space-y-4 sm:space-y-6">
         {/* Instructions */}
         <Alert>
-          <AlertCircle className="h-4 w-4" />
+          <Info className="h-4 w-4" />
           <AlertDescription>
-            <strong>Instructions:</strong> Only "Voter Name" column is required. All other columns are optional. 
-            The system will automatically handle missing columns and create Firestore IDs for each record.
+            <strong>Production Guidelines:</strong> Only "Voter Name" is required. System validates data quality, 
+            handles duplicates, and processes uploads in batches for optimal performance.
           </AlertDescription>
         </Alert>
 
-        {/* File Input */}
-        <div className="space-y-2">
-          <Label htmlFor="csvFile" className="text-sm font-medium">Select CSV File</Label>
+        {/* File Upload Section */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <Label htmlFor="csvFile" className="text-sm font-medium">
+              Select CSV File for Upload
+            </Label>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={downloadTemplate}
+              className="flex items-center gap-2"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Download Template
+            </Button>
+          </div>
+          
           <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
             <Input
               id="csvFile"
               type="file"
               accept=".csv"
               onChange={handleFileChange}
+              disabled={isProcessing || uploadMutation.isPending}
               className="w-full sm:w-auto"
             />
             {csvFile && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setCsvFile(null);
-                  setPreviewData([]);
-                  setPreviewVisible(false);
-                  setValidationErrors([]);
-                  setCsvHeaders([]);
-                  setTotalRows(0);
-                }}
+                onClick={resetState}
+                disabled={uploadMutation.isPending}
                 className="w-full sm:w-auto"
               >
                 <X className="w-4 h-4 mr-2" />
@@ -480,61 +362,100 @@ const BulkVoterUpload = () => {
           </div>
         </div>
 
-        {/* Download Template */}
-        <div className="flex justify-between items-center">
-          <p className="text-sm text-gray-600">
-            Download template with all possible columns
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={downloadTemplate}
-            className="flex items-center gap-2"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            Download Template
-          </Button>
-        </div>
+        {/* Processing Indicator */}
+        {isProcessing && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>Processing CSV file...</AlertDescription>
+          </Alert>
+        )}
 
-        {/* File Info */}
-        {csvFile && (
+        {/* File Summary */}
+        {csvFile && !isProcessing && (
           <div className="bg-blue-50 p-4 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle className="w-4 h-4 text-green-600" />
-              <span className="font-medium">File Loaded: {csvFile.name}</span>
+              <span className="font-medium">File: {csvFile.name}</span>
             </div>
-            <div className="text-sm text-gray-600 space-y-1">
-              <p>Headers found: {csvHeaders.length}</p>
-              <p>Valid rows: {totalRows}</p>
-              <p>Validation errors: {validationErrors.length}</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="text-gray-600">Headers:</span>
+                <span className="ml-2 font-medium">{csvHeaders.length}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Valid Rows:</span>
+                <span className="ml-2 font-medium">{totalRows}</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Errors:</span>
+                <span className="ml-2 font-medium text-red-600">
+                  {validationResult?.errors.length || 0}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-600">Warnings:</span>
+                <span className="ml-2 font-medium text-yellow-600">
+                  {validationResult?.warnings.length || 0}
+                </span>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Validation Errors */}
-        {validationErrors.length > 0 && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              <strong>{validationErrors.length} Validation Error(s) Found:</strong>
-              <ul className="mt-2 space-y-1 text-sm">
-                {validationErrors.slice(0, 5).map((error, index) => (
-                  <li key={index}>
-                    Row {error.row}: {error.field} - {error.message}
-                  </li>
-                ))}
-                {validationErrors.length > 5 && (
-                  <li>... and {validationErrors.length - 5} more errors</li>
-                )}
-              </ul>
-            </AlertDescription>
-          </Alert>
+        {/* Validation Results */}
+        {validationResult && (
+          <div className="space-y-4">
+            {validationResult.errors.length > 0 && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>{validationResult.errors.length} Critical Error(s):</strong>
+                  <ul className="mt-2 space-y-1 text-sm max-h-32 overflow-y-auto">
+                    {validationResult.errors.slice(0, 10).map((error, index) => (
+                      <li key={index}>
+                        Row {error.row}: <strong>{error.field}</strong> - {error.message}
+                      </li>
+                    ))}
+                    {validationResult.errors.length > 10 && (
+                      <li>... and {validationResult.errors.length - 10} more errors</li>
+                    )}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {validationResult.warnings.length > 0 && (
+              <Alert className="border-yellow-200 bg-yellow-50">
+                <AlertCircle className="h-4 w-4 text-yellow-600" />
+                <AlertDescription>
+                  <strong className="text-yellow-800">
+                    {validationResult.warnings.length} Warning(s):
+                  </strong>
+                  <ul className="mt-2 space-y-1 text-sm text-yellow-700 max-h-32 overflow-y-auto">
+                    {validationResult.warnings.slice(0, 5).map((warning, index) => (
+                      <li key={index}>
+                        Row {warning.row}: <strong>{warning.field}</strong> - {warning.message}
+                      </li>
+                    ))}
+                    {validationResult.warnings.length > 5 && (
+                      <li>... and {validationResult.warnings.length - 5} more warnings</li>
+                    )}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
         )}
 
         {/* Data Preview */}
         {previewVisible && previewData.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-sm font-medium">Data Preview (First 10 Rows)</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium">Data Preview (First 10 Rows)</h3>
+              <Badge variant="outline">
+                Quality Score: {validationResult?.validRowCount || 0}/{validationResult?.totalRowCount || 0}
+              </Badge>
+            </div>
             <ScrollArea className="h-[300px] w-full rounded-md border">
               <Table>
                 <TableHeader>
@@ -562,15 +483,31 @@ const BulkVoterUpload = () => {
           </div>
         )}
 
+        {/* Upload Progress */}
+        <BulkUploadProgress
+          isUploading={uploadMutation.isPending}
+          progress={uploadProgress}
+          currentBatch={currentBatch}
+          totalBatches={totalBatches}
+          uploadedCount={uploadedCount}
+          totalCount={totalRows}
+          errors={uploadErrors}
+        />
+
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-2 justify-end">
           <Button
             onClick={handleUpload}
-            disabled={!csvFile || isUploading || validationErrors.length > 0}
+            disabled={
+              !csvFile || 
+              uploadMutation.isPending || 
+              isProcessing ||
+              (validationResult && validationResult.errors.length > 0)
+            }
             className="bg-green-600 hover:bg-green-700 transition-colors duration-200 flex items-center gap-2"
           >
             <Upload className="w-4 h-4" />
-            {isUploading ? 'Uploading...' : `Upload ${totalRows} Voters`}
+            {uploadMutation.isPending ? 'Uploading...' : `Upload ${totalRows} Voters`}
           </Button>
         </div>
       </div>
