@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -21,7 +22,6 @@ import AllVoters from "./adminDashboard/AllVoters";
 import AddVoters from "./adminDashboard/AddVoters";
 import Analytics from "./adminDashboard/Analytics";
 import SMSCampaign from "./adminDashboard/SMSCampaign";
-import SMSCampaignNew from "./adminDashboard/SMSCampaignNew";
 import DataHub from "./adminDashboard/DataHub";
 import GoogleForm from "./adminDashboard/GoogleForm";
 import UserVerify from "./adminDashboard/usersverify/UserVerify";
@@ -129,12 +129,6 @@ const App = () => {
                   <Route path="/admin/sms-campaign" element={
                     <ProtectedRoute requiredRole="division_admin">
                       <SMSCampaign />
-                    </ProtectedRoute>
-                  } />
-
-                  <Route path="/admin/sms-campaign-new" element={
-                    <ProtectedRoute requiredRole="division_admin">
-                      <SMSCampaignNew />
                     </ProtectedRoute>
                   } />
 

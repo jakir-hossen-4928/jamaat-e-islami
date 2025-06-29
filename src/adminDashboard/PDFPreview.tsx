@@ -1,7 +1,6 @@
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import AdminLayout from '@/components/layout/AdminLayout';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Download, Smartphone, Monitor } from 'lucide-react';
@@ -11,23 +10,36 @@ import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { VoterData } from '@/lib/types';
+import RoleBasedSidebar from '@/components/layout/RoleBasedSidebar';
 
 const PDFPreview = () => {
   usePageTitle('পিডিএফ প্রিভিউ - জামায়াতে ইসলামী');
   const navigate = useNavigate();
+  const location = useLocation();
   const [previewMode, setPreviewMode] = useState<'mobile' | 'desktop'>('desktop');
 
+  // Get voters from navigation state or fetch from Firebase
+  const passedVoters = location.state?.voters as VoterData[] | undefined;
+
   const { data: voters = [] } = useQuery({
-    queryKey: ['voters'],
+    queryKey: ['voters-pdf'],
     queryFn: async () => {
+      if (passedVoters && passedVoters.length > 0) {
+        return passedVoters;
+      }
+      
       const votersRef = collection(db, 'voters');
       const snapshot = await getDocs(votersRef);
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoterData));
-    }
+    },
+    enabled: !passedVoters || passedVoters.length === 0,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
+  const finalVoters = passedVoters || voters;
+
   return (
-    <AdminLayout>
+    <RoleBasedSidebar>
       <div className="min-h-screen bg-gray-50 p-3 sm:p-4 lg:p-6">
         <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
           {/* Header */}
@@ -52,7 +64,14 @@ const PDFPreview = () => {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <AdvancedPDFGenerator voters={voters} />
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/admin/analytics', { state: { voters: finalVoters } })}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    রিপোর্ট এনালিটিক্স
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -85,6 +104,9 @@ const PDFPreview = () => {
             </CardContent>
           </Card>
 
+          {/* Advanced PDF Generator */}
+          <AdvancedPDFGenerator voters={finalVoters} />
+
           {/* Preview Container */}
           <Card>
             <CardHeader className="pb-3">
@@ -113,15 +135,15 @@ const PDFPreview = () => {
                     <div className={`grid gap-2 ${previewMode === 'mobile' ? 'text-xs' : 'text-sm'}`}>
                       <div className="flex justify-between">
                         <span className="font-medium">মোট ভোটার:</span>
-                        <span>{voters.length}</span>
+                        <span>{finalVoters.length}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="font-medium">ভোট দেবেন:</span>
-                        <span>{voters.filter(v => v['Will Vote'] === 'Yes').length}</span>
+                        <span>{finalVoters.filter(v => v['Will Vote'] === 'Yes').length}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="font-medium">উচ্চ অগ্রাধিকার:</span>
-                        <span>{voters.filter(v => v['Priority Level'] === 'High').length}</span>
+                        <span>{finalVoters.filter(v => v['Priority Level'] === 'High').length}</span>
                       </div>
                     </div>
                   </div>
@@ -139,7 +161,7 @@ const PDFPreview = () => {
           </Card>
         </div>
       </div>
-    </AdminLayout>
+    </RoleBasedSidebar>
   );
 };
 
