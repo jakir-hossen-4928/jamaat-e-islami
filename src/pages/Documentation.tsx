@@ -9,12 +9,11 @@ import {
   Users, 
   MapPin, 
   BarChart3, 
-  MessageSquare, 
   Database, 
   Settings,
-  FileText,
   ArrowRight,
-  BookOpen
+  BookOpen,
+  Shield
 } from 'lucide-react';
 import { usePageTitle } from '@/lib/usePageTitle';
 
@@ -26,43 +25,29 @@ const Documentation = () => {
       icon: Users,
       title: 'ভোটার ব্যবস্থাপনা',
       description: 'ভোটার তথ্য যোগ, সম্পাদনা এবং ব্যবস্থাপনা',
-      path: '/docs/voter-management',
+      path: '/voters',
       badge: 'মূল ফিচার'
     },
     {
       icon: MapPin,
       title: 'এলাকা ব্যবস্থাপনা',
       description: 'বিভাগ, জেলা, উপজেলা, ইউনিয়ন ও গ্রাম ব্যবস্থাপনা',
-      path: '/docs/location-management',
+      path: '/locations',
       badge: 'প্রশাসনিক'
     },
     {
       icon: BarChart3,
       title: 'বিশ্লেষণ সিস্টেম',
       description: 'ভোটার ডেটা বিশ্লেষণ ও রিপোর্ট তৈরি',
-      path: '/docs/analytics',
+      path: '/analytics',
       badge: 'রিপোর্টিং'
     },
     {
-      icon: MessageSquare,
-      title: 'SMS ক্যাম্পেইন',
-      description: 'ভোটারদের SMS পাঠানো ও ক্যাম্পেইন ব্যবস্থাপনা',
-      path: '/docs/sms-campaign',
-      badge: 'যোগাযোগ'
-    },
-    {
       icon: Database,
-      title: 'ডেটা হাব',
+      title: 'ডেটা ব্যবস্থাপনা',
       description: 'ডেটা আমদানি/রপ্তানি ও ব্যাকআপ',
-      path: '/docs/data-hub',
+      path: '/data-hub',
       badge: 'ডেটা'
-    },
-    {
-      icon: Settings,
-      title: 'সিস্টেম সেটিংস',
-      description: 'সিস্টেম কনফিগারেশন ও নিরাপত্তা',
-      path: '/docs/system-settings',
-      badge: 'কনফিগারেশন'
     }
   ];
 
@@ -86,7 +71,7 @@ const Documentation = () => {
           </div>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             জামায়াতে ইসলামী বাংলাদেশের জন্য একটি সম্পূর্ণ ভোটার ব্যবস্থাপনা ও বিশ্লেষণ সিস্টেম। 
-            এই সিস্টেম দিয়ে আপনি ভোটার তথ্য সংগ্রহ, সংরক্ষণ, বিশ্লেষণ এবং যোগাযোগ করতে পারবেন।
+            এই সিস্টেম দিয়ে আপনি ভোটার তথ্য সংগ্রহ, সংরক্ষণ, বিশ্লেষণ করতে পারবেন।
           </p>
         </div>
 
@@ -123,7 +108,7 @@ const Documentation = () => {
         {/* Features Overview */}
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-6">মূল ফিচারসমূহ</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {features.map((feature) => {
               const Icon = feature.icon;
               return (
@@ -153,7 +138,10 @@ const Documentation = () => {
         {/* System Architecture */}
         <Card>
           <CardHeader>
-            <CardTitle>সিস্টেম আর্কিটেকচার</CardTitle>
+            <CardTitle className="flex items-center">
+              <Shield className="w-5 h-5 mr-2 text-green-600" />
+              সিস্টেম কাঠামো
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -192,10 +180,10 @@ const Documentation = () => {
                 <h3 className="text-lg font-semibold mb-3">ফ্রন্টএন্ড</h3>
                 <ul className="space-y-1 text-gray-700">
                   <li>• React 18 with TypeScript</li>
-                  <li>• Tailwind CSS for styling</li>
+                  <li>• Tailwind CSS</li>
                   <li>• Shadcn/ui components</li>
-                  <li>• React Router for navigation</li>
-                  <li>• TanStack Query for data fetching</li>
+                  <li>• React Router</li>
+                  <li>• Vite Build Tool</li>
                 </ul>
               </div>
               <div>
@@ -203,8 +191,8 @@ const Documentation = () => {
                 <ul className="space-y-1 text-gray-700">
                   <li>• Firebase Firestore Database</li>
                   <li>• Firebase Authentication</li>
-                  <li>• Cloud Functions (if needed)</li>
-                  <li>• File Storage for documents</li>
+                  <li>• Real-time Data Sync</li>
+                  <li>• Secure Data Storage</li>
                 </ul>
               </div>
             </div>
