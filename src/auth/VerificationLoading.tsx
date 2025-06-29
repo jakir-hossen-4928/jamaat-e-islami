@@ -8,7 +8,7 @@ import { Loader2 } from 'lucide-react';
 
 const VerificationLoading = () => {
   usePageTitle('যাচাই করা হচ্ছে - জামায়াতে ইসলামী');
-  
+
   const { currentUser, userProfile, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -30,12 +30,12 @@ const VerificationLoading = () => {
         <CardContent className="text-center py-12 space-y-6">
           <div className="flex justify-center">
             <img
-              src="https://i.ibb.co/6Rt79ScS/bangladesh-jamaat-e-islami-seeklogo.png"
+              src="/public/bangladesh-jamaat-e-islami-seeklogo.svg"
               alt="জামায়াতে ইসলামী"
               className="w-16 h-16"
             />
           </div>
-          
+
           <div className="space-y-4">
             <Loader2 className="w-8 h-8 text-green-600 animate-spin mx-auto" />
             <h2 className="text-xl font-semibold text-gray-900">

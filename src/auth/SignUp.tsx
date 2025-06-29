@@ -117,7 +117,7 @@ const SignUp = () => {
           <CardHeader className="space-y-4 pb-4">
             <div className="flex justify-center">
               <img
-                src="https://i.ibb.co/6Rt79ScS/bangladesh-jamaat-e-islami-seeklogo.png"
+                src="/public/bangladesh-jamaat-e-islami-seeklogo.svg"
                 alt="জামায়াতে ইসলামী"
                 className="w-16 h-16"
               />

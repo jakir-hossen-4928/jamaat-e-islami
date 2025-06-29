@@ -6,8 +6,9 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { usePageTitle } from '@/lib/usePageTitle';
 
+
 const Index = () => {
-  usePageTitle('জামায়াতে ইসলামী বাংলাদেশ, কাকৈর খোলা, চৌদ্দগ্রাম শাখা');
+  usePageTitle('জামায়াতে ইসলামী বাংলাদেশ, ঢাকা, বাংলাদেশ');
 
   const { currentUser } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -98,7 +99,7 @@ const Index = () => {
                   জামায়াতে ইসলামী বাংলাদেশ
                 </span>
                 <span className="text-xs sm:text-sm text-gray-600 leading-tight">
-                  কাকৈর খোলা, চৌদ্দগ্রাম শাখা
+                  ঢাকা, বাংলাদেশ
                 </span>
               </div>
             </motion.div>
@@ -226,7 +227,7 @@ const Index = () => {
                   সিস্টেম
                 </h1>
                 <p className="text-base sm:text-lg lg:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                  জামায়াতে ইসলামী বাংলাদেশ কাকৈর খোলা, চৌদ্দগ্রাম শাখার জন্য আধুনিক ভোটার তথ্য ব্যবস্থাপনা ও প্রচারণা সিস্টেম
+                  জামায়াতে ইসলামী বাংলাদেশ এর জন্য আধুনিক ভোটার তথ্য ব্যবস্থাপনা ও প্রচারণা সিস্টেম
                 </p>
               </motion.div>
 
@@ -430,8 +431,8 @@ const Index = () => {
               {
                 icon: <MapPin className="w-8 h-8 text-purple-600" />,
                 title: "ঠিকানা",
-                info: "কাকৈর খোলা, চৌদ্দগ্রাম",
-                subtitle: "কুমিল্লা, বাংলাদেশ",
+                info: "ঢাকা",
+                subtitle: "ঢাকা, বাংলাদেশ",
                 bg: "from-purple-50 to-purple-100"
               }
             ].map((contact, index) => (
@@ -481,7 +482,8 @@ const Index = () => {
                 />
                 <div>
                   <h3 className="text-xl sm:text-2xl font-bold">জামায়াতে ইসলামী বাংলাদেশ</h3>
-                  <p className="text-gray-400">কাকৈর খোলা, চৌদ্দগ্রাম শাখা</p>
+                  <p className="text-gray-400">ঢাকা, বাংলাদেশ</p>
+
                   <p className="text-gray-400 text-sm">ভোটার ব্যবস্থাপনা সিস্টেম</p>
                 </div>
               </div>
@@ -533,8 +535,8 @@ const Index = () => {
                 <li className="flex items-start space-x-3">
                   <MapPin className="w-4 h-4 mt-1 text-purple-400" />
                   <div>
-                    <p className="font-medium">কাকৈর খোলা, চৌদ্দগ্রাম</p>
-                    <p className="text-xs">কুমিল্লা, বাংলাদেশ</p>
+                    <p className="font-medium">ঢাকা</p>
+                    <p className="text-xs">ঢাকা, বাংলাদেশ</p>
                   </div>
                 </li>
               </ul>
@@ -544,7 +546,7 @@ const Index = () => {
           <div className="border-t border-gray-700 mt-12 pt-8">
             <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
               <p className="text-gray-400 text-center sm:text-left">
-                © ২০২৫ জামায়াতে ইসলামী বাংলাদেশ, কাকৈর খোলা, চৌদ্দগ্রাম শাখা। সকল অধিকার সংরক্ষিত।
+                © {new Date().getFullYear()} জামায়াতে ইসলামী বাংলাদেশ। সকল অধিকার সংরক্ষিত।
               </p>
               <p className="text-sm text-gray-500 text-center sm:text-right">
                 Developed with ❤️ by{' '}

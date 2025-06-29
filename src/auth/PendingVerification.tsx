@@ -9,7 +9,7 @@ import { Clock, Home } from 'lucide-react';
 
 const PendingVerification = () => {
   usePageTitle('অনুমোদনের অপেক্ষায় - জামায়াতে ইসলামী');
-  
+
   const { currentUser, userProfile } = useAuth();
   const navigate = useNavigate();
 
@@ -30,7 +30,7 @@ const PendingVerification = () => {
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
             <img
-              src="https://i.ibb.co/6Rt79ScS/bangladesh-jamaat-e-islami-seeklogo.png"
+              src="/public/bangladesh-jamaat-e-islami-seeklogo.svg"
               alt="জামায়াতে ইসলামী"
               className="w-16 h-16"
             />
@@ -39,12 +39,12 @@ const PendingVerification = () => {
             অনুমোদনের অপেক্ষায়
           </CardTitle>
         </CardHeader>
-        
+
         <CardContent className="text-center space-y-6">
           <div className="flex justify-center">
             <Clock className="w-16 h-16 text-yellow-500 animate-pulse" />
           </div>
-          
+
           <div className="space-y-3">
             <p className="text-gray-600">
               আপনার অ্যাকাউন্ট সফলভাবে তৈরি হয়েছে!
@@ -74,7 +74,7 @@ const PendingVerification = () => {
               <Home className="w-4 h-4 mr-2" />
               হোমে ফিরুন
             </Button>
-            
+
             <Button
               onClick={() => navigate('/login')}
               variant="outline"

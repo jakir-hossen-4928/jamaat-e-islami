@@ -13,12 +13,12 @@ import { Eye, EyeOff, LogIn, ArrowLeft } from "lucide-react";
 
 const Login = () => {
   usePageTitle('লগইন - জামায়াতে ইসলামী');
-  
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  
+
   const { secureLogin, loading } = useSecureAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -33,7 +33,7 @@ const Login = () => {
     try {
       setError("");
       const result = await secureLogin(email, password);
-      
+
       if (result.success) {
         toast({
           title: "✅ সফল",
@@ -69,7 +69,7 @@ const Login = () => {
           <CardHeader className="space-y-4 pb-4">
             <div className="flex justify-center">
               <img
-                src="https://i.ibb.co/6Rt79ScS/bangladesh-jamaat-e-islami-seeklogo.png"
+                src="/public/bangladesh-jamaat-e-islami-seeklogo.svg"
                 alt="জামায়াতে ইসলামী"
                 className="w-16 h-16"
               />
@@ -81,7 +81,7 @@ const Login = () => {
               ভোটার ব্যবস্থাপনা সিস্টেম
             </p>
           </CardHeader>
-          
+
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
@@ -89,7 +89,7 @@ const Login = () => {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-              
+
               <div className="space-y-2">
                 <Label htmlFor="email">ইমেইল</Label>
                 <Input
@@ -102,7 +102,7 @@ const Login = () => {
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="password">পাসওয়ার্ড</Label>
                 <div className="relative">
@@ -130,7 +130,7 @@ const Login = () => {
                   </Button>
                 </div>
               </div>
-              
+
               <Button
                 type="submit"
                 className="w-full bg-green-600 hover:bg-green-700"
@@ -149,7 +149,7 @@ const Login = () => {
                 )}
               </Button>
             </form>
-            
+
             <div className="mt-6 text-center space-y-2">
               <Link
                 to="/forgot-password"
@@ -157,7 +157,7 @@ const Login = () => {
               >
                 পাসওয়ার্ড ভুলে গেছেন?
               </Link>
-              
+
               <div className="text-sm text-gray-600">
                 নতুন অ্যাকাউন্ট প্রয়োজন?{' '}
                 <Link
