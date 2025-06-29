@@ -1,21 +1,28 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Download, FileText, FileSpreadsheet, BarChart3, Settings, Eye, ChevronDown, ChevronUp } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Download, FileText, FileSpreadsheet, BarChart3, Settings, Eye, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { VoterData } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { usePageTitle } from '@/lib/usePageTitle';
+import { useAuth } from '@/hooks/useAuth';
+import { useLocationFilter } from '@/hooks/useLocationFilter';
+import { canAccessLocation } from '@/lib/rbac';
 import Papa from 'papaparse';
 import html2pdf from 'html2pdf.js';
 
 const DataHub = () => {
   usePageTitle('ডেটা হাব - এক্সপোর্ট সেন্টার');
+  
+  const { userProfile } = useAuth();
+  const { locationData, selectedLocation, setSelectedLocation, isLoading: locationLoading } = useLocationFilter();
   
   const [selectedFields, setSelectedFields] = useState<string[]>([
     'Voter Name',
@@ -25,16 +32,56 @@ const DataHub = () => {
   ]);
   const [showFieldSelector, setShowFieldSelector] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showLocationFilter, setShowLocationFilter] = useState(false);
   const { toast } = useToast();
 
-  const { data: voters = [], isLoading } = useQuery({
-    queryKey: ['voters'],
+  const { data: allVoters = [], isLoading } = useQuery({
+    queryKey: ['voters', 'data-hub', selectedLocation],
     queryFn: async () => {
+      if (!userProfile) return [];
+      
       const votersRef = collection(db, 'voters');
-      const snapshot = await getDocs(votersRef);
+      let votersQuery = votersRef;
+
+      // Apply location-based filtering for non-super admins
+      if (userProfile.role !== 'super_admin') {
+        const scope = userProfile.accessScope;
+        const filters = [];
+        
+        if (scope.division_id) filters.push(where('division_id', '==', scope.division_id));
+        if (scope.district_id) filters.push(where('district_id', '==', scope.district_id));
+        if (scope.upazila_id) filters.push(where('upazila_id', '==', scope.upazila_id));
+        if (scope.union_id) filters.push(where('union_id', '==', scope.union_id));
+        if (scope.village_id) filters.push(where('village_id', '==', scope.village_id));
+        
+        if (filters.length > 0) {
+          votersQuery = query(votersRef, ...filters);
+        }
+      }
+
+      const snapshot = await getDocs(votersQuery);
       return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoterData));
-    }
+    },
+    enabled: !!userProfile,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
+
+  // Filter voters based on selected location (for super admin)
+  const voters = useMemo(() => {
+    if (!allVoters.length) return [];
+    
+    if (userProfile?.role === 'super_admin' && Object.keys(selectedLocation).length > 0) {
+      return allVoters.filter(voter => {
+        return Object.entries(selectedLocation).every(([key, value]) => {
+          if (!value) return true;
+          return voter[key as keyof VoterData] === value;
+        });
+      });
+    }
+    
+    return allVoters;
+  }, [allVoters, selectedLocation, userProfile]);
 
   const availableFields = [
     'ID', 'Voter Name', 'House Name', 'FatherOrHusband', 'Age', 'Gender',
@@ -298,7 +345,7 @@ const DataHub = () => {
               <div className="flex items-center gap-1">
                 <span>মোট ভোটার: <strong className="text-green-600">{stats.total}</strong></span>
               </div>
-              {isLoading && (
+              {(isLoading || locationLoading) && (
                 <div className="flex items-center gap-1">
                   <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-green-600"></div>
                   <span>লোড হচ্ছে...</span>
@@ -307,6 +354,107 @@ const DataHub = () => {
             </div>
           </div>
         </div>
+
+        {/* Location Filter for Super Admin */}
+        {userProfile?.role === 'super_admin' && (
+          <Card className="shadow-md border-blue-200">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-blue-600" />
+                  এলাকা ভিত্তিক ফিল্টার
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowLocationFilter(!showLocationFilter)}
+                >
+                  {showLocationFilter ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </Button>
+              </div>
+            </CardHeader>
+            {showLocationFilter && (
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">বিভাগ</label>
+                    <Select
+                      value={selectedLocation.division_id || ""}
+                      onValueChange={(value) => setSelectedLocation({ ...selectedLocation, division_id: value || undefined })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">সব বিভাগ</SelectItem>
+                        {locationData.divisions.map((division) => (
+                          <SelectItem key={division.id} value={division.id}>
+                            {division.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">জেলা</label>
+                    <Select
+                      value={selectedLocation.district_id || ""}
+                      onValueChange={(value) => setSelectedLocation({ ...selectedLocation, district_id: value || undefined })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="জেলা নির্বাচন করুন" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">সব জেলা</SelectItem>
+                        {locationData.districts
+                          .filter(district => !selectedLocation.division_id || district.division_id === selectedLocation.division_id)
+                          .map((district) => (
+                          <SelectItem key={district.id} value={district.id}>
+                            {district.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">উপজেলা</label>
+                    <Select
+                      value={selectedLocation.upazila_id || ""}
+                      onValueChange={(value) => setSelectedLocation({ ...selectedLocation, upazila_id: value || undefined })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="উপজেলা নির্বাচন করুন" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">সব উপজেলা</SelectItem>
+                        {locationData.upazilas
+                          .filter(upazila => !selectedLocation.district_id || upazila.district_id === selectedLocation.district_id)
+                          .map((upazila) => (
+                          <SelectItem key={upazila.id} value={upazila.id}>
+                            {upazila.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedLocation({})}
+                    className="text-xs"
+                  >
+                    ফিল্টার রিসেট করুন
+                  </Button>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+        )}
 
         {/* Mobile-Optimized Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">

@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -9,12 +8,12 @@ import { AuthProvider } from "@/hooks/useAuth";
 import AuthWrapper from "@/components/layout/AuthWrapper";
 import { addTransitionStyles } from "@/lib/barbaTransitions";
 import Index from "./pages/Index";
-import Login from "./authentication/Login";
-import SignUp from "./authentication/SignUp";
-import ForgotPassword from "./authentication/ForgotPassword";
-import PendingVerification from "./authentication/PendingVerification";
-import VerificationLoading from "./authentication/VerificationLoading";
-import Unauthorized from "./authentication/Unauthorized";
+import Login from "./auth/Login";
+import SignUp from "./auth/SignUp";
+import ForgotPassword from "./auth/ForgotPassword";
+import PendingVerification from "./auth/PendingVerification";
+import VerificationLoading from "./auth/VerificationLoading";
+import Unauthorized from "./auth/Unauthorized";
 import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./adminDashboard/AdminDashboard";

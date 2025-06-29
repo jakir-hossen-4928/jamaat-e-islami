@@ -30,8 +30,7 @@ import {
   UserCheck,
   FileText,
   Settings,
-  MapPin,
-  BookOpen
+  MapPin
 } from 'lucide-react';
 
 interface ResponsiveSidebarProps {
@@ -101,33 +100,34 @@ const AppSidebar = () => {
       baseItems.push({ icon: UserCheck, label: 'ব্যবহারকারী ব্যবস্থাপনা', path: '/admin/verify-users' });
     }
 
-    baseItems.push({ icon: BookOpen, label: 'ডকুমেন্টেশন', path: '/docs' });
-
     return baseItems;
   };
 
   const menuItems = getMenuItems();
 
   return (
-    <Sidebar className="bg-green-800 text-white border-r-0">
-      <SidebarHeader className="bg-green-900 p-4">
+    <Sidebar className="bg-gradient-to-b from-green-800 to-green-900 text-white border-r border-green-700 shadow-xl">
+      <SidebarHeader className="bg-gradient-to-r from-green-900 to-green-800 p-4 border-b border-green-700">
         <div className="flex items-center space-x-3">
           <img
             src="https://i.ibb.co/6Rt79ScS/bangladesh-jamaat-e-islami-seeklogo.png"
             alt="Logo"
-            className="w-8 h-8"
+            className="w-8 h-8 rounded-full bg-white p-1"
           />
-          <span className="text-white font-bold text-lg group-data-[collapsible=icon]:hidden">
-            জামায়াতে ইসলামী
-          </span>
+          <div className="group-data-[collapsible=icon]:hidden">
+            <span className="text-white font-bold text-lg">জামায়াতে ইসলামী</span>
+            <p className="text-green-200 text-xs">ভোটার ব্যবস্থাপনা</p>
+          </div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-2 py-4">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-green-200">মেনু</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-green-300 font-semibold text-sm mb-2 px-2">
+            প্রধান মেনু
+          </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="space-y-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
@@ -136,11 +136,16 @@ const AppSidebar = () => {
                     <SidebarMenuButton 
                       asChild 
                       isActive={isActive}
-                      className="text-white hover:bg-green-700 data-[active=true]:bg-green-700 data-[active=true]:border-r-4 data-[active=true]:border-green-400"
+                      className={`
+                        text-white hover:bg-green-700 hover:text-white transition-all duration-200 rounded-lg
+                        data-[active=true]:bg-gradient-to-r data-[active=true]:from-green-600 data-[active=true]:to-green-700 
+                        data-[active=true]:border-l-4 data-[active=true]:border-green-300 data-[active=true]:shadow-lg
+                        data-[active=true]:text-white font-medium
+                      `}
                     >
-                      <Link to={item.path} className="flex items-center space-x-3">
-                        <Icon className="w-5 h-5" />
-                        <span>{item.label}</span>
+                      <Link to={item.path} className="flex items-center space-x-3 px-3 py-2">
+                        <Icon className="w-5 h-5 flex-shrink-0" />
+                        <span className="truncate">{item.label}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -151,27 +156,43 @@ const AppSidebar = () => {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4">
-        <div className="bg-green-700 rounded-lg p-4 mb-4">
-          <p className="text-white text-sm font-medium">{userProfile?.displayName}</p>
-          <p className="text-green-200 text-xs">{userProfile?.email}</p>
-          <p className="text-green-200 text-xs">
-            {getRoleDisplayName(userProfile?.role)}
-          </p>
-          {userProfile.accessScope && userProfile.role !== 'super_admin' && (
-            <div className="mt-2 text-green-200 text-xs">
-              {userProfile.accessScope.division_name && <p>বিভাগ: {userProfile.accessScope.division_name}</p>}
-              {userProfile.accessScope.district_name && <p>জেলা: {userProfile.accessScope.district_name}</p>}
-              {userProfile.accessScope.upazila_name && <p>উপজেলা: {userProfile.accessScope.upazila_name}</p>}
-              {userProfile.accessScope.union_name && <p>ইউনিয়ন: {userProfile.accessScope.union_name}</p>}
-              {userProfile.accessScope.village_name && <p>গ্রাম: {userProfile.accessScope.village_name}</p>}
-            </div>
-          )}
+      <SidebarFooter className="p-4 border-t border-green-700">
+        <div className="bg-gradient-to-r from-green-700 to-green-800 rounded-lg p-4 mb-4 shadow-inner border border-green-600">
+          <div className="space-y-1">
+            <p className="text-white text-sm font-semibold truncate" title={userProfile?.displayName}>
+              {userProfile?.displayName}
+            </p>
+            <p className="text-green-200 text-xs truncate" title={userProfile?.email}>
+              {userProfile?.email}
+            </p>
+            <p className="text-green-300 text-xs font-medium">
+              {getRoleDisplayName(userProfile?.role)}
+            </p>
+            {userProfile.accessScope && userProfile.role !== 'super_admin' && (
+              <div className="mt-2 text-green-200 text-xs space-y-0.5 border-t border-green-600 pt-2">
+                {userProfile.accessScope.division_name && (
+                  <p className="truncate">বিভাগ: {userProfile.accessScope.division_name}</p>
+                )}
+                {userProfile.accessScope.district_name && (
+                  <p className="truncate">জেলা: {userProfile.accessScope.district_name}</p>
+                )}
+                {userProfile.accessScope.upazila_name && (
+                  <p className="truncate">উপজেলা: {userProfile.accessScope.upazila_name}</p>
+                )}
+                {userProfile.accessScope.union_name && (
+                  <p className="truncate">ইউনিয়ন: {userProfile.accessScope.union_name}</p>
+                )}
+                {userProfile.accessScope.village_name && (
+                  <p className="truncate">গ্রাম: {userProfile.accessScope.village_name}</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
         <Button
           onClick={handleLogout}
           variant="outline"
-          className="w-full text-black border-white bg-white hover:bg-gray-100"
+          className="w-full text-green-800 border-green-300 bg-white hover:bg-green-50 hover:border-green-400 transition-colors font-medium"
         >
           <LogOut className="w-4 h-4 mr-2" />
           লগআউট
@@ -183,28 +204,25 @@ const AppSidebar = () => {
 
 export const ResponsiveSidebar = ({ children }: ResponsiveSidebarProps) => {
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+    <SidebarProvider defaultOpen={true}>
+      <div className="min-h-screen flex w-full bg-gray-50">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top bar with trigger */}
-          <div className="bg-white shadow-sm border-b h-16 flex items-center px-4">
-            <SidebarTrigger className="mr-4" />
-            <h1 className="text-lg lg:text-xl font-semibold text-gray-900">
-              ভোটার ব্যবস্থাপনা সিস্টেম
-            </h1>
-            <div className="ml-auto flex items-center space-x-4">
-              <Link
-                to="/docs"
-                className="text-sm text-blue-600 hover:text-blue-800"
-              >
-                ডকুমেন্টেশন
-              </Link>
+          <div className="bg-white shadow-sm border-b border-gray-200 h-16 flex items-center px-4 sticky top-0 z-40">
+            <SidebarTrigger className="mr-4 p-2 hover:bg-gray-100 rounded-lg transition-colors" />
+            <div className="flex-1">
+              <h1 className="text-lg lg:text-xl font-semibold text-gray-900">
+                ভোটার ব্যবস্থাপনা সিস্টেম
+              </h1>
+              <p className="text-xs text-gray-500 hidden sm:block">
+                জামায়াতে ইসলামী বাংলাদেশ
+              </p>
             </div>
           </div>
           
           {/* Main content */}
-          <main className="flex-1 p-4 lg:p-6 overflow-auto">
+          <main className="flex-1 p-4 lg:p-6 overflow-auto bg-gray-50">
             {children}
           </main>
         </div>
