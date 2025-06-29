@@ -1,8 +1,8 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
-
 
 export default defineConfig(({ mode }) => ({
   server: {
@@ -19,10 +19,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-   
     sourcemap: false,
-
-   
     rollupOptions: {
       output: {
         manualChunks: {
@@ -32,29 +29,31 @@ export default defineConfig(({ mode }) => ({
           swiper: ['swiper'],
           firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
           router: ['react-router-dom'],
+          query: ['@tanstack/react-query'],
         },
       },
     },
-    // Reduce bundle size
     minify: mode === 'production' ? 'terser' : false,
     terserOptions: mode === 'production' ? {
       compress: {
-        drop_console: true,
+        drop_console: false, // Keep console logs for debugging
         drop_debugger: true,
       },
     } : undefined,
-    // Enable gzip compression
     reportCompressedSize: true,
     chunkSizeWarningLimit: 1000,
   },
-  // Optimize dependencies
   optimizeDeps: {
     include: [
       'react', 
       'react-dom', 
       'framer-motion', 
       'swiper', 
-      'react-router-dom'
+      'react-router-dom',
+      '@tanstack/react-query',
+      'firebase/app',
+      'firebase/auth',
+      'firebase/firestore'
     ],
   },
 }));
