@@ -36,13 +36,11 @@ const SMSCampaign = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({
     willVote: '',
-    priority: '',
     gender: '',
     minAge: '',
     maxAge: '',
     maritalStatus: '',
     student: '',
-    whatsapp: '',
     hasDisability: '',
     isMigrated: '',
   });
@@ -92,26 +90,22 @@ const SMSCampaign = () => {
       voter.Phone?.includes(searchTerm);
 
     const matchesWillVote = !filters.willVote || voter['Will Vote'] === filters.willVote;
-    const matchesPriority = !filters.priority || voter['Priority Level'] === filters.priority;
     const matchesGender = !filters.gender || voter.Gender === filters.gender;
     const matchesMinAge = !filters.minAge || (voter.Age && voter.Age >= parseInt(filters.minAge));
     const matchesMaxAge = !filters.maxAge || (voter.Age && voter.Age <= parseInt(filters.maxAge));
     const matchesMaritalStatus = !filters.maritalStatus || voter['Marital Status'] === filters.maritalStatus;
     const matchesStudent = !filters.student || voter.Student === filters.student;
-    const matchesWhatsApp = !filters.whatsapp || voter.WhatsApp === filters.whatsapp;
     const matchesHasDisability = !filters.hasDisability || voter['Has Disability'] === filters.hasDisability;
     const matchesIsMigrated = !filters.isMigrated || voter['Is Migrated'] === filters.isMigrated;
 
     return (
       matchesSearch &&
       matchesWillVote &&
-      matchesPriority &&
       matchesGender &&
       matchesMinAge &&
       matchesMaxAge &&
       matchesMaritalStatus &&
       matchesStudent &&
-      matchesWhatsApp &&
       matchesHasDisability &&
       matchesIsMigrated &&
       voter.Phone
@@ -238,13 +232,11 @@ const SMSCampaign = () => {
   const resetFilters = () => {
     setFilters({
       willVote: '',
-      priority: '',
       gender: '',
       minAge: '',
       maxAge: '',
       maritalStatus: '',
       student: '',
-      whatsapp: '',
       hasDisability: '',
       isMigrated: '',
     });
@@ -398,23 +390,6 @@ const SMSCampaign = () => {
                         </Select>
                       </div>
                       <div>
-                        <Label htmlFor="priority" className="text-sm font-medium">অগ্রাধিকার</Label>
-                        <Select
-                          value={filters.priority}
-                          onValueChange={(value) => setFilters({ ...filters, priority: value })}
-                        >
-                          <SelectTrigger id="priority" className="mt-1">
-                            <SelectValue placeholder="সবাই" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="">সবাই</SelectItem>
-                            <SelectItem value="High">উচ্চ</SelectItem>
-                            <SelectItem value="Medium">মাঝারি</SelectItem>
-                            <SelectItem value="Low">নিম্ন</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
                         <Label htmlFor="gender" className="text-sm font-medium">লিঙ্গ</Label>
                         <Select
                           value={filters.gender}
@@ -456,22 +431,6 @@ const SMSCampaign = () => {
                           onValueChange={(value) => setFilters({ ...filters, student: value })}
                         >
                           <SelectTrigger id="student" className="mt-1">
-                            <SelectValue placeholder="সবাই" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="">সবাই</SelectItem>
-                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
-                            <SelectItem value="No">না</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="whatsapp" className="text-sm font-medium">হোয়াটসঅ্যাপ</Label>
-                        <Select
-                          value={filters.whatsapp}
-                          onValueChange={(value) => setFilters({ ...filters, whatsapp: value })}
-                        >
-                          <SelectTrigger id="whatsapp" className="mt-1">
                             <SelectValue placeholder="সবাই" />
                           </SelectTrigger>
                           <SelectContent>
@@ -593,24 +552,6 @@ const SMSCampaign = () => {
                             className="text-xs"
                           >
                             {voter['Will Vote'] === 'Yes' ? 'ভোট দেবেন' : voter['Will Vote'] === 'No' ? 'ভোট দেবেন না' : 'N/A'}
-                          </Badge>
-                          <Badge
-                            variant={
-                              voter['Priority Level'] === 'High'
-                                ? 'destructive'
-                                : voter['Priority Level'] === 'Medium'
-                                  ? 'default'
-                                  : 'secondary'
-                            }
-                            className="text-xs"
-                          >
-                            {voter['Priority Level'] === 'High'
-                              ? 'উচ্চ'
-                              : voter['Priority Level'] === 'Medium'
-                                ? 'মাঝারি'
-                                : voter['Priority Level'] === 'Low'
-                                  ? 'নিম্ন'
-                                  : 'N/A'}
                           </Badge>
                           {voter.Gender && (
                             <Badge variant="outline" className="text-xs">

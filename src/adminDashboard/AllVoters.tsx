@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
@@ -102,11 +101,9 @@ const AllVoters = () => {
           Religion: documentData.Religion,
           Phone: documentData.Phone,
           NID: documentData.NID,
-          WhatsApp: documentData.WhatsApp,
           'Will Vote': documentData['Will Vote'],
           'Voted Before': documentData['Voted Before'],
           'Vote Probability (%)': documentData['Vote Probability (%)'],
-          'Priority Level': documentData['Priority Level'],
           'Political Support': documentData['Political Support'],
           'Has Disability': documentData['Has Disability'],
           'Is Migrated': documentData['Is Migrated'],
@@ -463,4 +460,3 @@ const AllVoters = () => {
 };
 
 export default AllVoters;
-
