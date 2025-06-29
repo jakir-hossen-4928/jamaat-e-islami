@@ -379,14 +379,14 @@ const DataHub = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-700 block mb-1">বিভাগ</label>
                     <Select
-                      value={selectedLocation.division_id || ""}
-                      onValueChange={(value) => setSelectedLocation({ ...selectedLocation, division_id: value || undefined })}
+                      value={selectedLocation.division_id || "all"}
+                      onValueChange={(value) => setSelectedLocation({ ...selectedLocation, division_id: value === "all" ? undefined : value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">সব বিভাগ</SelectItem>
+                        <SelectItem value="all">সব বিভাগ</SelectItem>
                         {locationData.divisions.map((division) => (
                           <SelectItem key={division.id} value={division.id}>
                             {division.name}
@@ -399,14 +399,14 @@ const DataHub = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-700 block mb-1">জেলা</label>
                     <Select
-                      value={selectedLocation.district_id || ""}
-                      onValueChange={(value) => setSelectedLocation({ ...selectedLocation, district_id: value || undefined })}
+                      value={selectedLocation.district_id || "all"}
+                      onValueChange={(value) => setSelectedLocation({ ...selectedLocation, district_id: value === "all" ? undefined : value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="জেলা নির্বাচন করুন" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">সব জেলা</SelectItem>
+                        <SelectItem value="all">সব জেলা</SelectItem>
                         {locationData.districts
                           .filter(district => !selectedLocation.division_id || district.division_id === selectedLocation.division_id)
                           .map((district) => (
@@ -421,14 +421,14 @@ const DataHub = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-700 block mb-1">উপজেলা</label>
                     <Select
-                      value={selectedLocation.upazila_id || ""}
-                      onValueChange={(value) => setSelectedLocation({ ...selectedLocation, upazila_id: value || undefined })}
+                      value={selectedLocation.upazila_id || "all"}
+                      onValueChange={(value) => setSelectedLocation({ ...selectedLocation, upazila_id: value === "all" ? undefined : value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="উপজেলা নির্বাচন করুন" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">সব উপজেলা</SelectItem>
+                        <SelectItem value="all">সব উপজেলা</SelectItem>
                         {locationData.upazilas
                           .filter(upazila => !selectedLocation.district_id || upazila.district_id === selectedLocation.district_id)
                           .map((upazila) => (

@@ -1,4 +1,3 @@
-
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -11,20 +10,16 @@ import { VoterData } from '@/lib/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useLocationFilter } from '@/hooks/useLocationFilter';
 
 const Analytics = () => {
   const { userProfile } = useAuth();
+  const { locationData, selectedLocation, setSelectedLocation, isLoading: locationLoading } = useLocationFilter();
   const [showLocationFilter, setShowLocationFilter] = useState(false);
-  const [locationFilters, setLocationFilters] = useState<{
-    division_id?: string;
-    district_id?: string;
-    upazila_id?: string;
-    union_id?: string;
-    village_id?: string;
-  }>({});
 
   const { data: analytics, isLoading } = useQuery({
-    queryKey: ['analytics', locationFilters, userProfile?.accessScope],
+    queryKey: ['analytics', selectedLocation, userProfile?.accessScope],
     queryFn: async () => {
       const votersRef = collection(db, 'voters');
       let votersQuery = query(votersRef);
@@ -44,9 +39,9 @@ const Analytics = () => {
             votersQuery = query(votersRef, ...constraints);
           }
         }
-      } else if (Object.keys(locationFilters).length > 0) {
+      } else if (Object.keys(selectedLocation).length > 0) {
         // Super admin can filter by location
-        const constraints = Object.entries(locationFilters)
+        const constraints = Object.entries(selectedLocation)
           .filter(([_, value]) => value)
           .map(([key, value]) => where(key, '==', value));
         
@@ -173,16 +168,6 @@ const Analytics = () => {
     staleTime: 2 * 60 * 1000, // Cache for 2 minutes
   });
 
-  const handleLocationFilterChange = (filters: {
-    division_id?: string;
-    district_id?: string;
-    upazila_id?: string;
-    union_id?: string;
-    village_id?: string;
-  }) => {
-    setLocationFilters(filters);
-  };
-
   const COLORS = ['#059669', '#DC2626', '#D97706', '#7C3AED', '#2563EB', '#DB2777'];
 
   if (isLoading) {
@@ -213,12 +198,93 @@ const Analytics = () => {
         </div>
 
         {/* Location Filter for Super Admin */}
-        {userProfile?.role === 'super_admin' && (
-          <LocationFilter
-            onFilterChange={handleLocationFilterChange}
-            isVisible={showLocationFilter}
-            onToggle={setShowLocationFilter}
-          />
+        {userProfile?.role === 'super_admin' && showLocationFilter && (
+          <Card className="shadow-md border-blue-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Filter className="w-4 h-4 text-blue-600" />
+                এলাকা ভিত্তিক ফিল্টার
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">বিভাগ</label>
+                  <Select
+                    value={selectedLocation.division_id || "all"}
+                    onValueChange={(value) => setSelectedLocation({ ...selectedLocation, division_id: value === "all" ? undefined : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">সব বিভাগ</SelectItem>
+                      {locationData.divisions.map((division) => (
+                        <SelectItem key={division.id} value={division.id}>
+                          {division.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">জেলা</label>
+                  <Select
+                    value={selectedLocation.district_id || "all"}
+                    onValueChange={(value) => setSelectedLocation({ ...selectedLocation, district_id: value === "all" ? undefined : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="জেলা নির্বাচন করুন" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">সব জেলা</SelectItem>
+                      {locationData.districts
+                        .filter(district => !selectedLocation.division_id || district.division_id === selectedLocation.division_id)
+                        .map((district) => (
+                        <SelectItem key={district.id} value={district.id}>
+                          {district.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">উপজেলা</label>
+                  <Select
+                    value={selectedLocation.upazila_id || "all"}
+                    onValueChange={(value) => setSelectedLocation({ ...selectedLocation, upazila_id: value === "all" ? undefined : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="উপজেলা নির্বাচন করুন" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">সব উপজেলা</SelectItem>
+                      {locationData.upazilas
+                        .filter(upazila => !selectedLocation.district_id || upazila.district_id === selectedLocation.district_id)
+                        .map((upazila) => (
+                        <SelectItem key={upazila.id} value={upazila.id}>
+                          {upazila.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedLocation({})}
+                  className="text-xs"
+                >
+                  ফিল্টার রিসেট করুন
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Key Metrics */}
