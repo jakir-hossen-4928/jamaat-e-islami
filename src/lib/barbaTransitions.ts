@@ -1,4 +1,3 @@
-
 import barba from '@barba/core';
 
 export const initBarbaTransitions = () => {
@@ -8,7 +7,7 @@ export const initBarbaTransitions = () => {
       {
         name: 'default-transition',
         leave(data) {
-          return new Promise((resolve) => {
+          return new Promise<void>((resolve) => {
             const current = data.current.container;
             
             // Fade out animation
@@ -22,7 +21,7 @@ export const initBarbaTransitions = () => {
         },
         
         enter(data) {
-          return new Promise((resolve) => {
+          return new Promise<void>((resolve) => {
             const next = data.next.container;
             
             // Set initial state
@@ -48,7 +47,7 @@ export const initBarbaTransitions = () => {
         from: { route: ['/dashboard', '/admin'] },
         to: { route: ['/docs'] },
         leave(data) {
-          return new Promise((resolve) => {
+          return new Promise<void>((resolve) => {
             const current = data.current.container;
             
             current.style.transition = 'transform 0.5s ease-in-out';
@@ -61,7 +60,7 @@ export const initBarbaTransitions = () => {
         },
         
         enter(data) {
-          return new Promise((resolve) => {
+          return new Promise<void>((resolve) => {
             const next = data.next.container;
             
             next.style.transform = 'translateX(100%)';
