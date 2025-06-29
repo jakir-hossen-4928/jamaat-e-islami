@@ -35,9 +35,9 @@ import Documentation from "./pages/Documentation";
 import VoterManagement from "./pages/docs/VoterManagement";
 import LocationDocumentation from "./components/documentation/LocationDocumentation";
 import AnalyticsSystem from "./pages/docs/AnalyticsSystem";
-import SMSCampaign as SMSCampaignDocs from "./pages/docs/SMSCampaign";
-import DataHub as DataHubDocs from "./pages/docs/DataHub";
-import SystemSettings as SystemSettingsDocs from "./pages/docs/SystemSettings";
+import SMSCampaignDocs from "./pages/docs/SMSCampaign";
+import DataHubDocs from "./pages/docs/DataHub";
+import SystemSettingsDocs from "./pages/docs/SystemSettings";
 import APIReference from "./pages/docs/APIReference";
 
 const queryClient = new QueryClient();
