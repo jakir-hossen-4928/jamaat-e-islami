@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs } from 'firebase/firestore';
@@ -12,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MapPin, Building, Users, BarChart3, Plus, Download } from 'lucide-react';
-import AdminLayout from '@/components/layout/AdminLayout';
+import RoleBasedSidebar from '@/components/layout/RoleBasedSidebar';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -284,7 +283,7 @@ const LocationManagement = () => {
   const { filteredDistricts, filteredUpazilas, filteredUnions, filteredVillages } = getFilteredData();
 
   return (
-    <AdminLayout>
+    <RoleBasedSidebar>
       <div className="space-y-6">
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white">
           <div className="flex justify-between items-center">
@@ -578,7 +577,7 @@ const LocationManagement = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
+    </RoleBasedSidebar>
   );
 };
 
