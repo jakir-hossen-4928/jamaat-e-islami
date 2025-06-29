@@ -139,7 +139,7 @@ const App = () => {
                   } />
 
                   <Route path="/admin/user-verification" element={
-                    <ProtectedRoute requiredRole="super_admin">
+                    <ProtectedRoute>
                       <UserVerify />
                     </ProtectedRoute>
                   } />
@@ -169,4 +169,3 @@ const App = () => {
 };
 
 export default App;
-

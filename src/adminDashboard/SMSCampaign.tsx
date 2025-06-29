@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MessageSquare, Users, Send, Filter, DollarSign, Wifi, Loader2 } from 'lucide-react';
 import { VoterData } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface SMSLog {
   timestamp: string;
@@ -26,6 +27,7 @@ interface SMSLog {
 const SMSCampaign = () => {
   const baseUrl = import.meta.env.VITE_API_BASE_URL;
   const { toast } = useToast();
+  const { userProfile } = useAuth();
   const [message, setMessage] = useState('');
   const [selectedVoters, setSelectedVoters] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,15 +47,69 @@ const SMSCampaign = () => {
     isMigrated: '',
   });
 
-  // Fetch voters, ordered by Last Updated (DESC)
+  // Fetch voters with role-based access control
   const { data: voters = [], isLoading } = useQuery({
-    queryKey: ['voters'],
+    queryKey: ['sms-voters', userProfile?.uid],
     queryFn: async () => {
-      const votersRef = collection(db, 'voters');
-      const q = query(votersRef, orderBy('Last Updated', 'desc'));
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as VoterData));
+      if (!userProfile) return [];
+      
+      const votersCollection = collection(db, 'voters');
+      let finalQuery = query(votersCollection, orderBy('Last Updated', 'desc'));
+      
+      // Apply location-based filtering based on user role
+      if (userProfile.role !== 'super_admin') {
+        const userScope = userProfile.accessScope;
+        if (userScope.village_id) {
+          finalQuery = query(votersCollection, where('village_id', '==', userScope.village_id), orderBy('Last Updated', 'desc'));
+        } else if (userScope.union_id) {
+          finalQuery = query(votersCollection, where('union_id', '==', userScope.union_id), orderBy('Last Updated', 'desc'));
+        } else if (userScope.upazila_id) {
+          finalQuery = query(votersCollection, where('upazila_id', '==', userScope.upazila_id), orderBy('Last Updated', 'desc'));
+        } else if (userScope.district_id) {
+          finalQuery = query(votersCollection, where('district_id', '==', userScope.district_id), orderBy('Last Updated', 'desc'));
+        } else if (userScope.division_id) {
+          finalQuery = query(votersCollection, where('division_id', '==', userScope.division_id), orderBy('Last Updated', 'desc'));
+        }
+      }
+      
+      const snapshot = await getDocs(finalQuery);
+      return snapshot.docs.map((doc) => {
+        const documentData = doc.data();
+        const voterData: VoterData = {
+          id: doc.id,
+          ID: documentData.ID || '',
+          'Voter Name': documentData['Voter Name'] || '',
+          FatherOrHusband: documentData.FatherOrHusband,
+          Age: documentData.Age,
+          Gender: documentData.Gender,
+          'Marital Status': documentData['Marital Status'],
+          Student: documentData.Student,
+          Occupation: documentData.Occupation,
+          Education: documentData.Education,
+          Religion: documentData.Religion,
+          Phone: documentData.Phone,
+          NID: documentData.NID,
+          'Will Vote': documentData['Will Vote'],
+          'Voted Before': documentData['Voted Before'],
+          'Vote Probability (%)': documentData['Vote Probability (%)'],
+          'Political Support': documentData['Political Support'],
+          'Has Disability': documentData['Has Disability'],
+          'Is Migrated': documentData['Is Migrated'],
+          division_id: documentData.division_id,
+          district_id: documentData.district_id,
+          upazila_id: documentData.upazila_id,
+          union_id: documentData.union_id,
+          village_id: documentData.village_id,
+          'House Name': documentData['House Name'],
+          Remarks: documentData.Remarks,
+          Collector: documentData.Collector,
+          'Collection Date': documentData['Collection Date'],
+          'Last Updated': documentData['Last Updated']
+        };
+        return voterData;
+      });
     },
+    enabled: !!userProfile,
   });
 
   // Fetch SMS balance
@@ -85,14 +141,24 @@ const SMSCampaign = () => {
 
   // Filter voters based on search and advanced filters
   const filteredVoters = voters.filter((voter) => {
-    const matchesSearch =
-      voter['Voter Name']?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      voter.Phone?.includes(searchTerm);
+    // Only include voters with phone numbers
+    if (!voter.Phone) return false;
 
+    // Search filter
+    const matchesSearch = !searchTerm || 
+      voter['Voter Name']?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      voter.Phone?.includes(searchTerm) ||
+      voter.ID?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Advanced filters
     const matchesWillVote = !filters.willVote || voter['Will Vote'] === filters.willVote;
     const matchesGender = !filters.gender || voter.Gender === filters.gender;
-    const matchesMinAge = !filters.minAge || (voter.Age && voter.Age >= parseInt(filters.minAge));
-    const matchesMaxAge = !filters.maxAge || (voter.Age && voter.Age <= parseInt(filters.maxAge));
+    
+    const matchesMinAge = !filters.minAge || 
+      (voter.Age !== undefined && voter.Age >= parseInt(filters.minAge));
+    const matchesMaxAge = !filters.maxAge || 
+      (voter.Age !== undefined && voter.Age <= parseInt(filters.maxAge));
+      
     const matchesMaritalStatus = !filters.maritalStatus || voter['Marital Status'] === filters.maritalStatus;
     const matchesStudent = !filters.student || voter.Student === filters.student;
     const matchesHasDisability = !filters.hasDisability || voter['Has Disability'] === filters.hasDisability;
@@ -107,10 +173,14 @@ const SMSCampaign = () => {
       matchesMaritalStatus &&
       matchesStudent &&
       matchesHasDisability &&
-      matchesIsMigrated &&
-      voter.Phone
+      matchesIsMigrated
     );
   });
+
+  console.log('Total voters:', voters.length);
+  console.log('Filtered voters:', filteredVoters.length);
+  console.log('Applied filters:', filters);
+  console.log('Search term:', searchTerm);
 
   const selectedVoterData = filteredVoters.filter((voter) => selectedVoters.includes(voter.id!));
   const estimatedCost = selectedVoters.length * 0.35;
@@ -280,7 +350,6 @@ const SMSCampaign = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {/* Message Composition */}
           <Card className="shadow-lg">
             <CardHeader className="bg-blue-50">
               <CardTitle className="flex items-center gap-2 text-blue-800 text-base sm:text-lg">
@@ -359,7 +428,7 @@ const SMSCampaign = () => {
               <CardTitle className="flex items-center justify-between text-base sm:text-lg">
                 <div className="flex items-center gap-2 text-green-800">
                   <Users className="w-5 h-5" />
-                  ভোটার নির্বাচন
+                  ভোটার নির্বাচন ({filteredVoters.length})
                 </div>
                 <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                   <DialogTrigger asChild>
