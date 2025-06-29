@@ -1,5 +1,3 @@
-
-
 export interface VoterData {
   id?: string; // Firestore Document ID
   ID: string;
@@ -36,6 +34,9 @@ export interface VoterData {
   upazila_id?: string;
   union_id?: string;
   village_id?: string;
+
+  // Location Names (for display)
+  'Village Name'?: string;
 
   // Metadata
   'House Name'?: string;
@@ -166,4 +167,3 @@ export interface RolePermissions {
   canAccessAllVoters: boolean;
   locationScope: 'all' | 'division' | 'district' | 'upazila' | 'union' | 'village';
 }
-
