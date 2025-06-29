@@ -133,17 +133,26 @@ const AllVoters = () => {
 
   const votersQuery = createVotersQuery();
 
+  // Create proper query key with stringified objects
+  const createQueryKey = () => {
+    const baseKey = ['voters-optimized', userProfile?.uid];
+    if (selectedLocation && Object.keys(selectedLocation).length > 0) {
+      baseKey.push(JSON.stringify(selectedLocation));
+    }
+    return baseKey;
+  };
+
   // Optimized Firebase query with caching
   const { data: allVoters = [], isLoading, error } = useVotersQuery({
     query: votersQuery!,
-    queryKey: ['voters-optimized', userProfile?.uid, selectedLocation],
+    queryKey: createQueryKey(),
     enabled: !!userProfile && !!votersQuery,
   });
 
   // Load location names efficiently using static data
   React.useEffect(() => {
     const loadLocationNames = async () => {
-      if (allVoters.length === 0) return;
+      if (!allVoters || allVoters.length === 0) return;
       
       const names: {[key: string]: string} = {};
       
@@ -182,6 +191,8 @@ const AllVoters = () => {
 
   // Filter voters based on search and tab with optimizations
   const filteredVoters = useMemo(() => {
+    if (!allVoters) return [];
+    
     let filtered = allVoters;
 
     // Search filter with early return
@@ -218,6 +229,8 @@ const AllVoters = () => {
 
   // Statistics with memoization
   const stats = useMemo(() => {
+    if (!allVoters) return { total: 0, willVote: 0, wontVote: 0, highProbability: 0, withPhone: 0 };
+    
     const total = allVoters.length;
     const willVote = allVoters.filter(v => v['Will Vote'] === 'Yes').length;
     const wontVote = allVoters.filter(v => v['Will Vote'] === 'No').length;
@@ -230,7 +243,7 @@ const AllVoters = () => {
   }, [allVoters]);
 
   const handleExportToPDF = () => {
-    if (filteredVoters.length === 0) {
+    if (!filteredVoters || filteredVoters.length === 0) {
       toast({
         title: 'সতর্কতা',
         description: 'পিডিএফ তৈরি করার জন্য কোন ভোটার নেই',
@@ -427,7 +440,7 @@ const AllVoters = () => {
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <div className="grid gap-3 lg:gap-4 p-4 lg:p-6">
-                        {filteredVoters.length === 0 ? (
+                        {!filteredVoters || filteredVoters.length === 0 ? (
                           <div className="text-center py-8">
                             <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                             <p className="text-gray-600">কোন ভোটার পাওয়া যায়নি</p>

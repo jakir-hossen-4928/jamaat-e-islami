@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, orderBy, where, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -100,41 +101,27 @@ const SMSCampaign = () => {
 
   const votersQuery = createVotersQuery();
 
+  // Create proper query key
+  const createQueryKey = () => {
+    const baseKey = ['sms-voters-optimized', userProfile?.uid];
+    if (userProfile?.accessScope) {
+      baseKey.push(JSON.stringify(userProfile.accessScope));
+    }
+    return baseKey;
+  };
+
   // Use optimized query hook
   const { data: voters = [], isLoading } = useVotersQuery({
     query: votersQuery!,
-    queryKey: ['sms-voters-optimized', userProfile?.uid, userProfile?.accessScope],
+    queryKey: createQueryKey(),
     enabled: !!userProfile && !!votersQuery,
   });
 
   // Load location names efficiently using static data
   useEffect(() => {
     const loadLocationNames = async () => {
-      if (voters.length === 0) return;
+      if (!voters || voters.length === 0) return;
       
-      const locationIds = new Set<string>();
-      const locationTypes = new Set<string>();
-      
-      voters.forEach(voter => {
-        if (voter.division_id) {
-          locationIds.add(`division_${voter.division_id}`);
-          locationTypes.add('division');
-        }
-        if (voter.district_id) {
-          locationIds.add(`district_${voter.district_id}`);
-          locationTypes.add('district');
-        }
-        if (voter.upazila_id) {
-          locationIds.add(`upazila_${voter.upazila_id}`);
-          locationTypes.add('upazila');
-        }
-        if (voter.union_id) {
-          locationIds.add(`union_${voter.union_id}`);
-          locationTypes.add('union');
-        }
-      });
-
-      // Batch load location names to reduce API calls
       const names: {[key: string]: string} = {};
       
       try {
@@ -196,7 +183,7 @@ const SMSCampaign = () => {
   }, []);
 
   // Optimized filter function with early returns
-  const filteredVoters = voters.filter((voter) => {
+  const filteredVoters = voters ? voters.filter((voter) => {
     // Early return for voters without phone numbers
     if (!voter.Phone) return false;
 
@@ -222,9 +209,9 @@ const SMSCampaign = () => {
     if (filters.isMigrated !== 'all' && voter['Is Migrated'] !== filters.isMigrated) return false;
 
     return true;
-  });
+  }) : [];
 
-  console.log('Total voters loaded:', voters.length);
+  console.log('Total voters loaded:', voters ? voters.length : 0);
   console.log('Filtered voters:', filteredVoters.length);
 
   const selectedVoterData = filteredVoters.filter((voter) => selectedVoters.includes(voter.id!));

@@ -1,15 +1,16 @@
 
 import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import { collection, getDocs, query, Query, DocumentData } from 'firebase/firestore';
+import { VoterData } from '@/lib/types';
 
 interface OptimizedQueryOptions extends Omit<UseQueryOptions, 'queryKey' | 'queryFn'> {
-  queryKey: string[];
+  queryKey: (string | number | boolean | object)[];
   firestoreQuery: Query<DocumentData>;
   enabled?: boolean;
 }
 
-export const useOptimizedQuery = <T,>(options: OptimizedQueryOptions) => {
-  return useQuery({
+export const useOptimizedQuery = <T = VoterData,>(options: OptimizedQueryOptions) => {
+  return useQuery<T[]>({
     queryKey: options.queryKey,
     queryFn: async () => {
       const snapshot = await getDocs(options.firestoreQuery);
@@ -30,10 +31,10 @@ export const useOptimizedQuery = <T,>(options: OptimizedQueryOptions) => {
 // Cached query for voters with aggressive caching
 export const useVotersQuery = (queryConfig: {
   query: Query<DocumentData>;
-  queryKey: string[];
+  queryKey: (string | number | boolean | object)[];
   enabled?: boolean;
 }) => {
-  return useOptimizedQuery({
+  return useOptimizedQuery<VoterData>({
     queryKey: queryConfig.queryKey,
     firestoreQuery: queryConfig.query,
     enabled: queryConfig.enabled,
