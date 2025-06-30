@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, getDocs, doc, updateDoc, query, orderBy } from 'firebase/firestore';
@@ -184,6 +183,18 @@ const UserAssignmentDialog = ({
     return selectedLocation[requiredLocation as keyof typeof selectedLocation];
   };
 
+  // Check if location dropdown should be shown based on role
+  const shouldShowLocationLevel = (level: string) => {
+    if (!selectedRole || selectedRole === 'super_admin') return false;
+    
+    const levels = ['division_id', 'district_id', 'upazila_id', 'union_id', 'village_id'];
+    const roleRequiredLevel = getLocationRequirement(selectedRole);
+    const roleIndex = levels.indexOf(roleRequiredLevel || '');
+    const levelIndex = levels.indexOf(level);
+    
+    return levelIndex <= roleIndex;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -215,26 +226,28 @@ const UserAssignmentDialog = ({
 
           {selectedRole && selectedRole !== 'super_admin' && (
             <div className="space-y-3">
-              <div>
-                <Label>বিভাগ {getLocationRequirement(selectedRole) === 'division_id' && '*'}</Label>
-                <Select
-                  value={selectedLocation.division_id}
-                  onValueChange={(value) => handleLocationChange('division_id', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locationData.divisions.map(division => (
-                      <SelectItem key={division.id} value={division.id}>
-                        {division.bn_name} ({division.name})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {shouldShowLocationLevel('division_id') && (
+                <div>
+                  <Label>বিভাগ {getLocationRequirement(selectedRole) === 'division_id' && '*'}</Label>
+                  <Select
+                    value={selectedLocation.division_id}
+                    onValueChange={(value) => handleLocationChange('division_id', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {locationData.divisions.map(division => (
+                        <SelectItem key={division.id} value={division.id}>
+                          {division.bn_name} ({division.name})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
-              {(selectedRole === 'district_admin' || selectedRole === 'upazila_admin' || selectedRole === 'union_admin' || selectedRole === 'village_admin') && (
+              {shouldShowLocationLevel('district_id') && (
                 <div>
                   <Label>জেলা {getLocationRequirement(selectedRole) === 'district_id' && '*'}</Label>
                   <Select
@@ -256,7 +269,7 @@ const UserAssignmentDialog = ({
                 </div>
               )}
 
-              {(selectedRole === 'upazila_admin' || selectedRole === 'union_admin' || selectedRole === 'village_admin') && (
+              {shouldShowLocationLevel('upazila_id') && (
                 <div>
                   <Label>উপজেলা {getLocationRequirement(selectedRole) === 'upazila_id' && '*'}</Label>
                   <Select
@@ -278,7 +291,7 @@ const UserAssignmentDialog = ({
                 </div>
               )}
 
-              {(selectedRole === 'union_admin' || selectedRole === 'village_admin') && (
+              {shouldShowLocationLevel('union_id') && (
                 <div>
                   <Label>ইউনিয়ন {getLocationRequirement(selectedRole) === 'union_id' && '*'}</Label>
                   <Select
@@ -300,7 +313,7 @@ const UserAssignmentDialog = ({
                 </div>
               )}
 
-              {selectedRole === 'village_admin' && (
+              {shouldShowLocationLevel('village_id') && (
                 <div>
                   <Label>গ্রাম *</Label>
                   <Select
