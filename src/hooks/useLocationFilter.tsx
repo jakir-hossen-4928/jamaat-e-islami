@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { VoterData } from '@/lib/types';
 import { canAccessLocation } from '@/lib/rbac';
-import { loadLocationData } from '@/lib/locationUtils';
+import { loadLocationData, getVillagesByUnion } from '@/lib/locationUtils';
 
 interface LocationFilter {
   division_id?: string;
@@ -40,8 +40,11 @@ export const useLocationFilter = () => {
         setIsLoading(true);
         const data = await loadLocationData();
         setLocationData({
-          ...data,
-          villages: [] // Empty for now, will be populated from villages.json when available
+          divisions: data.divisions,
+          districts: data.districts,
+          upazilas: data.upazilas,
+          unions: data.unions,
+          villages: data.villages
         });
       } catch (error) {
         console.error('Error loading location data:', error);

@@ -13,32 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { User } from '@/lib/types';
 import { getRolePermissions, getRoleDisplayName } from '@/lib/rbac';
 import { CheckCircle, XCircle, UserCheck, MapPin, Settings } from 'lucide-react';
-import { getFullLocationHierarchy } from '@/lib/locationUtils';
-
-// Location cache
-const locationCache = {
-  divisions: null as any[] | null,
-  districts: null as any[] | null,
-  upazilas: null as any[] | null,
-  unions: null as any[] | null,
-  villages: null as any[] | null,
-};
-
-const loadLocationData = async (type: string) => {
-  if (locationCache[type as keyof typeof locationCache]) {
-    return locationCache[type as keyof typeof locationCache];
-  }
-
-  try {
-    const response = await fetch(`/data/${type}.json`);
-    const data = await response.json();
-    locationCache[type as keyof typeof locationCache] = data;
-    return data;
-  } catch (error) {
-    console.error(`Error loading ${type}:`, error);
-    return [];
-  }
-};
+import { getFullLocationHierarchy, loadLocationData, getVillagesByUnion } from '@/lib/locationUtils';
 
 const UserAssignmentDialog = ({
   user,
@@ -73,15 +48,14 @@ const UserAssignmentDialog = ({
     if (isOpen) {
       const loadData = async () => {
         try {
-          const [divisions, districts, upazilas, unions, villages] = await Promise.all([
-            loadLocationData('divisions'),
-            loadLocationData('districts'),
-            loadLocationData('upazilas'),
-            loadLocationData('unions'),
-            loadLocationData('villages')
-          ]);
-
-          setLocationData({ divisions, districts, upazilas, unions, villages });
+          const data = await loadLocationData();
+          setLocationData({
+            divisions: data.divisions,
+            districts: data.districts,
+            upazilas: data.upazilas,
+            unions: data.unions,
+            villages: data.villages
+          });
         } catch (error) {
           console.error('Error loading location data:', error);
         }
@@ -101,10 +75,15 @@ const UserAssignmentDialog = ({
     u => selectedLocation.upazila_id ? u.upazilla_id === selectedLocation.upazila_id : true
   );
   const filteredVillages = locationData.villages.filter(
-    v => selectedLocation.union_id ? v.union_id === selectedLocation.union_id : true
-  );
+    v => selectedLocation.union_id ? v.union_id.toString() === selectedLocation.union_id : true
+  ).map((village, index) => ({
+    id: `village_${village.union_id}_${index}`,
+    name: village.village,
+    bn_name: village.village,
+    union_id: village.union_id
+  }));
 
-  const handleLocationChange = (level: string, value: string) => {
+  const handleLocationChange = async (level: string, value: string) => {
     const newLocation = { ...selectedLocation };
 
     // Set the selected value
@@ -142,14 +121,14 @@ const UserAssignmentDialog = ({
     });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedRole) return;
 
     const division = locationData.divisions.find(d => d.id === selectedLocation.division_id);
     const district = locationData.districts.find(d => d.id === selectedLocation.district_id);
     const upazila = locationData.upazilas.find(d => d.id === selectedLocation.upazila_id);
     const union = locationData.unions.find(d => d.id === selectedLocation.union_id);
-    const village = locationData.villages.find(v => v.id === selectedLocation.village_id);
+    const village = filteredVillages.find(v => v.id === selectedLocation.village_id);
 
     const accessScope = {
       ...(selectedLocation.division_id && { division_id: selectedLocation.division_id }),
@@ -157,11 +136,11 @@ const UserAssignmentDialog = ({
       ...(selectedLocation.upazila_id && { upazila_id: selectedLocation.upazila_id }),
       ...(selectedLocation.union_id && { union_id: selectedLocation.union_id }),
       ...(selectedLocation.village_id && { village_id: selectedLocation.village_id }),
-      ...(division?.name && { division_name: division.name }),
-      ...(district?.name && { district_name: district.name }),
-      ...(upazila?.name && { upazila_name: upazila.name }),
-      ...(union?.name && { union_name: union.name }),
-      ...(village?.name && { village_name: village.name })
+      ...(division?.bn_name && { division_name: division.bn_name }),
+      ...(district?.bn_name && { district_name: district.bn_name }),
+      ...(upazila?.bn_name && { upazila_name: upazila_name }),
+      ...(union?.bn_name && { union_name: union_name }),
+      ...(village?.bn_name && { village_name: village.bn_name })
     };
 
     const updates: Partial<User> = {
@@ -334,7 +313,7 @@ const UserAssignmentDialog = ({
                     <SelectContent>
                       {filteredVillages.map(village => (
                         <SelectItem key={village.id} value={village.id}>
-                          {village.bn_name} ({village.name})
+                          {village.bn_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
