@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, getDocs, doc, updateDoc, query, orderBy } from 'firebase/firestore';
@@ -138,8 +139,8 @@ const UserAssignmentDialog = ({
       ...(selectedLocation.village_id && { village_id: selectedLocation.village_id }),
       ...(division?.bn_name && { division_name: division.bn_name }),
       ...(district?.bn_name && { district_name: district.bn_name }),
-      ...(upazila?.bn_name && { upazila_name: upazila_name }),
-      ...(union?.bn_name && { union_name: union_name }),
+      ...(upazila?.bn_name && { upazila_name: upazila.bn_name }),
+      ...(union?.bn_name && { union_name: union.bn_name }),
       ...(village?.bn_name && { village_name: village.bn_name })
     };
 
