@@ -75,10 +75,12 @@ const UserAssignmentDialog = ({
   const filteredUnions = locationData.unions.filter(
     u => selectedLocation.upazila_id ? u.upazilla_id === selectedLocation.upazila_id : true
   );
+  
+  // Fixed village filtering to work with your actual data structure
   const filteredVillages = locationData.villages.filter(
     v => selectedLocation.union_id ? v.union_id.toString() === selectedLocation.union_id : true
   ).map((village, index) => ({
-    id: `village_${village.union_id}_${index}`,
+    id: village.id || `village_${village.union_id}_${index}`,
     name: village.village,
     bn_name: village.village,
     union_id: village.union_id
