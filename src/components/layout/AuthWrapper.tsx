@@ -10,6 +10,8 @@ interface AuthWrapperProps {
 const AuthWrapper = ({ children }: AuthWrapperProps) => {
   const { loading } = useAuth();
 
+  console.log('AuthWrapper loading state:', loading);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-white to-blue-50">
@@ -47,6 +49,7 @@ const AuthWrapper = ({ children }: AuthWrapperProps) => {
     );
   }
 
+  console.log('AuthWrapper rendering children');
   return <>{children}</>;
 };
 
