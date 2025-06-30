@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { User } from '@/lib/types';
 import { getRolePermissions, getRoleDisplayName } from '@/lib/rbac';
 import { CheckCircle, XCircle, UserCheck, MapPin, Settings } from 'lucide-react';
+import { getFullLocationHierarchy } from '@/lib/locationUtils';
 
 // Location cache
 const locationCache = {
@@ -89,20 +90,18 @@ const UserAssignmentDialog = ({
     }
   }, [isOpen]);
 
-  const filteredDistricts = locationData.districts.filter(d =>
-    !selectedLocation.division_id || d.division_id === selectedLocation.division_id
+  // Filtered lists for dropdowns based on parent selection
+  const filteredDistricts = locationData.districts.filter(
+    d => selectedLocation.division_id ? d.division_id === selectedLocation.division_id : true
   );
-
-  const filteredUpazilas = locationData.upazilas.filter(u =>
-    !selectedLocation.district_id || u.district_id === selectedLocation.district_id
+  const filteredUpazilas = locationData.upazilas.filter(
+    u => selectedLocation.district_id ? u.district_id === selectedLocation.district_id : true
   );
-
-  const filteredUnions = locationData.unions.filter(u =>
-    !selectedLocation.upazila_id || u.upazilla_id === selectedLocation.upazila_id
+  const filteredUnions = locationData.unions.filter(
+    u => selectedLocation.upazila_id ? u.upazilla_id === selectedLocation.upazila_id : true
   );
-
-  const filteredVillages = locationData.villages.filter(v =>
-    !selectedLocation.union_id || v.union_id === selectedLocation.union_id
+  const filteredVillages = locationData.villages.filter(
+    v => selectedLocation.union_id ? v.union_id === selectedLocation.union_id : true
   );
 
   const handleLocationChange = (level: string, value: string) => {
@@ -238,14 +237,17 @@ const UserAssignmentDialog = ({
             <div className="space-y-3">
               <div>
                 <Label>বিভাগ {getLocationRequirement(selectedRole) === 'division_id' && '*'}</Label>
-                <Select value={selectedLocation.division_id} onValueChange={(value) => handleLocationChange('division_id', value)}>
+                <Select
+                  value={selectedLocation.division_id}
+                  onValueChange={(value) => handleLocationChange('division_id', value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
                   </SelectTrigger>
                   <SelectContent>
                     {locationData.divisions.map(division => (
                       <SelectItem key={division.id} value={division.id}>
-                        {division.name} ({division.bn_name})
+                        {division.bn_name} ({division.name})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -255,14 +257,18 @@ const UserAssignmentDialog = ({
               {(selectedRole === 'district_admin' || selectedRole === 'upazila_admin' || selectedRole === 'union_admin' || selectedRole === 'village_admin') && (
                 <div>
                   <Label>জেলা {getLocationRequirement(selectedRole) === 'district_id' && '*'}</Label>
-                  <Select value={selectedLocation.district_id} onValueChange={(value) => handleLocationChange('district_id', value)} disabled={!selectedLocation.division_id}>
+                  <Select
+                    value={selectedLocation.district_id}
+                    onValueChange={(value) => handleLocationChange('district_id', value)}
+                    disabled={!selectedLocation.division_id}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder={!selectedLocation.division_id ? "প্রথমে বিভাগ নির্বাচন করুন" : "জেলা নির্বাচন করুন"} />
                     </SelectTrigger>
                     <SelectContent>
                       {filteredDistricts.map(district => (
                         <SelectItem key={district.id} value={district.id}>
-                          {district.name} ({district.bn_name})
+                          {district.bn_name} ({district.name})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -273,14 +279,18 @@ const UserAssignmentDialog = ({
               {(selectedRole === 'upazila_admin' || selectedRole === 'union_admin' || selectedRole === 'village_admin') && (
                 <div>
                   <Label>উপজেলা {getLocationRequirement(selectedRole) === 'upazila_id' && '*'}</Label>
-                  <Select value={selectedLocation.upazila_id} onValueChange={(value) => handleLocationChange('upazila_id', value)} disabled={!selectedLocation.district_id}>
+                  <Select
+                    value={selectedLocation.upazila_id}
+                    onValueChange={(value) => handleLocationChange('upazila_id', value)}
+                    disabled={!selectedLocation.district_id}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder={!selectedLocation.district_id ? "প্রথমে জেলা নির্বাচন করুন" : "উপজেলা নির্বাচন করুন"} />
                     </SelectTrigger>
                     <SelectContent>
                       {filteredUpazilas.map(upazila => (
                         <SelectItem key={upazila.id} value={upazila.id}>
-                          {upazila.name} ({upazila.bn_name})
+                          {upazila.bn_name} ({upazila.name})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -291,14 +301,18 @@ const UserAssignmentDialog = ({
               {(selectedRole === 'union_admin' || selectedRole === 'village_admin') && (
                 <div>
                   <Label>ইউনিয়ন {getLocationRequirement(selectedRole) === 'union_id' && '*'}</Label>
-                  <Select value={selectedLocation.union_id} onValueChange={(value) => handleLocationChange('union_id', value)} disabled={!selectedLocation.upazila_id}>
+                  <Select
+                    value={selectedLocation.union_id}
+                    onValueChange={(value) => handleLocationChange('union_id', value)}
+                    disabled={!selectedLocation.upazila_id}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder={!selectedLocation.upazila_id ? "প্রথমে উপজেলা নির্বাচন করুন" : "ইউনিয়ন নির্বাচন করুন"} />
                     </SelectTrigger>
                     <SelectContent>
                       {filteredUnions.map(union => (
                         <SelectItem key={union.id} value={union.id}>
-                          {union.name} ({union.bn_name})
+                          {union.bn_name} ({union.name})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -309,14 +323,18 @@ const UserAssignmentDialog = ({
               {selectedRole === 'village_admin' && (
                 <div>
                   <Label>গ্রাম *</Label>
-                  <Select value={selectedLocation.village_id} onValueChange={(value) => handleLocationChange('village_id', value)} disabled={!selectedLocation.union_id}>
+                  <Select
+                    value={selectedLocation.village_id}
+                    onValueChange={(value) => handleLocationChange('village_id', value)}
+                    disabled={!selectedLocation.union_id}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder={!selectedLocation.union_id ? "প্রথমে ইউনিয়ন নির্বাচন করুন" : "গ্রাম নির্বাচন করুন"} />
                     </SelectTrigger>
                     <SelectContent>
                       {filteredVillages.map(village => (
                         <SelectItem key={village.id} value={village.id}>
-                          {village.name} ({village.bn_name})
+                          {village.bn_name} ({village.name})
                         </SelectItem>
                       ))}
                     </SelectContent>
