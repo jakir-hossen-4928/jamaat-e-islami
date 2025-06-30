@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, getDocs, doc, updateDoc, query, orderBy } from 'firebase/firestore';
@@ -12,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { User } from '@/lib/types';
 import { getRolePermissions, getRoleDisplayName } from '@/lib/rbac';
-import { CheckCircle, XCircle, UserCheck, MapPin, Settings } from 'lucide-react';
+import { CheckCircle, XCircle, UserCheck, MapPin, Settings, Eye } from 'lucide-react';
 import { getFullLocationHierarchy, loadLocationData, getVillagesByUnion } from '@/lib/locationUtils';
 
 const UserAssignmentDialog = ({
@@ -195,6 +196,32 @@ const UserAssignmentDialog = ({
     return levelIndex <= roleIndex;
   };
 
+  // Get current selection preview
+  const getSelectionPreview = () => {
+    if (!selectedRole) return null;
+
+    const division = locationData.divisions.find(d => d.id === selectedLocation.division_id);
+    const district = locationData.districts.find(d => d.id === selectedLocation.district_id);
+    const upazila = locationData.upazilas.find(u => u.id === selectedLocation.upazila_id);
+    const union = locationData.unions.find(u => u.id === selectedLocation.union_id);
+    const village = filteredVillages.find(v => v.id === selectedLocation.village_id);
+
+    const hierarchy = [];
+    if (division) hierarchy.push(division.bn_name);
+    if (district) hierarchy.push(district.bn_name);
+    if (upazila) hierarchy.push(upazila.bn_name);
+    if (union) hierarchy.push(union.bn_name);
+    if (village) hierarchy.push(village.bn_name);
+
+    return {
+      role: getRoleDisplayName(selectedRole),
+      location: hierarchy.join(' → ') || 'কোনো অবস্থান নির্বাচিত নয়',
+      isComplete: isValidAssignment()
+    };
+  };
+
+  const preview = getSelectionPreview();
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -334,6 +361,34 @@ const UserAssignmentDialog = ({
                   </Select>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Selection Preview */}
+          {preview && (
+            <div className="border rounded-lg p-3 bg-gray-50">
+              <div className="flex items-center gap-2 mb-2">
+                <Eye className="w-4 h-4 text-blue-600" />
+                <span className="font-medium text-sm">বরাদ্দ প্রিভিউ</span>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">ভূমিকা:</span>
+                  <Badge variant="outline">{preview.role}</Badge>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-gray-600">অবস্থান:</span>
+                  <div className="text-right max-w-[60%]">
+                    <span className="text-xs">{preview.location}</span>
+                  </div>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">অবস্থা:</span>
+                  <Badge variant={preview.isComplete ? "default" : "secondary"}>
+                    {preview.isComplete ? "সম্পূর্ণ" : "অসম্পূর্ণ"}
+                  </Badge>
+                </div>
+              </div>
             </div>
           )}
 
