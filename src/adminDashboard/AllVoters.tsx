@@ -18,7 +18,7 @@ import {
   BarChart3,
   Menu
 } from 'lucide-react';
-import { useLocationAccess } from '@/components/LocationBasedAccessWrapper';
+import { useDataAccess } from '@/contexts/DataAccessContext';
 import VoterLocationFilter from '@/components/admin/VoterLocationFilter';
 import { useLocationFilter } from '@/hooks/useLocationFilter';
 import { VoterData } from '@/lib/types';
@@ -36,7 +36,13 @@ const PAGE_SIZE = 50;
 const AllVoters = () => {
   usePageTitle('সকল ভোটার - অ্যাডমিন প্যানেল');
 
-  const { userProfile, role, accessScope } = useLocationAccess();
+  const { 
+    accessScope, 
+    canAccessAllData, 
+    createVoterQuery, 
+    getAccessibleVoters 
+  } = useDataAccess();
+  
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,100 +62,28 @@ const AllVoters = () => {
     isLoading: locationLoading
   } = useLocationFilter();
 
-  // Create optimized query with pagination and select only needed fields
-  const createVotersQuery = useCallback((afterDoc?: QueryDocumentSnapshot<DocumentData> | null) => {
-    if (!userProfile) return null;
-    const votersCollection = collection(db, 'voters');
-    let q: Query<DocumentData>;
-    // Role/location-based filtering
-    if (role !== 'super_admin') {
-      if (accessScope.village_id) {
-        q = query(votersCollection,
-          where('village_id', '==', accessScope.village_id),
-          orderBy('Last Updated', 'desc'),
-          limit(PAGE_SIZE)
-        );
-      } else if (accessScope.union_id) {
-        q = query(votersCollection,
-          where('union_id', '==', accessScope.union_id),
-          orderBy('Last Updated', 'desc'),
-          limit(PAGE_SIZE)
-        );
-      } else if (accessScope.upazila_id) {
-        q = query(votersCollection,
-          where('upazila_id', '==', accessScope.upazila_id),
-          orderBy('Last Updated', 'desc'),
-          limit(PAGE_SIZE)
-        );
-      } else if (accessScope.district_id) {
-        q = query(votersCollection,
-          where('district_id', '==', accessScope.district_id),
-          orderBy('Last Updated', 'desc'),
-          limit(PAGE_SIZE)
-        );
-      } else if (accessScope.division_id) {
-        q = query(votersCollection,
-          where('division_id', '==', accessScope.division_id),
-          orderBy('Last Updated', 'desc'),
-          limit(PAGE_SIZE)
-        );
-      } else {
-        q = query(votersCollection, orderBy('Last Updated', 'desc'), limit(PAGE_SIZE));
-      }
-    } else {
-      // For super admin, apply selected location filters
-      if (selectedLocation.village_id) {
-        q = query(votersCollection,
-          where('village_id', '==', selectedLocation.village_id),
-          orderBy('Last Updated', 'desc'),
-          limit(PAGE_SIZE)
-        );
-      } else if (selectedLocation.union_id) {
-        q = query(votersCollection,
-          where('union_id', '==', selectedLocation.union_id),
-          orderBy('Last Updated', 'desc'),
-          limit(PAGE_SIZE)
-        );
-      } else if (selectedLocation.upazila_id) {
-        q = query(votersCollection,
-          where('upazila_id', '==', selectedLocation.upazila_id),
-          orderBy('Last Updated', 'desc'),
-          limit(PAGE_SIZE)
-        );
-      } else if (selectedLocation.district_id) {
-        q = query(votersCollection,
-          where('district_id', '==', selectedLocation.district_id),
-          orderBy('Last Updated', 'desc'),
-          limit(PAGE_SIZE)
-        );
-      } else if (selectedLocation.division_id) {
-        q = query(votersCollection,
-          where('division_id', '==', selectedLocation.division_id),
-          orderBy('Last Updated', 'desc'),
-          limit(PAGE_SIZE)
-        );
-      } else {
-        q = query(votersCollection, orderBy('Last Updated', 'desc'), limit(PAGE_SIZE));
-      }
-    }
-    if (afterDoc) {
-      q = query(q, startAfter(afterDoc));
-    }
-    return q;
-  }, [userProfile, selectedLocation]);
-
-  // Fetch voters with pagination
+  // Fetch voters with role-based access control
   const fetchVoters = useCallback(async (afterDoc?: QueryDocumentSnapshot<DocumentData> | null, append = false) => {
     setIsLoading(true);
     try {
-      const q = createVotersQuery(afterDoc);
+      const q = createVoterQuery();
       if (!q) return;
-      const snapshot = await getDocs(q);
+      
+      let finalQuery = q;
+      if (afterDoc) {
+        finalQuery = query(q, startAfter(afterDoc));
+      }
+      
+      const snapshot = await getDocs(finalQuery);
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as VoterData[];
+      
+      // Apply additional client-side filtering using data access
+      const accessibleDocs = getAccessibleVoters(docs);
+      
       if (append) {
-        setVoters(prev => [...prev, ...docs]);
+        setVoters(prev => [...prev, ...accessibleDocs]);
       } else {
-        setVoters(docs);
+        setVoters(accessibleDocs);
       }
       setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
       setHasMore(snapshot.docs.length === PAGE_SIZE);
@@ -159,13 +93,12 @@ const AllVoters = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [createVotersQuery, toast]);
+  }, [createVoterQuery, getAccessibleVoters, toast]);
 
-  // Initial and location/search change fetch
+  // Initial fetch
   React.useEffect(() => {
     fetchVoters();
-    // eslint-disable-next-line
-  }, [userProfile, selectedLocation, debouncedSearchTerm]);
+  }, [fetchVoters]);
 
   // Load more handler
   const handleLoadMore = useCallback(() => {
@@ -187,7 +120,6 @@ const AllVoters = () => {
         voter.NID?.includes(term)
       );
     }
-    // Tab filter (if needed)
     return filtered;
   }, [voters, debouncedSearchTerm]);
 
@@ -299,15 +231,24 @@ const AllVoters = () => {
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-4 lg:p-6 text-white">
             <h1 className="text-xl lg:text-3xl font-bold">সকল ভোটার</h1>
             <p className="mt-2 text-blue-100 text-sm lg:text-base">ভোটারদের তালিকা ও বিস্তারিত তথ্য</p>
+            {/* Show access scope info */}
+            {!canAccessAllData && (
+              <div className="mt-3 flex items-center space-x-2 text-blue-200">
+                <MapPin className="w-4 h-4" />
+                <span className="text-sm">
+                  আপনার এক্সেস: {accessScope.division_name || accessScope.district_name || accessScope.upazila_name || accessScope.union_name || accessScope.village_name || 'সীমিত এক্সেস'}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Location Filter - Only show for super admin */}
-          {role === 'super_admin' && (
+          {canAccessAllData && (
             <VoterLocationFilter
               locationData={locationData}
               selectedLocation={selectedLocation}
               onLocationChange={setSelectedLocation}
-              userRole={role}
+              userRole="super_admin"
               disabled={locationLoading}
             />
           )}
@@ -449,4 +390,3 @@ const AllVoters = () => {
 };
 
 export default AllVoters;
-

@@ -1,3 +1,4 @@
+
 import { useEffect, Suspense, lazy } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -5,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { DataAccessProvider } from "@/contexts/DataAccessContext";
 import AuthWrapper from "@/components/layout/AuthWrapper";
 import { addTransitionStyles } from "@/lib/barbaTransitions";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -69,62 +71,64 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
             <AuthProvider>
-              <AuthWrapper>
-                <div className="min-h-screen">
-                  <Suspense fallback={<Loading fullScreen message="পেজ লোড হচ্ছে..." />}>
-                    <Routes>
-                      {/* Public Routes */}
-                      <Route path="/" element={<Index />} />
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/forgot-password" element={<ForgotPassword />} />
-                      <Route path="/pending-verification" element={<PendingVerification />} />
-                      <Route path="/verification-loading" element={<VerificationLoading />} />
-                      <Route path="/unauthorized" element={<Unauthorized />} />
-                      <Route path="/location-demo" element={<LocationDemo />} />
+              <DataAccessProvider>
+                <AuthWrapper>
+                  <div className="min-h-screen">
+                    <Suspense fallback={<Loading fullScreen message="পেজ লোড হচ্ছে..." />}>
+                      <Routes>
+                        {/* Public Routes */}
+                        <Route path="/" element={<Index />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/pending-verification" element={<PendingVerification />} />
+                        <Route path="/verification-loading" element={<VerificationLoading />} />
+                        <Route path="/unauthorized" element={<Unauthorized />} />
+                        <Route path="/location-demo" element={<LocationDemo />} />
 
-                      {/* Documentation Routes */}
-                      <Route path="/docs" element={<Documentation />} />
-                      <Route path="/documentation/voter-management" element={<VoterManagement />} />
-                      <Route path="/documentation/location-management" element={<LocationDocumentation />} />
-                      <Route path="/documentation/analytics-system" element={<AnalyticsSystem />} />
-                      <Route path="/documentation/sms-campaigns" element={<SMSCampaignDocs />} />
-                      <Route path="/documentation/data-hub" element={<DataHubDocs />} />
-                      <Route path="/documentation/system-settings" element={<SystemSettingsDocs />} />
-                      <Route path="/documentation/api-reference" element={<APIReference />} />
+                        {/* Documentation Routes */}
+                        <Route path="/docs" element={<Documentation />} />
+                        <Route path="/documentation/voter-management" element={<VoterManagement />} />
+                        <Route path="/documentation/location-management" element={<LocationDocumentation />} />
+                        <Route path="/documentation/analytics-system" element={<AnalyticsSystem />} />
+                        <Route path="/documentation/sms-campaigns" element={<SMSCampaignDocs />} />
+                        <Route path="/documentation/data-hub" element={<DataHubDocs />} />
+                        <Route path="/documentation/system-settings" element={<SystemSettingsDocs />} />
+                        <Route path="/documentation/api-reference" element={<APIReference />} />
 
-                      {/* Protected Routes - wrap all in LocationBasedAccessWrapper */}
-                      <Route
-                        path="/*"
-                        element={
-                          <ProtectedRoute>
-                            <LocationBasedAccessWrapper>
-                              <Routes>
-                                <Route path="dashboard" element={<DashboardRouter />} />
-                                <Route path="admin" element={<AdminDashboard />} />
-                                <Route path="admin/home" element={<AdminDashboard />} />
-                                <Route path="admin/all-voters" element={<AllVoters />} />
-                                <Route path="admin/pdf-preview" element={<PDFPreview />} />
-                                <Route path="admin/add-new-voter" element={<AddVoters />} />
-                                <Route path="admin/google-forms" element={<GoogleForm />} />
-                                <Route path="admin/analytics-reports" element={<Analytics />} />
-                                <Route path="admin/sms-campaigns" element={<SMSCampaign />} />
-                                <Route path="admin/data-management" element={<DataHub />} />
-                                <Route path="admin/user-verification" element={<UserVerify />} />
-                                <Route path="admin/location-management" element={<LocationManagement />} />
-                                <Route path="admin/system-configuration" element={<SystemSettings />} />
-                                {/* Add more protected routes as needed */}
-                              </Routes>
-                            </LocationBasedAccessWrapper>
-                          </ProtectedRoute>
-                        }
-                      />
+                        {/* Protected Routes - wrap all in LocationBasedAccessWrapper */}
+                        <Route
+                          path="/*"
+                          element={
+                            <ProtectedRoute>
+                              <LocationBasedAccessWrapper>
+                                <Routes>
+                                  <Route path="dashboard" element={<DashboardRouter />} />
+                                  <Route path="admin" element={<AdminDashboard />} />
+                                  <Route path="admin/home" element={<AdminDashboard />} />
+                                  <Route path="admin/all-voters" element={<AllVoters />} />
+                                  <Route path="admin/pdf-preview" element={<PDFPreview />} />
+                                  <Route path="admin/add-new-voter" element={<AddVoters />} />
+                                  <Route path="admin/google-forms" element={<GoogleForm />} />
+                                  <Route path="admin/analytics-reports" element={<Analytics />} />
+                                  <Route path="admin/sms-campaigns" element={<SMSCampaign />} />
+                                  <Route path="admin/data-management" element={<DataHub />} />
+                                  <Route path="admin/user-verification" element={<UserVerify />} />
+                                  <Route path="admin/location-management" element={<LocationManagement />} />
+                                  <Route path="admin/system-configuration" element={<SystemSettings />} />
+                                  {/* Add more protected routes as needed */}
+                                </Routes>
+                              </LocationBasedAccessWrapper>
+                            </ProtectedRoute>
+                          }
+                        />
 
-                      {/* Catch-all route */}
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Suspense>
-                </div>
-              </AuthWrapper>
+                        {/* Catch-all route */}
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </Suspense>
+                  </div>
+                </AuthWrapper>
+              </DataAccessProvider>
             </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
+import { useDataAccess } from '@/contexts/DataAccessContext';
 import { User } from '@/lib/types';
 import { getRolePermissions, getRoleDisplayName } from '@/lib/rbac';
 import { CheckCircle, XCircle, UserCheck, MapPin, Settings, Eye, EyeOff } from 'lucide-react';
@@ -435,7 +435,14 @@ const UserRow = React.memo(({ index, style, data }: ListChildComponentProps) => 
 });
 
 const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
-  const { userProfile } = useAuth();
+  const { 
+    getAccessibleUsers, 
+    canManageUser, 
+    canAssignRole,
+    accessScope,
+    canAccessAllData 
+  } = useDataAccess();
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
@@ -446,7 +453,7 @@ const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch users with pagination and .select()
+  // Fetch users with role-based filtering
   const fetchUsers = useCallback(async (afterDoc?: QueryDocumentSnapshot<DocumentData> | null, append = false) => {
     setIsLoading(true);
     setError(null);
@@ -458,16 +465,20 @@ const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
       }
       const snapshot = await getDocs(q);
       const docs = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() })) as User[];
+      
+      // Apply role-based filtering
+      const accessibleUsers = getAccessibleUsers(docs);
+      
       setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
       setHasMore(snapshot.docs.length === PAGE_SIZE);
-      setUsers(prev => append ? [...prev, ...docs] : docs);
+      setUsers(prev => append ? [...prev, ...accessibleUsers] : accessibleUsers);
     } catch (err: any) {
       setError('ব্যবহারকারী ডেটা আনতে সমস্যা হয়েছে।');
       setHasMore(false);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [getAccessibleUsers]);
 
   useEffect(() => {
     fetchUsers();
@@ -484,28 +495,8 @@ const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
         user.email?.toLowerCase().includes(term)
       );
     }
-    // Role/location-based filtering
-    if (userProfile && userProfile.role !== 'super_admin') {
-      filtered = filtered.filter(user => {
-        if (!user.accessScope || !userProfile.accessScope) return false;
-        const userScope = userProfile.accessScope;
-        const targetScope = user.accessScope;
-        switch (userProfile.role) {
-          case 'division_admin':
-            return targetScope.division_id === userScope.division_id;
-          case 'district_admin':
-            return targetScope.district_id === userScope.district_id;
-          case 'upazila_admin':
-            return targetScope.upazila_id === userScope.upazila_id;
-          case 'union_admin':
-            return targetScope.union_id === userScope.union_id;
-          default:
-            return false;
-        }
-      });
-    }
     return filtered;
-  }, [users, debouncedSearchTerm, userProfile]);
+  }, [users, debouncedSearchTerm]);
 
   // Batch update mutation for multi-user actions
   const batchUpdateUsers = useMutation({
@@ -570,13 +561,16 @@ const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
     }
   }, [hasMore, lastDoc, fetchUsers]);
 
-  const permissions = userProfile ? getRolePermissions(userProfile.role) : null;
-
-  if (!userProfile || !permissions?.canVerifyUsers) {
+  if (!canAccessAllData && !canAssignRole('village_admin')) {
     return (
       <Card>
         <CardContent className="p-6">
-          <p className="text-center text-gray-500">আপনার ব্যবহারকারী যাচাই করার অনুমতি নেই</p>
+          <div className="text-center">
+            <p className="text-gray-500 mb-2">আপনার ব্যবহারকারী যাচাই করার অনুমতি নেই</p>
+            <div className="text-sm text-gray-400">
+              <p>আপনার এক্সেস স্কোপ: {accessScope.division_name || accessScope.district_name || accessScope.upazila_name || accessScope.union_name || accessScope.village_name || 'সীমিত'}</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
@@ -610,27 +604,44 @@ const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
             <UserCheck className="w-5 h-5" />
             ব্যবহারকারী যাচাই ও ভূমিকা বরাদ্দ
           </CardTitle>
-          <Input
-            placeholder="নাম বা ইমেইল দিয়ে খুঁজুন..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="max-w-xs"
-          />
+          <div className="flex items-center gap-4">
+            <Input
+              placeholder="নাম বা ইমেইল দিয়ে খুঁজুন..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="max-w-xs"
+            />
+            {!canAccessAllData && (
+              <Badge variant="outline" className="text-xs">
+                {accessScope.division_name && `বিভাগ: ${accessScope.division_name}`}
+                {accessScope.district_name && `জেলা: ${accessScope.district_name}`}
+                {accessScope.upazila_name && `উপজেলা: ${accessScope.upazila_name}`}
+                {accessScope.union_name && `ইউনিয়ন: ${accessScope.union_name}`}
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {filteredUsers.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">কোনো ব্যবহারকারী পাওয়া যায়নি</p>
+              <p className="text-center text-gray-500 py-8">
+                আপনার এক্সেস স্কোপে কোনো ব্যবহারকারী পাওয়া যায়নি
+              </p>
             ) : (
-              <List
-                height={600}
-                itemCount={filteredUsers.length}
-                itemSize={140}
-                width="100%"
-                itemData={{ users: filteredUsers, permissions, handleUpdateUser, handleVerifyUser, userProfile }}
-              >
-                {UserRow}
-              </List>
+              <>
+                <div className="text-sm text-gray-600 mb-4">
+                  মোট ব্যবহারকারী: {filteredUsers.length}
+                </div>
+                <List
+                  height={600}
+                  itemCount={filteredUsers.length}
+                  itemSize={140}
+                  width="100%"
+                  itemData={{ users: filteredUsers, permissions: getRolePermissions(accessScope?.role || ''), handleUpdateUser, handleVerifyUser, userProfile: accessScope }}
+                >
+                  {UserRow}
+                </List>
+              </>
             )}
             {hasMore && !isLoading && (
               <div className="flex justify-center mt-4">
