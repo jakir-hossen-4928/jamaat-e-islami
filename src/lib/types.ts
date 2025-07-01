@@ -1,12 +1,15 @@
+
 export interface VoterData {
   id?: string; // Firestore Document ID
   ID: string;
 
   // Personal Info
-  'Voter Name': string;
+  Name: string; // Changed from 'Voter Name' to 'Name'
+  'Fathers Name': string; // Keep this as is
+  'Mothers Name': string; // Keep this as is
   FatherOrHusband?: string;
   Age?: number;
-  Gender?: 'Male' | 'Female' | 'Other';
+  Gender?: 'Male' | 'Female' | 'Other' | 'পুরুষ' | 'মহিলা';
   'Marital Status'?: 'Married' | 'Unmarried' | 'Widowed' | 'Divorced';
   Student?: 'Yes' | 'No';
   Occupation?: string;
@@ -15,13 +18,15 @@ export interface VoterData {
 
   // Contact Info
   Phone?: string;
+  Mobile?: string; // Added Mobile field
   NID?: string;
+  'Voter ID'?: string; // Added Voter ID field
 
   // Voting Info
   'Will Vote'?: 'Yes' | 'No';
   'Voted Before'?: 'Yes' | 'No';
-  'Vote Probability (%)'?: number; // Should be a number between 10 and 100
-
+  'Vote Probability (%)'?: number;
+  'Priority Level'?: string; // Added Priority Level
   'Political Support'?: string;
 
   // Special Conditions
@@ -36,11 +41,23 @@ export interface VoterData {
   village_id?: string;
 
   // Location Names (for display)
+  Division?: string; // Added Division name field
+  District?: string; // Added District name field
+  Upazila?: string; // Added Upazila name field
+  Union?: string; // Added Union name field
+  Village?: string; // Added Village name field
   'Village Name'?: string;
+
+  // Additional fields
+  Serial?: string; // Added Serial field
+  'Blood Group'?: string; // Added Blood Group field
+  Picture?: string; // Added Picture field
+  Address?: string; // Added Address field
 
   // Metadata
   'House Name'?: string;
   Remarks?: string;
+  'Special Note'?: string; // Added Special Note field
   Collector?: string;
   'Collection Date'?: string;
   'Last Updated'?: string;

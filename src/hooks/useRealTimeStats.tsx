@@ -4,6 +4,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from './useAuth';
 import { useDataAccess } from '@/contexts/DataAccessContext';
+import { VoterData } from '@/lib/types';
 
 interface StatsData {
   totalVoters: number;
@@ -44,13 +45,19 @@ export const useRealTimeStats = (options: UseRealTimeStatsOptions = {}) => {
       // Fetch voters based on user's access scope
       const votersQuery = createVoterQuery();
       const votersSnapshot = votersQuery ? await getDocs(votersQuery) : null;
-      const voters = votersSnapshot?.docs.map(doc => doc.data()) || [];
+      const voters = votersSnapshot?.docs.map(doc => doc.data() as VoterData) || [];
 
       // Calculate voter stats
       const totalVoters = voters.length;
-      const maleVoters = voters.filter(voter => voter.Gender === 'Male' || voter.Gender === 'পুরুষ').length;
-      const femaleVoters = voters.filter(voter => voter.Gender === 'Female' || voter.Gender === 'মহিলা').length;
-      const highPriorityVoters = voters.filter(voter => voter['Priority Level'] === 'High' || voter['Priority Level'] === 'উচ্চ').length;
+      const maleVoters = voters.filter(voter => 
+        voter.Gender === 'Male' || voter.Gender === 'পুরুষ'
+      ).length;
+      const femaleVoters = voters.filter(voter => 
+        voter.Gender === 'Female' || voter.Gender === 'মহিলা'
+      ).length;
+      const highPriorityVoters = voters.filter(voter => 
+        voter['Priority Level'] === 'High' || voter['Priority Level'] === 'উচ্চ'
+      ).length;
 
       // Fetch users data (only if user has permission)
       let activeAdmins = 0;

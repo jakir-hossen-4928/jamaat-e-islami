@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +11,7 @@ import { useLocationAccess } from '@/components/LocationBasedAccessWrapper';
 
 const SuperAdminDashboard = () => {
   const { userProfile } = useLocationAccess();
-  const { stats, isLoading, refetch, isRefetching } = useRealTimeStats({
+  const { data: stats, isLoading, refetch, isRefetching } = useRealTimeStats({
     refetchInterval: 30000, // Refresh every 30 seconds
     staleTime: 10000, // Consider data stale after 10 seconds
   });

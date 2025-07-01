@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
@@ -40,10 +41,10 @@ const AllVoters = () => {
   const { toast } = useToast();
 
   const additionalFilters = useMemo(() => {
-    return {
-      Gender: genderFilter,
-      'Priority Level': priorityFilter,
-    };
+    const filters: Record<string, string> = {};
+    if (genderFilter) filters.Gender = genderFilter;
+    if (priorityFilter) filters['Priority Level'] = priorityFilter;
+    return filters;
   }, [genderFilter, priorityFilter]);
 
   const { data: votersData = [], isLoading, error, refetch } = useQuery({
@@ -55,7 +56,7 @@ const AllVoters = () => {
       const snapshot = await getDocs(votersQuery);
       const votersData = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...(doc.data() || {}) // Ensure we always spread an object
+        ...doc.data()
       })) as VoterData[];
       
       return getAccessibleVoters(votersData);
@@ -95,7 +96,7 @@ const AllVoters = () => {
       <Card>
         <CardContent className="p-6">
           <p className="text-center text-red-500">
-            ভোটার তালিকা লোড করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।
+            ভোটার তালিকা লোড করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।
           </p>
         </CardContent>
       </Card>
@@ -110,7 +111,7 @@ const AllVoters = () => {
           <div className="flex items-center space-x-4">
             <Input
               type="search"
-              placeholder="নাম, আইডি, ঠিকানা দিয়ে খুঁজুন..."
+              placeholder="নাম, আইডি, ঠিকানা দিয়ে খুঁজুন..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
@@ -119,7 +120,7 @@ const AllVoters = () => {
                 <SelectValue placeholder="লিঙ্গ" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">সব</SelectItem>
+                <SelectItem value="all">সব</SelectItem>
                 <SelectItem value="পুরুষ">পুরুষ</SelectItem>
                 <SelectItem value="মহিলা">মহিলা</SelectItem>
               </SelectContent>
@@ -129,7 +130,7 @@ const AllVoters = () => {
                 <SelectValue placeholder="অগ্রাধিকার" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">সব</SelectItem>
+                <SelectItem value="all">সব</SelectItem>
                 <SelectItem value="উচ্চ">উচ্চ</SelectItem>
                 <SelectItem value="মাঝারি">মাঝারি</SelectItem>
                 <SelectItem value="নিম্ন">নিম্ন</SelectItem>
@@ -139,7 +140,7 @@ const AllVoters = () => {
         </CardHeader>
         <CardContent>
           {filteredVoters.length === 0 ? (
-            <p className="text-center">কোনো ভোটার পাওয়া যায়নি</p>
+            <p className="text-center">কোনো ভোটার পাওয়া যায়নি</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -150,11 +151,11 @@ const AllVoters = () => {
                     <TableHead>মাতার নাম</TableHead>
                     <TableHead>লিঙ্গ</TableHead>
                     <TableHead>গ্রাম</TableHead>
-                    <TableHead>ইউনিয়ন</TableHead>
+                    <TableHead>ইউনিয়ন</TableHead>
                     <TableHead>উপজেলা</TableHead>
                     <TableHead>জেলা</TableHead>
                     <TableHead>বিভাগ</TableHead>
-                    <TableHead>সিরিয়াল</TableHead>
+                    <TableHead>সিরিয়াল</TableHead>
                     <TableHead>ভোটার আইডি</TableHead>
                     <TableHead>মোবাইল</TableHead>
                     <TableHead>পেশা</TableHead>

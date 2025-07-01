@@ -24,7 +24,7 @@ import { toast } from 'sonner';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Input } from '@/components/ui/input';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 
 const PAGE_SIZE = 30;
 

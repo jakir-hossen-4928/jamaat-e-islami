@@ -11,7 +11,7 @@ import RoleBasedSidebar from '@/components/layout/RoleBasedSidebar';
 
 const DivisionAdminDashboard = () => {
   const { userProfile } = useAuth();
-  const { stats, isLoading, refetch, isRefetching } = useRealTimeStats({
+  const { data: stats, isLoading, refetch, isRefetching } = useRealTimeStats({
     refetchInterval: 30000, // Refresh every 30 seconds
     staleTime: 10000, // Consider data stale after 10 seconds
     enabled: !!userProfile?.accessScope?.division_id
