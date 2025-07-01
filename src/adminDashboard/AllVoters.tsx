@@ -56,7 +56,7 @@ const AllVoters = () => {
       const snapshot = await getDocs(votersQuery);
       const votersData = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...(doc.data() as Omit<VoterData, 'id'>)
       })) as VoterData[];
       
       return getAccessibleVoters(votersData);
@@ -67,7 +67,7 @@ const AllVoters = () => {
   const filteredVoters = useMemo(() => {
     if (!Array.isArray(votersData)) return [];
 
-    let filtered = votersData;
+    let filtered = [...votersData];
 
     if (debouncedSearchTerm) {
       const term = debouncedSearchTerm.toLowerCase();
