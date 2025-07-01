@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User as FirebaseUser, onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -11,7 +10,6 @@ interface AuthContextType {
   currentUser: FirebaseUser | null;
   userProfile: User | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
   loading: boolean;
 }
@@ -31,7 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userProfile, setUserProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { secureLogin, secureRegister } = useSecureAuth();
+  const { secureLogin } = useSecureAuth();
 
   const login = async (email: string, password: string) => {
     const result = await secureLogin(email, password);
@@ -55,29 +53,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           navigate('/dashboard');
         }
       }
-    }
-  };
-
-  const register = async (
-    email: string, 
-    password: string, 
-    displayName: string
-  ) => {
-    const result = await secureRegister(email, password);
-    
-    if (result.success && result.user) {
-      // Create user profile in Firestore
-      const userProfile: User = {
-        uid: result.user.uid,
-        email: email,
-        displayName: displayName,
-        role: 'union_admin', // Default role for new users
-        approved: false,
-        createdAt: new Date().toISOString(),
-        accessScope: {} // Initialize empty access scope
-      };
-
-      await setDoc(doc(db, 'users', result.user.uid), userProfile);
     }
   };
 
@@ -109,7 +84,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     currentUser,
     userProfile,
     login,
-    register,
     logout,
     loading,
   };

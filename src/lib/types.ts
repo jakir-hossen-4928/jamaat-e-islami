@@ -167,3 +167,5 @@ export interface RolePermissions {
   canAccessAllVoters: boolean;
   locationScope: 'all' | 'division' | 'district' | 'upazila' | 'union' | 'village';
 }
+
+export type UserRole = 'super_admin' | 'division_admin' | 'district_admin' | 'upazila_admin' | 'union_admin' | 'village_admin';

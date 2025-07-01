@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import React, { useState, useMemo, useCallback } from 'react';
+import { collection, query, where, orderBy, limit, startAfter, getDocs, Query, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,8 +27,11 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import RoleBasedSidebar from '@/components/layout/RoleBasedSidebar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { useVotersQuery } from '@/hooks/useOptimizedQuery';
 import { getFullLocationHierarchy } from '@/lib/locationUtils';
+import VirtualizedVoterList from '@/components/voter/VirtualizedVoterList';
+import { useDebounce } from '@/hooks/useDebounce';
+
+const PAGE_SIZE = 50;
 
 const AllVoters = () => {
   usePageTitle('সকল ভোটার - অ্যাডমিন প্যানেল');
@@ -37,9 +40,14 @@ const AllVoters = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [selectedTab, setSelectedTab] = useState('all');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [locationNames, setLocationNames] = useState<{ [key: string]: string }>({});
+  const [voters, setVoters] = useState<VoterData[]>([]);
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const {
     locationData,
@@ -48,108 +56,152 @@ const AllVoters = () => {
     isLoading: locationLoading
   } = useLocationFilter();
 
-  // Create optimized query without limits to reduce complexity
-  const createVotersQuery = () => {
+  // Create optimized query with pagination and select only needed fields
+  const createVotersQuery = useCallback((afterDoc?: QueryDocumentSnapshot<DocumentData> | null) => {
     if (!userProfile) return null;
-
     const votersCollection = collection(db, 'voters');
-
-    // Apply role-based filtering without limits for better performance
+    let q: Query<DocumentData>;
+    // Role/location-based filtering
     if (userProfile.role !== 'super_admin') {
       const userScope = userProfile.accessScope;
       if (userScope.village_id) {
-        return query(votersCollection,
+        q = query(votersCollection,
           where('village_id', '==', userScope.village_id),
-          orderBy('Last Updated', 'desc')
+          orderBy('Last Updated', 'desc'),
+          limit(PAGE_SIZE)
         );
       } else if (userScope.union_id) {
-        return query(votersCollection,
+        q = query(votersCollection,
           where('union_id', '==', userScope.union_id),
-          orderBy('Last Updated', 'desc')
+          orderBy('Last Updated', 'desc'),
+          limit(PAGE_SIZE)
         );
       } else if (userScope.upazila_id) {
-        return query(votersCollection,
+        q = query(votersCollection,
           where('upazila_id', '==', userScope.upazila_id),
-          orderBy('Last Updated', 'desc')
+          orderBy('Last Updated', 'desc'),
+          limit(PAGE_SIZE)
         );
       } else if (userScope.district_id) {
-        return query(votersCollection,
+        q = query(votersCollection,
           where('district_id', '==', userScope.district_id),
-          orderBy('Last Updated', 'desc')
+          orderBy('Last Updated', 'desc'),
+          limit(PAGE_SIZE)
         );
       } else if (userScope.division_id) {
-        return query(votersCollection,
+        q = query(votersCollection,
           where('division_id', '==', userScope.division_id),
-          orderBy('Last Updated', 'desc')
+          orderBy('Last Updated', 'desc'),
+          limit(PAGE_SIZE)
         );
+      } else {
+        q = query(votersCollection, orderBy('Last Updated', 'desc'), limit(PAGE_SIZE));
       }
     } else {
       // For super admin, apply selected location filters
       if (selectedLocation.village_id) {
-        return query(votersCollection,
+        q = query(votersCollection,
           where('village_id', '==', selectedLocation.village_id),
-          orderBy('Last Updated', 'desc')
+          orderBy('Last Updated', 'desc'),
+          limit(PAGE_SIZE)
         );
       } else if (selectedLocation.union_id) {
-        return query(votersCollection,
+        q = query(votersCollection,
           where('union_id', '==', selectedLocation.union_id),
-          orderBy('Last Updated', 'desc')
+          orderBy('Last Updated', 'desc'),
+          limit(PAGE_SIZE)
         );
       } else if (selectedLocation.upazila_id) {
-        return query(votersCollection,
+        q = query(votersCollection,
           where('upazila_id', '==', selectedLocation.upazila_id),
-          orderBy('Last Updated', 'desc')
+          orderBy('Last Updated', 'desc'),
+          limit(PAGE_SIZE)
         );
       } else if (selectedLocation.district_id) {
-        return query(votersCollection,
+        q = query(votersCollection,
           where('district_id', '==', selectedLocation.district_id),
-          orderBy('Last Updated', 'desc')
+          orderBy('Last Updated', 'desc'),
+          limit(PAGE_SIZE)
         );
       } else if (selectedLocation.division_id) {
-        return query(votersCollection,
+        q = query(votersCollection,
           where('division_id', '==', selectedLocation.division_id),
-          orderBy('Last Updated', 'desc')
+          orderBy('Last Updated', 'desc'),
+          limit(PAGE_SIZE)
         );
+      } else {
+        q = query(votersCollection, orderBy('Last Updated', 'desc'), limit(PAGE_SIZE));
       }
     }
-
-    // Default query
-    return query(votersCollection,
-      orderBy('Last Updated', 'desc')
-    );
-  };
-
-  const votersQuery = createVotersQuery();
-
-  // Create proper query key with stringified objects
-  const createQueryKey = () => {
-    const baseKey = ['voters-optimized', userProfile?.uid];
-    if (selectedLocation && Object.keys(selectedLocation).length > 0) {
-      baseKey.push(JSON.stringify(selectedLocation));
+    if (afterDoc) {
+      q = query(q, startAfter(afterDoc));
     }
-    return baseKey;
-  };
+    return q;
+  }, [userProfile, selectedLocation]);
 
-  // Optimized Firebase query with caching
-  const { data: queryData, isLoading, error } = useVotersQuery({
-    query: votersQuery!,
-    queryKey: createQueryKey(),
-    enabled: !!userProfile && !!votersQuery,
-  });
+  // Fetch voters with pagination
+  const fetchVoters = useCallback(async (afterDoc?: QueryDocumentSnapshot<DocumentData> | null, append = false) => {
+    setIsLoading(true);
+    try {
+      const q = createVotersQuery(afterDoc);
+      if (!q) return;
+      const snapshot = await getDocs(q);
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as VoterData[];
+      if (append) {
+        setVoters(prev => [...prev, ...docs]);
+      } else {
+        setVoters(docs);
+      }
+      setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
+      setHasMore(snapshot.docs.length === PAGE_SIZE);
+    } catch (err) {
+      setHasMore(false);
+      toast({ title: 'ডেটা লোডে সমস্যা', description: 'ভোটার ডেটা আনতে সমস্যা হয়েছে।', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [createVotersQuery, toast]);
 
-  // Ensure allVoters is always an array
-  const allVoters: VoterData[] = Array.isArray(queryData) ? queryData : [];
+  // Initial and location/search change fetch
+  React.useEffect(() => {
+    fetchVoters();
+    // eslint-disable-next-line
+  }, [userProfile, selectedLocation, debouncedSearchTerm]);
+
+  // Load more handler
+  const handleLoadMore = useCallback(() => {
+    if (hasMore && lastDoc) {
+      fetchVoters(lastDoc, true);
+    }
+  }, [hasMore, lastDoc, fetchVoters]);
+
+  // Filter voters based on debounced search and tab
+  const filteredVoters = useMemo(() => {
+    if (!Array.isArray(voters)) return [];
+    let filtered = voters;
+    if (debouncedSearchTerm) {
+      const term = debouncedSearchTerm.toLowerCase();
+      filtered = filtered.filter(voter =>
+        voter['Voter Name']?.toLowerCase().includes(term) ||
+        voter.ID?.toLowerCase().includes(term) ||
+        voter.Phone?.includes(term) ||
+        voter.NID?.includes(term)
+      );
+    }
+    // Tab filter (if needed)
+    return filtered;
+  }, [voters, debouncedSearchTerm]);
 
   // Load location names efficiently using static data
   React.useEffect(() => {
     const loadLocationNames = async () => {
-      if (!allVoters || allVoters.length === 0) return;
+      if (!voters || voters.length === 0) return;
 
       const names: { [key: string]: string } = {};
 
       try {
         // Get unique location combinations to reduce API calls
-        const uniqueVoters = allVoters.filter((voter, index, self) =>
+        const uniqueVoters = voters.filter((voter, index, self) =>
           index === self.findIndex(v =>
             v.division_id === voter.division_id &&
             v.district_id === voter.district_id &&
@@ -178,40 +230,7 @@ const AllVoters = () => {
     };
 
     loadLocationNames();
-  }, [allVoters]);
-
-  // Filter voters based on search and tab with optimizations
-  const filteredVoters = useMemo(() => {
-    if (!Array.isArray(allVoters)) return [];
-
-    let filtered = allVoters;
-
-    // Search filter with early return
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(voter =>
-        voter['Voter Name']?.toLowerCase().includes(term) ||
-        voter.ID?.toLowerCase().includes(term) ||
-        voter.Phone?.includes(term) ||
-        voter.NID?.includes(term)
-      );
-    }
-
-    // Tab filter with early returns
-    if (selectedTab === 'will-vote') {
-      filtered = filtered.filter(voter => voter['Will Vote'] === 'Yes');
-    } else if (selectedTab === 'wont-vote') {
-      filtered = filtered.filter(voter => voter['Will Vote'] === 'No');
-    } else if (selectedTab === 'high-probability') {
-      filtered = filtered.filter(voter =>
-        voter['Vote Probability (%)'] && voter['Vote Probability (%)'] >= 70
-      );
-    } else if (selectedTab === 'with-phone') {
-      filtered = filtered.filter(voter => voter.Phone);
-    }
-
-    return filtered;
-  }, [allVoters, searchTerm, selectedTab]);
+  }, [voters]);
 
   const getLocationName = (voter: VoterData) => {
     const locationKey = `${voter.division_id}_${voter.district_id}_${voter.upazila_id}_${voter.union_id}`;
@@ -220,18 +239,18 @@ const AllVoters = () => {
 
   // Statistics with memoization
   const stats = useMemo(() => {
-    if (!Array.isArray(allVoters)) return { total: 0, willVote: 0, wontVote: 0, highProbability: 0, withPhone: 0 };
+    if (!Array.isArray(voters)) return { total: 0, willVote: 0, wontVote: 0, highProbability: 0, withPhone: 0 };
 
-    const total = allVoters.length;
-    const willVote = allVoters.filter(v => v['Will Vote'] === 'Yes').length;
-    const wontVote = allVoters.filter(v => v['Will Vote'] === 'No').length;
-    const highProbability = allVoters.filter(v =>
+    const total = voters.length;
+    const willVote = voters.filter(v => v['Will Vote'] === 'Yes').length;
+    const wontVote = voters.filter(v => v['Will Vote'] === 'No').length;
+    const highProbability = voters.filter(v =>
       v['Vote Probability (%)'] && v['Vote Probability (%)'] >= 70
     ).length;
-    const withPhone = allVoters.filter(v => v.Phone).length;
+    const withPhone = voters.filter(v => v.Phone).length;
 
     return { total, willVote, wontVote, highProbability, withPhone };
-  }, [allVoters]);
+  }, [voters]);
 
   const handleExportToPDF = () => {
     if (!Array.isArray(filteredVoters) || filteredVoters.length === 0) {
@@ -248,16 +267,6 @@ const AllVoters = () => {
   const handleViewAnalytics = () => {
     navigate('/admin/analytics', { state: { voters: filteredVoters, locationFilter: selectedLocation } });
   };
-
-  if (error) {
-    return (
-      <RoleBasedSidebar>
-        <div className="text-center py-8">
-          <p className="text-red-600">ডেটা লোড করতে সমস্যা হয়েছে</p>
-        </div>
-      </RoleBasedSidebar>
-    );
-  }
 
   return (
     <RoleBasedSidebar>
@@ -427,72 +436,10 @@ const AllVoters = () => {
                   <p className="mt-2 text-gray-600">লোড হচ্ছে...</p>
                 </div>
               ) : (
-                <Card>
-                  <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                      <div className="grid gap-3 lg:gap-4 p-4 lg:p-6">
-                        {!Array.isArray(filteredVoters) || filteredVoters.length === 0 ? (
-                          <div className="text-center py-8">
-                            <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <p className="text-gray-600">কোন ভোটার পাওয়া যায়নি</p>
-                          </div>
-                        ) : (
-                          filteredVoters.map((voter) => (
-                            <div key={voter.id} className="border rounded-lg p-3 lg:p-4 hover:bg-gray-50">
-                              <div className="flex items-start justify-between">
-                                <div className="flex items-start space-x-3 lg:space-x-4">
-                                  <Avatar className="h-10 w-10 lg:h-12 lg:w-12">
-                                    <AvatarFallback className="bg-blue-100 text-blue-600">
-                                      {voter['Voter Name']?.charAt(0) || 'V'}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="space-y-1">
-                                    <h3 className="font-medium text-gray-900 text-sm lg:text-base">
-                                      {voter['Voter Name']}
-                                    </h3>
-                                    <p className="text-xs lg:text-sm text-gray-600">আইডি: {voter.ID}</p>
-                                    {voter.Phone && (
-                                      <div className="flex items-center text-xs lg:text-sm text-gray-600">
-                                        <Phone className="h-3 w-3 mr-1" />
-                                        {voter.Phone}
-                                      </div>
-                                    )}
-                                    <div className="flex items-center text-xs lg:text-sm text-gray-600">
-                                      <MapPin className="h-3 w-3 mr-1" />
-                                      {getLocationName(voter)}
-                                    </div>
-                                    {voter['Political Support'] && (
-                                      <p className="text-xs text-gray-600">
-                                        সমর্থন: {voter['Political Support']}
-                                      </p>
-                                    )}
-                                    {/* No Priority Level or WhatsApp shown */}
-                                  </div>
-                                </div>
-                                <div className="flex flex-col lg:flex-row items-end lg:items-center space-y-2 lg:space-y-0 lg:space-x-2">
-                                  {voter['Will Vote'] === 'Yes' && (
-                                    <Badge className="bg-green-100 text-green-800 text-xs">ভোট দিবে</Badge>
-                                  )}
-                                  {voter['Will Vote'] === 'No' && (
-                                    <Badge className="bg-red-100 text-red-800 text-xs">ভোট দিবে না</Badge>
-                                  )}
-                                  {voter['Vote Probability (%)'] && (
-                                    <Badge variant="outline" className="text-xs">
-                                      {voter['Vote Probability (%)']}% সম্ভাবনা
-                                    </Badge>
-                                  )}
-                                  <Button variant="outline" size="sm">
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <VirtualizedVoterList
+                  voters={filteredVoters}
+                  isLoading={isLoading}
+                />
               )}
             </TabsContent>
           </Tabs>
@@ -503,3 +450,4 @@ const AllVoters = () => {
 };
 
 export default AllVoters;
+

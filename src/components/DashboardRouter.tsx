@@ -1,6 +1,6 @@
-
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { LocationBasedAccessWrapper } from './LocationBasedAccessWrapper';
 import SuperAdminDashboard from '@/dashboards/SuperAdminDashboard';
 import DivisionAdminDashboard from '@/dashboards/DivisionAdminDashboard';
 import DistrictAdminDashboard from '@/dashboards/DistrictAdminDashboard';
@@ -40,22 +40,30 @@ const DashboardRouter: React.FC = () => {
   }
 
   // Route based on role
-  switch (userProfile.role) {
-    case 'super_admin':
-      return <SuperAdminDashboard />;
-    case 'division_admin':
-      return <DivisionAdminDashboard />;
-    case 'district_admin':
-      return <DistrictAdminDashboard />;
-    case 'upazila_admin':
-      return <UpazilaAdminDashboard />;
-    case 'union_admin':
-      return <UnionAdminDashboard />;
-    case 'village_admin':
-      return <VillageAdminDashboard />;
-    default:
-      return <VillageAdminDashboard />;
-  }
+  const getDashboardComponent = () => {
+    switch (userProfile.role) {
+      case 'super_admin':
+        return <SuperAdminDashboard />;
+      case 'division_admin':
+        return <DivisionAdminDashboard />;
+      case 'district_admin':
+        return <DistrictAdminDashboard />;
+      case 'upazila_admin':
+        return <UpazilaAdminDashboard />;
+      case 'union_admin':
+        return <UnionAdminDashboard />;
+      case 'village_admin':
+        return <VillageAdminDashboard />;
+      default:
+        return <VillageAdminDashboard />;
+    }
+  };
+
+  return (
+    <LocationBasedAccessWrapper>
+      {getDashboardComponent()}
+    </LocationBasedAccessWrapper>
+  );
 };
 
 export default DashboardRouter;

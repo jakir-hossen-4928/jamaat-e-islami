@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
@@ -83,4 +82,4 @@ const BulkUploadProgress: React.FC<BulkUploadProgressProps> = ({
   );
 };
 
-export default BulkUploadProgress;
+export default React.memo(BulkUploadProgress);

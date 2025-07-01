@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSecureAuth } from "@/hooks/useSecureAuth";
@@ -157,16 +156,6 @@ const Login = () => {
               >
                 পাসওয়ার্ড ভুলে গেছেন?
               </Link>
-
-              <div className="text-sm text-gray-600">
-                নতুন অ্যাকাউন্ট প্রয়োজন?{' '}
-                <Link
-                  to="/register"
-                  className="text-green-600 hover:text-green-800 hover:underline font-medium"
-                >
-                  রেজিস্টার করুন
-                </Link>
-              </div>
             </div>
           </CardContent>
         </Card>

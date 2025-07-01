@@ -1,5 +1,4 @@
-
-import { useEffect } from 'react';
+import { useEffect, Suspense, lazy } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,41 +9,43 @@ import AuthWrapper from "@/components/layout/AuthWrapper";
 import { addTransitionStyles } from "@/lib/barbaTransitions";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/common/ErrorBoundary";
+import { LocationBasedAccessWrapper } from "./components/LocationBasedAccessWrapper";
+import Loading from "./components/loader/Loading";
 
-// Import all pages and components
-import Index from "./pages/Index";
-import Login from "./auth/Login";
-import SignUp from "./auth/SignUp";
-import ForgotPassword from "./auth/ForgotPassword";
-import PendingVerification from "./auth/PendingVerification";
-import VerificationLoading from "./auth/VerificationLoading";
-import Unauthorized from "./auth/Unauthorized";
-import NotFound from "./pages/NotFound";
-import LocationDemo from "./pages/LocationDemo";
-import DashboardRouter from "./components/DashboardRouter";
+// Lazy load all pages and dashboard components
+const Index = lazy(() => import("./pages/Index"));
+const Login = lazy(() => import("./auth/Login"));
+const ForgotPassword = lazy(() => import("./auth/ForgotPassword"));
+const PendingVerification = lazy(() => import("./auth/PendingVerification"));
+const VerificationLoading = lazy(() => import("./auth/VerificationLoading"));
+const Unauthorized = lazy(() => import("./auth/Unauthorized"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const LocationDemo = lazy(() => import("./pages/LocationDemo"));
+const DashboardRouter = lazy(() => import("./components/DashboardRouter"));
+const Register = lazy(() => import("./auth/Register"));
 
 // Admin Dashboard Components
-import AdminDashboard from "./adminDashboard/AdminDashboard";
-import AllVoters from "./adminDashboard/AllVoters";
-import AddVoters from "./adminDashboard/AddVoters";
-import Analytics from "./adminDashboard/Analytics";
-import SMSCampaign from "./adminDashboard/SMSCampaign";
-import DataHub from "./adminDashboard/DataHub";
-import GoogleForm from "./adminDashboard/GoogleForm";
-import UserVerify from "./adminDashboard/usersverify/UserVerify";
-import PDFPreview from "./adminDashboard/PDFPreview";
-import LocationManagement from "./adminDashboard/LocationManagement";
-import SystemSettings from "./adminDashboard/SystemSettings";
+const AdminDashboard = lazy(() => import("./adminDashboard/AdminDashboard"));
+const AllVoters = lazy(() => import("./adminDashboard/AllVoters"));
+const AddVoters = lazy(() => import("./adminDashboard/AddVoters"));
+const Analytics = lazy(() => import("./adminDashboard/Analytics"));
+const SMSCampaign = lazy(() => import("./adminDashboard/SMSCampaign"));
+const DataHub = lazy(() => import("./adminDashboard/DataHub"));
+const GoogleForm = lazy(() => import("./adminDashboard/GoogleForm"));
+const UserVerify = lazy(() => import("./adminDashboard/usersverify/UserVerify"));
+const PDFPreview = lazy(() => import("./adminDashboard/PDFPreview"));
+const LocationManagement = lazy(() => import("./adminDashboard/LocationManagement"));
+const SystemSettings = lazy(() => import("./adminDashboard/SystemSettings"));
 
 // Documentation Pages
-import Documentation from "./pages/Documentation";
-import VoterManagement from "./pages/docs/VoterManagement";
-import LocationDocumentation from "./pages/docs/LocationManagement";
-import AnalyticsSystem from "./pages/docs/AnalyticsSystem";
-import SMSCampaignDocs from "./pages/docs/SMSCampaign";
-import DataHubDocs from "./pages/docs/DataHub";
-import SystemSettingsDocs from "./pages/docs/SystemSettings";
-import APIReference from "./pages/docs/APIReference";
+const Documentation = lazy(() => import("./pages/Documentation"));
+const VoterManagement = lazy(() => import("./pages/docs/VoterManagement"));
+const LocationDocumentation = lazy(() => import("./pages/docs/LocationManagement"));
+const AnalyticsSystem = lazy(() => import("./pages/docs/AnalyticsSystem"));
+const SMSCampaignDocs = lazy(() => import("./pages/docs/SMSCampaign"));
+const DataHubDocs = lazy(() => import("./pages/docs/DataHub"));
+const SystemSettingsDocs = lazy(() => import("./pages/docs/SystemSettings"));
+const APIReference = lazy(() => import("./pages/docs/APIReference"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,109 +72,135 @@ const App = () => {
             <AuthProvider>
               <AuthWrapper>
                 <div className="min-h-screen">
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<SignUp />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/pending-verification" element={<PendingVerification />} />
-                    <Route path="/verification-loading" element={<VerificationLoading />} />
-                    <Route path="/unauthorized" element={<Unauthorized />} />
-                    <Route path="/location-demo" element={<LocationDemo />} />
+                  <Suspense fallback={<Loading fullScreen message="পেজ লোড হচ্ছে..." />}> 
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/forgot-password" element={<ForgotPassword />} />
+                      <Route path="/pending-verification" element={<PendingVerification />} />
+                      <Route path="/verification-loading" element={<VerificationLoading />} />
+                      <Route path="/unauthorized" element={<Unauthorized />} />
+                      <Route path="/location-demo" element={<LocationDemo />} />
+                      <Route path="/register" element={<Register />} />
 
-                    {/* Documentation Routes */}
-                    <Route path="/docs" element={<Documentation />} />
-                    <Route path="/documentation/voter-management" element={<VoterManagement />} />
-                    <Route path="/documentation/location-management" element={<LocationDocumentation />} />
-                    <Route path="/documentation/analytics-system" element={<AnalyticsSystem />} />
-                    <Route path="/documentation/sms-campaigns" element={<SMSCampaignDocs />} />
-                    <Route path="/documentation/data-hub" element={<DataHubDocs />} />
-                    <Route path="/documentation/system-settings" element={<SystemSettingsDocs />} />
-                    <Route path="/documentation/api-reference" element={<APIReference />} />
+                      {/* Documentation Routes */}
+                      <Route path="/docs" element={<Documentation />} />
+                      <Route path="/documentation/voter-management" element={<VoterManagement />} />
+                      <Route path="/documentation/location-management" element={<LocationDocumentation />} />
+                      <Route path="/documentation/analytics-system" element={<AnalyticsSystem />} />
+                      <Route path="/documentation/sms-campaigns" element={<SMSCampaignDocs />} />
+                      <Route path="/documentation/data-hub" element={<DataHubDocs />} />
+                      <Route path="/documentation/system-settings" element={<SystemSettingsDocs />} />
+                      <Route path="/documentation/api-reference" element={<APIReference />} />
 
-                    {/* Main Dashboard Route - Role-based routing */}
-                    <Route path="/dashboard" element={
-                      <ProtectedRoute>
-                        <DashboardRouter />
-                      </ProtectedRoute>
-                    } />
+                      {/* Main Dashboard Route - Role-based routing */}
+                      <Route path="/dashboard" element={
+                        <ProtectedRoute>
+                          <DashboardRouter />
+                        </ProtectedRoute>
+                      } />
 
-                    {/* Admin Routes with user-friendly names */}
-                    <Route path="/admin" element={
-                      <ProtectedRoute>
-                        <AdminDashboard />
-                      </ProtectedRoute>
-                    } />
+                      {/* Admin Routes with user-friendly names */}
+                      <Route path="/admin" element={
+                        <ProtectedRoute>
+                          <LocationBasedAccessWrapper requiredFeature="user_management">
+                            <AdminDashboard />
+                          </LocationBasedAccessWrapper>
+                        </ProtectedRoute>
+                      } />
 
-                    <Route path="/admin/home" element={
-                      <ProtectedRoute>
-                        <AdminDashboard />
-                      </ProtectedRoute>
-                    } />
+                      <Route path="/admin/home" element={
+                        <ProtectedRoute>
+                          <LocationBasedAccessWrapper requiredFeature="user_management">
+                            <AdminDashboard />
+                          </LocationBasedAccessWrapper>
+                        </ProtectedRoute>
+                      } />
 
-                    <Route path="/admin/all-voters" element={
-                      <ProtectedRoute>
-                        <AllVoters />
-                      </ProtectedRoute>
-                    } />
+                      <Route path="/admin/all-voters" element={
+                        <ProtectedRoute>
+                          <LocationBasedAccessWrapper requiredFeature="voter_management">
+                            <AllVoters />
+                          </LocationBasedAccessWrapper>
+                        </ProtectedRoute>
+                      } />
 
-                    <Route path="/admin/pdf-preview" element={
-                      <ProtectedRoute>
-                        <PDFPreview />
-                      </ProtectedRoute>
-                    } />
+                      <Route path="/admin/pdf-preview" element={
+                        <ProtectedRoute>
+                          <LocationBasedAccessWrapper requiredFeature="voter_management">
+                            <PDFPreview />
+                          </LocationBasedAccessWrapper>
+                        </ProtectedRoute>
+                      } />
 
-                    <Route path="/admin/add-new-voter" element={
-                      <ProtectedRoute>
-                        <AddVoters />
-                      </ProtectedRoute>
-                    } />
+                      <Route path="/admin/add-new-voter" element={
+                        <ProtectedRoute>
+                          <LocationBasedAccessWrapper requiredFeature="voter_management">
+                            <AddVoters />
+                          </LocationBasedAccessWrapper>
+                        </ProtectedRoute>
+                      } />
 
-                    <Route path="/admin/google-forms" element={
-                      <ProtectedRoute>
-                        <GoogleForm />
-                      </ProtectedRoute>
-                    } />
+                      <Route path="/admin/google-forms" element={
+                        <ProtectedRoute>
+                          <LocationBasedAccessWrapper requiredFeature="voter_management">
+                            <GoogleForm />
+                          </LocationBasedAccessWrapper>
+                        </ProtectedRoute>
+                      } />
 
-                    <Route path="/admin/analytics-reports" element={
-                      <ProtectedRoute>
-                        <Analytics />
-                      </ProtectedRoute>
-                    } />
+                      <Route path="/admin/analytics-reports" element={
+                        <ProtectedRoute>
+                          <LocationBasedAccessWrapper requiredFeature="analytics">
+                            <Analytics />
+                          </LocationBasedAccessWrapper>
+                        </ProtectedRoute>
+                      } />
 
-                    <Route path="/admin/sms-campaigns" element={
-                      <ProtectedRoute requiredRole="division_admin">
-                        <SMSCampaign />
-                      </ProtectedRoute>
-                    } />
+                      <Route path="/admin/sms-campaigns" element={
+                        <ProtectedRoute>
+                          <LocationBasedAccessWrapper requiredFeature="sms_campaigns">
+                            <SMSCampaign />
+                          </LocationBasedAccessWrapper>
+                        </ProtectedRoute>
+                      } />
 
-                    <Route path="/admin/data-management" element={
-                      <ProtectedRoute requiredRole="super_admin">
-                        <DataHub />
-                      </ProtectedRoute>
-                    } />
+                      <Route path="/admin/data-management" element={
+                        <ProtectedRoute>
+                          <LocationBasedAccessWrapper requiredFeature="system_settings">
+                            <DataHub />
+                          </LocationBasedAccessWrapper>
+                        </ProtectedRoute>
+                      } />
 
-                    <Route path="/admin/user-verification" element={
-                      <ProtectedRoute>
-                        <UserVerify />
-                      </ProtectedRoute>
-                    } />
+                      <Route path="/admin/user-verification" element={
+                        <ProtectedRoute>
+                          <LocationBasedAccessWrapper requiredFeature="user_management">
+                            <UserVerify />
+                          </LocationBasedAccessWrapper>
+                        </ProtectedRoute>
+                      } />
 
-                    <Route path="/admin/location-management" element={
-                      <ProtectedRoute requiredRole="super_admin">
-                        <LocationManagement />
-                      </ProtectedRoute>
-                    } />
+                      <Route path="/admin/location-management" element={
+                        <ProtectedRoute>
+                          <LocationBasedAccessWrapper requiredFeature="system_settings">
+                            <LocationManagement />
+                          </LocationBasedAccessWrapper>
+                        </ProtectedRoute>
+                      } />
 
-                    <Route path="/admin/system-configuration" element={
-                      <ProtectedRoute requiredRole="super_admin">
-                        <SystemSettings />
-                      </ProtectedRoute>
-                    } />
+                      <Route path="/admin/system-configuration" element={
+                        <ProtectedRoute>
+                          <LocationBasedAccessWrapper requiredFeature="system_settings">
+                            <SystemSettings />
+                          </LocationBasedAccessWrapper>
+                        </ProtectedRoute>
+                      } />
 
-                    {/* Catch-all route */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
+                      {/* Catch-all route */}
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
                 </div>
               </AuthWrapper>
             </AuthProvider>

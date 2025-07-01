@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -18,6 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import BulkVoterUpload from './BulkVoterUpload';
 import { useAuth } from '@/hooks/useAuth';
 import { loadLocationData } from '@/lib/locationUtils';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 // Updated VoterData interface
 export interface VoterData {
@@ -147,8 +148,8 @@ const AddVoters = () => {
 
   const queryClient = useQueryClient();
 
-  // Available columns for selection (excluding required 'Voter Name')
-  const availableColumns: { key: keyof VoterData; label: string }[] = [
+  // Memoize availableColumns
+  const availableColumns = useMemo(() => [
     { key: 'House Name', label: 'বাড়ির নাম' },
     { key: 'FatherOrHusband', label: 'পিতা/স্বামীর নাম' },
     { key: 'Age', label: 'বয়স' },
@@ -168,13 +169,32 @@ const AddVoters = () => {
     { key: 'Has Disability', label: 'প্রতিবন্ধী কিনা' },
     { key: 'Is Migrated', label: 'প্রবাসী কিনা' },
     { key: 'Remarks', label: 'মন্তব্য' },
-  ];
+  ], []);
 
-  // Location change handlers
-  const handleLocationChange = (field: string, value: string) => {
+  // Memoize location filter functions
+  const getFilteredDistricts = useCallback(() => {
+    if (!selectedLocation.division_id) return locationData.districts;
+    return locationData.districts.filter((d: any) => d.division_id === selectedLocation.division_id);
+  }, [locationData.districts, selectedLocation.division_id]);
+
+  const getFilteredUpazilas = useCallback(() => {
+    if (!selectedLocation.district_id) return locationData.upazilas;
+    return locationData.upazilas.filter((u: any) => u.district_id === selectedLocation.district_id);
+  }, [locationData.upazilas, selectedLocation.district_id]);
+
+  const getFilteredUnions = useCallback(() => {
+    if (!selectedLocation.upazila_id) return locationData.unions;
+    return locationData.unions.filter((u: any) => u.upazilla_id === selectedLocation.upazila_id);
+  }, [locationData.unions, selectedLocation.upazila_id]);
+
+  const getFilteredVillages = useCallback(() => {
+    if (!selectedLocation.union_id) return locationData.villages;
+    return locationData.villages.filter((v: any) => v.union_id === selectedLocation.union_id);
+  }, [locationData.villages, selectedLocation.union_id]);
+
+  // Memoize handlers
+  const handleLocationChange = useCallback((field: string, value: string) => {
     const updated = { ...selectedLocation };
-
-    // Clear dependent fields when parent changes
     if (field === 'division_id') {
       updated.district_id = '';
       updated.upazila_id = '';
@@ -190,31 +210,21 @@ const AddVoters = () => {
     } else if (field === 'union_id') {
       updated.village_id = '';
     }
-
     updated[field as keyof typeof updated] = value;
     setSelectedLocation(updated);
-  };
+  }, [selectedLocation]);
 
-  // Filter data based on selections
-  const getFilteredDistricts = () => {
-    if (!selectedLocation.division_id) return locationData.districts;
-    return locationData.districts.filter((d: any) => d.division_id === selectedLocation.division_id);
-  };
+  const handleInputChange = useCallback((field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  }, []);
 
-  const getFilteredUpazilas = () => {
-    if (!selectedLocation.district_id) return locationData.upazilas;
-    return locationData.upazilas.filter((u: any) => u.district_id === selectedLocation.district_id);
-  };
-
-  const getFilteredUnions = () => {
-    if (!selectedLocation.upazila_id) return locationData.unions;
-    return locationData.unions.filter((u: any) => u.upazilla_id === selectedLocation.upazila_id);
-  };
-
-  const getFilteredVillages = () => {
-    if (!selectedLocation.union_id) return locationData.villages;
-    return locationData.villages.filter((v: any) => v.union_id === selectedLocation.union_id);
-  };
+  const handleColumnToggle = useCallback((column: string) => {
+    setSelectedColumns((prev) =>
+      prev.includes(column)
+        ? prev.filter((c) => c !== column)
+        : [...prev, column]
+    );
+  }, []);
 
   const addSingleVoterMutation = useMutation({
     mutationFn: async (voter: Partial<VoterData>) => {
@@ -388,18 +398,6 @@ const AddVoters = () => {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleColumnToggle = (column: string) => {
-    setSelectedColumns((prev) =>
-      prev.includes(column)
-        ? prev.filter((c) => c !== column)
-        : [...prev, column]
-    );
-  };
-
   if (showSuccess) {
     return (
       <AdminLayout>
@@ -431,566 +429,580 @@ const AddVoters = () => {
     );
   }
 
+  // Loading skeleton for location data
+  if (userProfile?.role === 'super_admin' && locationData.divisions.length === 0) {
+    return (
+      <AdminLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+          <span className="ml-4 text-lg text-green-700">এলাকা ডেটা লোড হচ্ছে...</span>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
-    <AdminLayout>
-      <div className="min-h-screen bg-gray-50 p-4 sm:p-4">
-        <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white p-4 rounded-lg shadow-sm gap-4">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/admin/voters')}
-                className="flex items-center gap-2 transition-colors duration-200"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                ভোটারদের কাছে ফিরুন
-              </Button>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">নতুন ভোটার যোগ করুন</h1>
-                <p className="text-sm text-gray-600 hidden sm:block">ভোটারের তথ্য প্রবেশ করান ডাটাবেজে যোগ করতে</p>
+    <ErrorBoundary>
+      <AdminLayout>
+        <div className="min-h-screen bg-gray-50 p-4 sm:p-4">
+          <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white p-4 rounded-lg shadow-sm gap-4">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/admin/voters')}
+                  className="flex items-center gap-2 transition-colors duration-200"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  ভোটারদের কাছে ফিরুন
+                </Button>
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900">নতুন ভোটার যোগ করুন</h1>
+                  <p className="text-sm text-gray-600 hidden sm:block">ভোটারের তথ্য প্রবেশ করান ডাটাবেজে যোগ করতে</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <Upload className="w-4 h-4" />
+                      বাল্ক আপলোড CSV
+                    </Button>
+                  </DialogTrigger>
+                  <BulkVoterUpload />
+                </Dialog>
+                <Dialog open={isColumnSettingsOpen} onOpenChange={setIsColumnSettingsOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      কলাম সেটিংস
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="w-full max-w-lg p-4 sm:p-6">
+                    <DialogHeader>
+                      <DialogTitle className="text-lg sm:text-xl">ফর্ম কলাম নির্বাচন করুন</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-2 sm:space-y-4">
+                      <p className="text-sm text-gray-600">ফর্মে কোন কলামগুলো দেখাতে চান তা নির্বাচন করুন:</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+                        {availableColumns.map((column) => (
+                          <div key={column.key} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={column.key}
+                              checked={selectedColumns.includes(column.key)}
+                              onCheckedChange={() => handleColumnToggle(column.key)}
+                              disabled={column.key === 'Voter Name'} // Disable for required field
+                            />
+                            <Label htmlFor={column.key} className="text-sm">{column.label}</Label>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => setIsColumnSettingsOpen(false)}
+                          className="bg-green-600 hover:bg-green-700 transition-colors duration-200"
+                        >
+                          সংরক্ষণ করুন
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsColumnSettingsOpen(false)}
+                        >
+                          বাতিল
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Upload className="w-4 h-4" />
-                    বাল্ক আপলোড CSV
-                  </Button>
-                </DialogTrigger>
-                <BulkVoterUpload />
-              </Dialog>
-              <Dialog open={isColumnSettingsOpen} onOpenChange={setIsColumnSettingsOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Settings className="w-4 h-4" />
-                    কলাম সেটিংস
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="w-full max-w-lg p-4 sm:p-6">
-                  <DialogHeader>
-                    <DialogTitle className="text-lg sm:text-xl">ফর্ম কলাম নির্বাচন করুন</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-2 sm:space-y-4">
-                    <p className="text-sm text-gray-600">ফর্মে কোন কলামগুলো দেখাতে চান তা নির্বাচন করুন:</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
-                      {availableColumns.map((column) => (
-                        <div key={column.key} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={column.key}
-                            checked={selectedColumns.includes(column.key)}
-                            onCheckedChange={() => handleColumnToggle(column.key)}
-                            disabled={column.key === 'Voter Name'} // Disable for required field
-                          />
-                          <Label htmlFor={column.key} className="text-sm">{column.label}</Label>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => setIsColumnSettingsOpen(false)}
-                        className="bg-green-600 hover:bg-green-700 transition-colors duration-200"
-                      >
-                        সংরক্ষণ করুন
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsColumnSettingsOpen(false)}
-                      >
-                        বাতিল
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-            {/* Location Selection for Super Admin */}
-            {userProfile?.role === 'super_admin' && (
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+              {/* Location Selection for Super Admin */}
+              {userProfile?.role === 'super_admin' && (
+                <Card className="shadow-lg">
+                  <CardHeader className="bg-blue-50">
+                    <CardTitle className="flex items-center gap-2 text-blue-800 text-base sm:text-lg">
+                      <MapPin className="w-5 h-5" />
+                      এলাকা নির্বাচন করুন
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 sm:p-6 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                      <div>
+                        <Label>বিভাগ *</Label>
+                        <Select value={selectedLocation.division_id} onValueChange={(value) => handleLocationChange('division_id', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {locationData.divisions.map((division: any) => (
+                              <SelectItem key={division.id} value={division.id}>
+                                {division.bn_name} ({division.name})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label>জেলা *</Label>
+                        <Select
+                          value={selectedLocation.district_id}
+                          onValueChange={(value) => handleLocationChange('district_id', value)}
+                          disabled={!selectedLocation.division_id}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="জেলা নির্বাচন করুন" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getFilteredDistricts().map((district: any) => (
+                              <SelectItem key={district.id} value={district.id}>
+                                {district.bn_name} ({district.name})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label>উপজেলা *</Label>
+                        <Select
+                          value={selectedLocation.upazila_id}
+                          onValueChange={(value) => handleLocationChange('upazila_id', value)}
+                          disabled={!selectedLocation.district_id}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="উপজেলা নির্বাচন করুন" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getFilteredUpazilas().map((upazila: any) => (
+                              <SelectItem key={upazila.id} value={upazila.id}>
+                                {upazila.bn_name} ({upazila.name})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label>ইউনিয়ন</Label>
+                        <Select
+                          value={selectedLocation.union_id}
+                          onValueChange={(value) => handleLocationChange('union_id', value)}
+                          disabled={!selectedLocation.upazila_id}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="ইউনিয়ন নির্বাচন করুন" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getFilteredUnions().map((union: any) => (
+                              <SelectItem key={union.id} value={union.id}>
+                                {union.bn_name} ({union.name})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label>গ্রাম</Label>
+                        <Select
+                          value={selectedLocation.village_id}
+                          onValueChange={(value) => handleLocationChange('village_id', value)}
+                          disabled={!selectedLocation.union_id}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="গ্রাম নির্বাচন করুন" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getFilteredVillages().map((village: any) => (
+                              <SelectItem key={village.id} value={village.id}>
+                                {village.bn_name} ({village.name})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Personal Information */}
               <Card className="shadow-lg">
-                <CardHeader className="bg-blue-50">
-                  <CardTitle className="flex items-center gap-2 text-blue-800 text-base sm:text-lg">
-                    <MapPin className="w-5 h-5" />
-                    এলাকা নির্বাচন করুন
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6 space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div>
-                      <Label>বিভাগ *</Label>
-                      <Select value={selectedLocation.division_id} onValueChange={(value) => handleLocationChange('division_id', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {locationData.divisions.map((division: any) => (
-                            <SelectItem key={division.id} value={division.id}>
-                              {division.bn_name} ({division.name})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label>জেলা *</Label>
-                      <Select
-                        value={selectedLocation.district_id}
-                        onValueChange={(value) => handleLocationChange('district_id', value)}
-                        disabled={!selectedLocation.division_id}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="জেলা নির্বাচন করুন" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getFilteredDistricts().map((district: any) => (
-                            <SelectItem key={district.id} value={district.id}>
-                              {district.bn_name} ({district.name})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label>উপজেলা *</Label>
-                      <Select
-                        value={selectedLocation.upazila_id}
-                        onValueChange={(value) => handleLocationChange('upazila_id', value)}
-                        disabled={!selectedLocation.district_id}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="উপজেলা নির্বাচন করুন" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getFilteredUpazilas().map((upazila: any) => (
-                            <SelectItem key={upazila.id} value={upazila.id}>
-                              {upazila.bn_name} ({upazila.name})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label>ইউনিয়ন</Label>
-                      <Select
-                        value={selectedLocation.union_id}
-                        onValueChange={(value) => handleLocationChange('union_id', value)}
-                        disabled={!selectedLocation.upazila_id}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="ইউনিয়ন নির্বাচন করুন" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getFilteredUnions().map((union: any) => (
-                            <SelectItem key={union.id} value={union.id}>
-                              {union.bn_name} ({union.name})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label>গ্রাম</Label>
-                      <Select
-                        value={selectedLocation.village_id}
-                        onValueChange={(value) => handleLocationChange('village_id', value)}
-                        disabled={!selectedLocation.union_id}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="গ্রাম নির্বাচন করুন" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getFilteredVillages().map((village: any) => (
-                            <SelectItem key={village.id} value={village.id}>
-                              {village.bn_name} ({village.name})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Personal Information */}
-            <Card className="shadow-lg">
-              <CardHeader className="bg-green-50">
-                <CardTitle className="flex items-center gap-2 text-green-800 text-base sm:text-lg">
-                  <User className="w-5 h-5" />
-                  ব্যক্তিগত তথ্য
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {/* Always include Voter Name */}
-                  <div>
-                    <Label htmlFor="voterName" className="text-sm font-medium">
-                      ভোটারের নাম <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="voterName"
-                      value={formData['Voter Name']}
-                      onChange={(e) => handleInputChange('Voter Name', e.target.value)}
-                      placeholder="পূর্ণ নাম লিখুন"
-                      required
-                      className="mt-1"
-                    />
-                  </div>
-
-                  {selectedColumns.includes('House Name') && (
-                    <div>
-                      <Label htmlFor="houseName" className="text-sm font-medium">বাড়ির নাম</Label>
-                      <Input
-                        id="houseName"
-                        value={formData['House Name']}
-                        onChange={(e) => handleInputChange('House Name', e.target.value)}
-                        placeholder="বাড়ি/পারিবারিক নাম"
-                        className="mt-1"
-                      />
-                    </div>
-                  )}
-
-                  {selectedColumns.includes('FatherOrHusband') && (
-                    <div>
-                      <Label htmlFor="fatherHusband" className="text-sm font-medium">পিতা/স্বামীর নাম</Label>
-                      <Input
-                        id="fatherHusband"
-                        value={formData.FatherOrHusband}
-                        onChange={(e) => handleInputChange('FatherOrHusband', e.target.value)}
-                        placeholder="পিতা বা স্বামীর নাম"
-                        className="mt-1"
-                      />
-                    </div>
-                  )}
-
-                  {selectedColumns.includes('Age') && (
-                    <div>
-                      <Label htmlFor="age" className="text-sm font-medium">বয়স</Label>
-                      <Input
-                        id="age"
-                        type="number"
-                        min="0"
-                        max="120"
-                        value={formData.Age}
-                        onChange={(e) => handleInputChange('Age', e.target.value)}
-                        placeholder="বছরের হিসাবে বয়স"
-                        className="mt-1"
-                      />
-                    </div>
-                  )}
-
-                  {selectedColumns.includes('Gender') && (
-                    <div>
-                      <Label htmlFor="gender" className="text-sm font-medium">লিঙ্গ</Label>
-                      <Select value={formData.Gender} onValueChange={(value) => handleInputChange('Gender', value)}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="লিঙ্গ নির্বাচন করুন" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Male">পুরুষ</SelectItem>
-                          <SelectItem value="Female">মহিলা</SelectItem>
-                          <SelectItem value="Other">অন্যান্য</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {selectedColumns.includes('Marital Status') && (
-                    <div>
-                      <Label htmlFor="maritalStatus" className="text-sm font-medium">বৈবাহিক অবস্থা</Label>
-                      <Select value={formData['Marital Status']} onValueChange={(value) => handleInputChange('Marital Status', value)}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="অবস্থা নির্বাচন করুন" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Married">বিবাহিত</SelectItem>
-                          <SelectItem value="Unmarried">অবিবাহিত</SelectItem>
-                          <SelectItem value="Widowed">বিধবা</SelectItem>
-                          <SelectItem value="Divorced">তালাকপ্রাপ্ত</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {selectedColumns.includes('Student') && (
-                    <div>
-                      <Label htmlFor="student" className="text-sm font-medium">ছাত্র/ছাত্রী</Label>
-                      <Select value={formData.Student} onValueChange={(value) => handleInputChange('Student', value)}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder="ছাত্র/ছাত্রী কিনা?" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Yes">হ্যাঁ</SelectItem>
-                          <SelectItem value="No">না</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {selectedColumns.includes('Occupation') && (
-                    <div>
-                      <Label htmlFor="occupation" className="text-sm font-medium">পেশা</Label>
-                      <Input
-                        id="occupation"
-                        value={formData.Occupation}
-                        onChange={(e) => handleInputChange('Occupation', e.target.value)}
-                        placeholder="পেশা লিখুন"
-                        className="mt-1"
-                      />
-                    </div>
-                  )}
-
-                  {selectedColumns.includes('Education') && (
-                    <div>
-                      <Label htmlFor="education" className="text-sm font-medium">শিক্ষা</Label>
-                      <Input
-                        id="education"
-                        value={formData.Education}
-                        onChange={(e) => handleInputChange('Education', e.target.value)}
-                        placeholder="শিক্ষাগত যোগ্যতা"
-                        className="mt-1"
-                      />
-                    </div>
-                  )}
-
-                  {selectedColumns.includes('Religion') && (
-                    <div>
-                      <Label htmlFor="religion" className="text-sm font-medium">ধর্ম</Label>
-                      <Input
-                        id="religion"
-                        value={formData.Religion}
-                        onChange={(e) => handleInputChange('Religion', e.target.value)}
-                        placeholder="ধর্ম লিখুন"
-                        className="mt-1"
-                      />
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Contact Information */}
-            {(selectedColumns.includes('Phone') || selectedColumns.includes('NID')) && (
-              <Card className="shadow-lg">
-                <CardHeader className="bg-blue-50">
-                  <CardTitle className="flex items-center gap-2 text-blue-800 text-base sm:text-lg">
-                    <Phone className="w-5 h-5" />
-                    যোগাযোগ ও পরিচয়
+                <CardHeader className="bg-green-50">
+                  <CardTitle className="flex items-center gap-2 text-green-800 text-base sm:text-lg">
+                    <User className="w-5 h-5" />
+                    ব্যক্তিগত তথ্য
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 sm:p-6 space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {selectedColumns.includes('Phone') && (
+                    {/* Always include Voter Name */}
+                    <div>
+                      <Label htmlFor="voterName" className="text-sm font-medium">
+                        ভোটারের নাম <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="voterName"
+                        value={formData['Voter Name']}
+                        onChange={(e) => handleInputChange('Voter Name', e.target.value)}
+                        placeholder="পূর্ণ নাম লিখুন"
+                        required
+                        className="mt-1"
+                      />
+                    </div>
+
+                    {selectedColumns.includes('House Name') && (
                       <div>
-                        <Label htmlFor="phone" className="text-sm font-medium">ফোন</Label>
+                        <Label htmlFor="houseName" className="text-sm font-medium">বাড়ির নাম</Label>
                         <Input
-                          id="phone"
-                          value={formData.Phone}
-                          onChange={(e) => handleInputChange('Phone', e.target.value)}
-                          placeholder="ফোন নম্বর"
+                          id="houseName"
+                          value={formData['House Name']}
+                          onChange={(e) => handleInputChange('House Name', e.target.value)}
+                          placeholder="বাড়ি/পারিবারিক নাম"
                           className="mt-1"
                         />
                       </div>
                     )}
 
-                    {selectedColumns.includes('NID') && (
+                    {selectedColumns.includes('FatherOrHusband') && (
                       <div>
-                        <Label htmlFor="nid" className="text-sm font-medium">NID</Label>
+                        <Label htmlFor="fatherHusband" className="text-sm font-medium">পিতা/স্বামীর নাম</Label>
                         <Input
-                          id="nid"
-                          value={formData.NID}
-                          onChange={(e) => handleInputChange('NID', e.target.value)}
-                          placeholder="জাতীয় পরিচয়পত্র নম্বর"
+                          id="fatherHusband"
+                          value={formData.FatherOrHusband}
+                          onChange={(e) => handleInputChange('FatherOrHusband', e.target.value)}
+                          placeholder="পিতা বা স্বামীর নাম"
                           className="mt-1"
                         />
                       </div>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
-            {/* Political Information */}
-            {(selectedColumns.includes('Is Voter') || selectedColumns.includes('Will Vote') || selectedColumns.includes('Voted Before') || selectedColumns.includes('Vote Probability (%)') || selectedColumns.includes('Political Support') || selectedColumns.includes('Has Disability') || selectedColumns.includes('Is Migrated')) && (
-              <Card className="shadow-lg">
-                <CardHeader className="bg-orange-50">
-                  <CardTitle className="flex items-center gap-2 text-orange-800 text-base sm:text-lg">
-                    <Vote className="w-5 h-5" />
-                    রাজনৈতিক তথ্য
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6 space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {selectedColumns.includes('Is Voter') && (
+                    {selectedColumns.includes('Age') && (
                       <div>
-                        <Label htmlFor="isVoter" className="text-sm font-medium">ভোটার কিনা</Label>
-                        <Select value={formData['Is Voter']} onValueChange={(value) => handleInputChange('Is Voter', value)}>
-                          <SelectTrigger className="mt-1">
-                            <SelectValue placeholder="নিবন্ধিত ভোটার?" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
-                            <SelectItem value="No">না</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-
-                    {selectedColumns.includes('Will Vote') && (
-                      <div>
-                        <Label htmlFor="willVote" className="text-sm font-medium">ভোট দেবেন</Label>
-                        <Select value={formData['Will Vote']} onValueChange={(value) => handleInputChange('Will Vote', value)}>
-                          <SelectTrigger className="mt-1">
-                            <SelectValue placeholder="ভোট দেবেন?" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
-                            <SelectItem value="No">না</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-
-                    {selectedColumns.includes('Voted Before') && (
-                      <div>
-                        <Label htmlFor="votedBefore" className="text-sm font-medium">আগে ভোট দিয়েছেন</Label>
-                        <Select value={formData['Voted Before']} onValueChange={(value) => handleInputChange('Voted Before', value)}>
-                          <SelectTrigger className="mt-1">
-                            <SelectValue placeholder="আগে ভোট দিয়েছেন?" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
-                            <SelectItem value="No">না</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-
-                    {selectedColumns.includes('Vote Probability (%)') && (
-                      <div>
-                        <Label htmlFor="voteProbability" className="text-sm font-medium">ভোট দেওয়ার সম্ভাবনা (%)</Label>
+                        <Label htmlFor="age" className="text-sm font-medium">বয়স</Label>
                         <Input
-                          id="voteProbability"
+                          id="age"
                           type="number"
                           min="0"
-                          max="100"
-                          value={formData['Vote Probability (%)']}
-                          onChange={(e) => handleInputChange('Vote Probability (%)', e.target.value)}
-                          placeholder="0-100"
+                          max="120"
+                          value={formData.Age}
+                          onChange={(e) => handleInputChange('Age', e.target.value)}
+                          placeholder="বছরের হিসাবে বয়স"
                           className="mt-1"
                         />
                       </div>
                     )}
 
-                    {selectedColumns.includes('Political Support') && (
+                    {selectedColumns.includes('Gender') && (
                       <div>
-                        <Label htmlFor="politicalSupport" className="text-sm font-medium">রাজনৈতিক সমর্থন</Label>
+                        <Label htmlFor="gender" className="text-sm font-medium">লিঙ্গ</Label>
+                        <Select value={formData.Gender} onValueChange={(value) => handleInputChange('Gender', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="লিঙ্গ নির্বাচন করুন" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Male">পুরুষ</SelectItem>
+                            <SelectItem value="Female">মহিলা</SelectItem>
+                            <SelectItem value="Other">অন্যান্য</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {selectedColumns.includes('Marital Status') && (
+                      <div>
+                        <Label htmlFor="maritalStatus" className="text-sm font-medium">বৈবাহিক অবস্থা</Label>
+                        <Select value={formData['Marital Status']} onValueChange={(value) => handleInputChange('Marital Status', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="অবস্থা নির্বাচন করুন" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Married">বিবাহিত</SelectItem>
+                            <SelectItem value="Unmarried">অবিবাহিত</SelectItem>
+                            <SelectItem value="Widowed">বিধবা</SelectItem>
+                            <SelectItem value="Divorced">তালাকপ্রাপ্ত</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {selectedColumns.includes('Student') && (
+                      <div>
+                        <Label htmlFor="student" className="text-sm font-medium">ছাত্র/ছাত্রী</Label>
+                        <Select value={formData.Student} onValueChange={(value) => handleInputChange('Student', value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="ছাত্র/ছাত্রী কিনা?" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                            <SelectItem value="No">না</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {selectedColumns.includes('Occupation') && (
+                      <div>
+                        <Label htmlFor="occupation" className="text-sm font-medium">পেশা</Label>
                         <Input
-                          id="politicalSupport"
-                          value={formData['Political Support']}
-                          onChange={(e) => handleInputChange('Political Support', e.target.value)}
-                          placeholder="রাজনৈতিক দল বা প্রার্থী"
+                          id="occupation"
+                          value={formData.Occupation}
+                          onChange={(e) => handleInputChange('Occupation', e.target.value)}
+                          placeholder="পেশা লিখুন"
                           className="mt-1"
                         />
                       </div>
                     )}
 
-                    {selectedColumns.includes('Has Disability') && (
+                    {selectedColumns.includes('Education') && (
                       <div>
-                        <Label htmlFor="hasDisability" className="text-sm font-medium">প্রতিবন্ধী কিনা</Label>
-                        <Select value={formData['Has Disability']} onValueChange={(value) => handleInputChange('Has Disability', value)}>
-                          <SelectTrigger className="mt-1">
-                            <SelectValue placeholder="প্রতিবন্ধী কিনা?" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
-                            <SelectItem value="No">না</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Label htmlFor="education" className="text-sm font-medium">শিক্ষা</Label>
+                        <Input
+                          id="education"
+                          value={formData.Education}
+                          onChange={(e) => handleInputChange('Education', e.target.value)}
+                          placeholder="শিক্ষাগত যোগ্যতা"
+                          className="mt-1"
+                        />
                       </div>
                     )}
 
-                    {selectedColumns.includes('Is Migrated') && (
+                    {selectedColumns.includes('Religion') && (
                       <div>
-                        <Label htmlFor="isMigrated" className="text-sm font-medium">প্রবাসী কিনা</Label>
-                        <Select value={formData['Is Migrated']} onValueChange={(value) => handleInputChange('Is Migrated', value)}>
-                          <SelectTrigger className="mt-1">
-                            <SelectValue placeholder="প্রবাসী কিনা?" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Yes">হ্যাঁ</SelectItem>
-                            <SelectItem value="No">না</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Label htmlFor="religion" className="text-sm font-medium">ধর্ম</Label>
+                        <Input
+                          id="religion"
+                          value={formData.Religion}
+                          onChange={(e) => handleInputChange('Religion', e.target.value)}
+                          placeholder="ধর্ম লিখুন"
+                          className="mt-1"
+                        />
                       </div>
                     )}
                   </div>
                 </CardContent>
               </Card>
-            )}
 
-            {/* Additional Information */}
-            {selectedColumns.includes('Remarks') && (
-              <Card className="shadow-lg">
-                <CardHeader className="bg-gray-50">
-                  <CardTitle className="flex items-center gap-2 text-gray-800 text-base sm:text-lg">
-                    <Info className="w-5 h-5" />
-                    অতিরিক্ত তথ্য
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6 space-y-4">
-                  <div>
-                    <Label htmlFor="remarks" className="text-sm font-medium">মন্তব্য</Label>
-                    <Textarea
-                      id="remarks"
-                      value={formData.Remarks}
-                      onChange={(e) => handleInputChange('Remarks', e.target.value)}
-                      placeholder="অতিরিক্ত নোট বা মন্তব্য..."
-                      className="mt-1 min-h-[80px]"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+              {/* Contact Information */}
+              {(selectedColumns.includes('Phone') || selectedColumns.includes('NID')) && (
+                <Card className="shadow-lg">
+                  <CardHeader className="bg-blue-50">
+                    <CardTitle className="flex items-center gap-2 text-blue-800 text-base sm:text-lg">
+                      <Phone className="w-5 h-5" />
+                      যোগাযোগ ও পরিচয়
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 sm:p-6 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {selectedColumns.includes('Phone') && (
+                        <div>
+                          <Label htmlFor="phone" className="text-sm font-medium">ফোন</Label>
+                          <Input
+                            id="phone"
+                            value={formData.Phone}
+                            onChange={(e) => handleInputChange('Phone', e.target.value)}
+                            placeholder="ফোন নম্বর"
+                            className="mt-1"
+                          />
+                        </div>
+                      )}
 
-            {/* Submit Button */}
-            <div className="flex justify-end gap-3 bg-white p-4 rounded-lg shadow-sm">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate('/admin/voters')}
-                disabled={isLoading}
-                className="transition-colors duration-200"
-              >
-                বাতিল
-              </Button>
-              <Button
-                type="submit"
-                className="bg-green-600 hover:bg-green-700 flex items-center gap-2 transition-colors duration-200"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  'ভোটার যোগ করা হচ্ছে...'
-                ) : (
-                  <>
-                    <Save className="w-4 h-4" />
-                    ভোটার যোগ করুন
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
+                      {selectedColumns.includes('NID') && (
+                        <div>
+                          <Label htmlFor="nid" className="text-sm font-medium">NID</Label>
+                          <Input
+                            id="nid"
+                            value={formData.NID}
+                            onChange={(e) => handleInputChange('NID', e.target.value)}
+                            placeholder="জাতীয় পরিচয়পত্র নম্বর"
+                            className="mt-1"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Political Information */}
+              {(selectedColumns.includes('Is Voter') || selectedColumns.includes('Will Vote') || selectedColumns.includes('Voted Before') || selectedColumns.includes('Vote Probability (%)') || selectedColumns.includes('Political Support') || selectedColumns.includes('Has Disability') || selectedColumns.includes('Is Migrated')) && (
+                <Card className="shadow-lg">
+                  <CardHeader className="bg-orange-50">
+                    <CardTitle className="flex items-center gap-2 text-orange-800 text-base sm:text-lg">
+                      <Vote className="w-5 h-5" />
+                      রাজনৈতিক তথ্য
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 sm:p-6 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {selectedColumns.includes('Is Voter') && (
+                        <div>
+                          <Label htmlFor="isVoter" className="text-sm font-medium">ভোটার কিনা</Label>
+                          <Select value={formData['Is Voter']} onValueChange={(value) => handleInputChange('Is Voter', value)}>
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="নিবন্ধিত ভোটার?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                              <SelectItem value="No">না</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {selectedColumns.includes('Will Vote') && (
+                        <div>
+                          <Label htmlFor="willVote" className="text-sm font-medium">ভোট দেবেন</Label>
+                          <Select value={formData['Will Vote']} onValueChange={(value) => handleInputChange('Will Vote', value)}>
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="ভোট দেবেন?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                              <SelectItem value="No">না</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {selectedColumns.includes('Voted Before') && (
+                        <div>
+                          <Label htmlFor="votedBefore" className="text-sm font-medium">আগে ভোট দিয়েছেন</Label>
+                          <Select value={formData['Voted Before']} onValueChange={(value) => handleInputChange('Voted Before', value)}>
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="আগে ভোট দিয়েছেন?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                              <SelectItem value="No">না</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {selectedColumns.includes('Vote Probability (%)') && (
+                        <div>
+                          <Label htmlFor="voteProbability" className="text-sm font-medium">ভোট দেওয়ার সম্ভাবনা (%)</Label>
+                          <Input
+                            id="voteProbability"
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={formData['Vote Probability (%)']}
+                            onChange={(e) => handleInputChange('Vote Probability (%)', e.target.value)}
+                            placeholder="0-100"
+                            className="mt-1"
+                          />
+                        </div>
+                      )}
+
+                      {selectedColumns.includes('Political Support') && (
+                        <div>
+                          <Label htmlFor="politicalSupport" className="text-sm font-medium">রাজনৈতিক সমর্থন</Label>
+                          <Input
+                            id="politicalSupport"
+                            value={formData['Political Support']}
+                            onChange={(e) => handleInputChange('Political Support', e.target.value)}
+                            placeholder="রাজনৈতিক দল বা প্রার্থী"
+                            className="mt-1"
+                          />
+                        </div>
+                      )}
+
+                      {selectedColumns.includes('Has Disability') && (
+                        <div>
+                          <Label htmlFor="hasDisability" className="text-sm font-medium">প্রতিবন্ধী কিনা</Label>
+                          <Select value={formData['Has Disability']} onValueChange={(value) => handleInputChange('Has Disability', value)}>
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="প্রতিবন্ধী কিনা?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                              <SelectItem value="No">না</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {selectedColumns.includes('Is Migrated') && (
+                        <div>
+                          <Label htmlFor="isMigrated" className="text-sm font-medium">প্রবাসী কিনা</Label>
+                          <Select value={formData['Is Migrated']} onValueChange={(value) => handleInputChange('Is Migrated', value)}>
+                            <SelectTrigger className="mt-1">
+                              <SelectValue placeholder="প্রবাসী কিনা?" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Yes">হ্যাঁ</SelectItem>
+                              <SelectItem value="No">না</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Additional Information */}
+              {selectedColumns.includes('Remarks') && (
+                <Card className="shadow-lg">
+                  <CardHeader className="bg-gray-50">
+                    <CardTitle className="flex items-center gap-2 text-gray-800 text-base sm:text-lg">
+                      <Info className="w-5 h-5" />
+                      অতিরিক্ত তথ্য
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 sm:p-6 space-y-4">
+                    <div>
+                      <Label htmlFor="remarks" className="text-sm font-medium">মন্তব্য</Label>
+                      <Textarea
+                        id="remarks"
+                        value={formData.Remarks}
+                        onChange={(e) => handleInputChange('Remarks', e.target.value)}
+                        placeholder="অতিরিক্ত নোট বা মন্তব্য..."
+                        className="mt-1 min-h-[80px]"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Submit Button */}
+              <div className="flex justify-end gap-3 bg-white p-4 rounded-lg shadow-sm">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate('/admin/voters')}
+                  disabled={isLoading}
+                  className="transition-colors duration-200"
+                >
+                  বাতিল
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-green-600 hover:bg-green-700 flex items-center gap-2 transition-colors duration-200"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    'ভোটার যোগ করা হচ্ছে...'
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      ভোটার যোগ করুন
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
-    </AdminLayout>
+      </AdminLayout>
+    </ErrorBoundary>
   );
 };
 

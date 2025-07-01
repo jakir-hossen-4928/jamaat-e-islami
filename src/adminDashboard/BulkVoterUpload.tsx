@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, writeBatch, doc } from 'firebase/firestore';
@@ -17,6 +16,20 @@ import { Badge } from '@/components/ui/badge';
 import { VoterData } from '@/lib/types';
 import { BulkUploadValidator, ValidationResult } from '@/components/voter/BulkUploadValidator';
 import BulkUploadProgress from '@/components/voter/BulkUploadProgress';
+import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
+import React from 'react';
+
+const PreviewRow = React.memo(({ index, style, data }: ListChildComponentProps) => {
+  const row = data.previewData[index];
+  const headers = data.csvHeaders;
+  return (
+    <TableRow style={style}>
+      {headers.map((header, i) => (
+        <TableCell key={i}>{row[header]}</TableCell>
+      ))}
+    </TableRow>
+  );
+});
 
 const BulkVoterUpload = () => {
   const { toast } = useToast();
@@ -456,27 +469,35 @@ const BulkVoterUpload = () => {
                 Quality Score: {validationResult?.validRowCount || 0}/{validationResult?.totalRowCount || 0}
               </Badge>
             </div>
-            <ScrollArea className="h-[300px] w-full rounded-md border">
+            <ScrollArea className="max-h-96">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {csvHeaders.map((header) => (
-                      <TableHead key={header} className="text-xs sm:text-sm min-w-[100px]">
-                        {header}
-                      </TableHead>
+                    {csvHeaders.map((header, i) => (
+                      <TableHead key={i}>{header}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {previewData.map((row, index) => (
-                    <TableRow key={index}>
-                      {csvHeaders.map((header) => (
-                        <TableCell key={header} className="text-xs sm:text-sm">
-                          {row[header]?.toString() || '-'}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
+                  {previewData.length > 20 ? (
+                    <List
+                      height={400}
+                      itemCount={previewData.length}
+                      itemSize={40}
+                      width={csvHeaders.length * 150}
+                      itemData={{ previewData, csvHeaders }}
+                    >
+                      {PreviewRow}
+                    </List>
+                  ) : (
+                    previewData.map((row, rowIndex) => (
+                      <TableRow key={rowIndex}>
+                        {csvHeaders.map((header, i) => (
+                          <TableCell key={i}>{row[header]}</TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </ScrollArea>

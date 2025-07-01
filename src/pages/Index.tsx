@@ -127,8 +127,8 @@ const Index = () => {
                     <Button asChild variant="outline" size="sm" className="hover:bg-green-50">
                       <Link to="/login">লগইন</Link>
                     </Button>
-                    <Button asChild size="sm" className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg">
-                      <Link to="/register">নিবন্ধন</Link>
+                    <Button asChild variant="outline" size="sm" className="hover:bg-green-50">
+                      <Link to="/register">রেজিস্টার</Link>
                     </Button>
                   </>
                 ) : (
@@ -187,8 +187,8 @@ const Index = () => {
                       <Button asChild variant="outline" size="sm" className="w-full">
                         <Link to="/login">লগইন</Link>
                       </Button>
-                      <Button asChild size="sm" className="w-full bg-gradient-to-r from-green-600 to-green-700">
-                        <Link to="/register">নিবন্ধন</Link>
+                      <Button asChild variant="outline" size="sm" className="w-full">
+                        <Link to="/register">রেজিস্টার</Link>
                       </Button>
                     </>
                   ) : (
@@ -261,7 +261,7 @@ const Index = () => {
                   size="lg"
                   className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200 px-8 py-4 text-base sm:text-lg"
                 >
-                  <Link to="/register">
+                  <Link to="/login">
                     <CheckCircle className="w-5 h-5 mr-2" />
                     এখনই যোগ দিন
                   </Link>
@@ -507,7 +507,6 @@ const Index = () => {
               <h4 className="text-lg font-semibold mb-4">দ্রুত লিংক</h4>
               <ul className="space-y-3">
                 <li><Link to="/login" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center"><span className="mr-2">→</span>লগইন</Link></li>
-                <li><Link to="/register" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center"><span className="mr-2">→</span>নিবন্ধন</Link></li>
                 <li><a href="#features" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center"><span className="mr-2">→</span>বৈশিষ্ট্য</a></li>
                 <li><a href="#contact" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center"><span className="mr-2">→</span>যোগাযোগ</a></li>
                 <li><Link to="/docs" className="text-gray-400 hover:text-white transition-colors duration-200 flex items-center"><span className="mr-2">→</span>ডকুমেন্টেশন</Link></li>

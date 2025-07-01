@@ -76,7 +76,7 @@ const DocumentationLayout = ({ children }: DocumentationLayoutProps) => {
                 <SheetContent side="left" className="w-80 p-0">
                   <div className="flex items-center space-x-2 p-4 border-b">
                     <img
-                      src="/public/bangladesh-jamaat-e-islami-seeklogo.svg"
+                      src="/bangladesh-jamaat-e-islami-seeklogo.svg"
                       alt="Logo"
                       className="w-8 h-8"
                     />
@@ -88,7 +88,7 @@ const DocumentationLayout = ({ children }: DocumentationLayoutProps) => {
 
               <Link to="/" className="flex items-center space-x-2">
                 <img
-                  src="/public/bangladesh-jamaat-e-islami-seeklogo.svg"
+                  src="/bangladesh-jamaat-e-islami-seeklogo.svg"
                   alt="Logo"
                   className="w-8 h-8"
                 />

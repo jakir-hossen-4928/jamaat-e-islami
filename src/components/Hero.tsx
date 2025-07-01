@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight, Users, BarChart3, Shield, MessageSquare } from 'lucide-react';
@@ -154,30 +153,17 @@ const Hero = () => {
                 variants={fadeInUp}
               >
                 {!currentUser ? (
-                  <>
-                    <Button 
-                      asChild 
-                      size="lg" 
-                      className="bg-white text-green-800 hover:bg-green-50 hover:text-green-900 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 rounded-full px-6 sm:px-8 font-semibold"
-                    >
-                      <Link to="/register" className="flex items-center justify-center gap-2">
-                        <Users className="w-4 h-4 sm:w-5 sm:h-5" /> 
-                        Request Access
-                        <ChevronRight className="w-4 h-4" />
-                      </Link>
-                    </Button>
-                    <Button 
-                      asChild 
-                      size="lg" 
-                      variant="outline" 
-                      className="text-white border-white/50 hover:text-green-800 hover:bg-white hover:border-white backdrop-blur-sm shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 rounded-full px-6 sm:px-8 font-semibold"
-                    >
-                      <Link to="/login" className="flex items-center justify-center gap-2">
-                        <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" /> 
-                        Login
-                      </Link>
-                    </Button>
-                  </>
+                  <Button 
+                    asChild 
+                    size="lg" 
+                    className="bg-white text-green-800 hover:bg-green-50 hover:text-green-900 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 rounded-full px-6 sm:px-8 font-semibold"
+                  >
+                    <Link to="/login" className="flex items-center justify-center gap-2">
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5" /> 
+                      Login
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </Button>
                 ) : (
                   <Button 
                     asChild 

@@ -1,5 +1,5 @@
-
 import React, { useMemo } from 'react';
+import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ interface VirtualizedVoterListProps {
   onEdit?: (voter: VoterData) => void;
   onDelete?: (voterId: string) => void;
   isLoading?: boolean;
+  height?: number;
+  itemSize?: number;
 }
 
 const VoterCard = React.memo(({ 
@@ -89,11 +91,23 @@ const VoterCard = React.memo(({
 
 VoterCard.displayName = 'VoterCard';
 
+const Row = React.memo(({ index, style, data }: ListChildComponentProps) => {
+  const { voters, onEdit, onDelete } = data;
+  const voter = voters[index];
+  return (
+    <div style={style}>
+      <VoterCard voter={voter} onEdit={onEdit} onDelete={onDelete} />
+    </div>
+  );
+});
+
 const VirtualizedVoterList: React.FC<VirtualizedVoterListProps> = ({
   voters,
   onEdit,
   onDelete,
-  isLoading = false
+  isLoading = false,
+  height = 600,
+  itemSize = 120
 }) => {
   const voterList = useMemo(() => voters || [], [voters]);
 
@@ -127,16 +141,15 @@ const VirtualizedVoterList: React.FC<VirtualizedVoterListProps> = ({
   }
 
   return (
-    <div className="space-y-4">
-      {voterList.map((voter) => (
-        <VoterCard
-          key={voter.id}
-          voter={voter}
-          onEdit={onEdit}
-          onDelete={onDelete}
-        />
-      ))}
-    </div>
+    <List
+      height={height}
+      itemCount={voterList.length}
+      itemSize={itemSize}
+      width="100%"
+      itemData={{ voters: voterList, onEdit, onDelete }}
+    >
+      {Row}
+    </List>
   );
 };
 

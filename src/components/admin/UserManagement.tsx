@@ -1,7 +1,6 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, getDocs, doc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, orderBy, limit, startAfter, QueryDocumentSnapshot, DocumentData, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,8 +12,20 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { User } from '@/lib/types';
 import { getRolePermissions, getRoleDisplayName } from '@/lib/rbac';
-import { CheckCircle, XCircle, UserCheck, MapPin, Settings, Eye } from 'lucide-react';
+import { CheckCircle, XCircle, UserCheck, MapPin, Settings, Eye, EyeOff } from 'lucide-react';
 import { getFullLocationHierarchy, loadLocationData, getVillagesByUnion } from '@/lib/locationUtils';
+import { useLocationData } from '@/hooks/useLocationData';
+import { UserRole } from '@/lib/types';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { setDoc } from 'firebase/firestore';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
+import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
+import { useDebounce } from '@/hooks/useDebounce';
+import { Input } from '@/components/ui/input';
+
+const PAGE_SIZE = 30;
 
 const UserAssignmentDialog = ({
   user,
@@ -26,14 +37,7 @@ const UserAssignmentDialog = ({
   currentUserProfile: User;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<User['role'] | ''>('');
-  const [locationData, setLocationData] = useState({
-    divisions: [] as any[],
-    districts: [] as any[],
-    upazilas: [] as any[],
-    unions: [] as any[],
-    villages: [] as any[]
-  });
+  const [selectedRole, setSelectedRole] = useState<UserRole | ''>('');
   const [selectedLocation, setSelectedLocation] = useState({
     division_id: '',
     district_id: '',
@@ -43,109 +47,95 @@ const UserAssignmentDialog = ({
   });
 
   const permissions = getRolePermissions(currentUserProfile.role);
-  const availableRoles = permissions.canAssignRoles;
+  const availableRoles = permissions.canAssignRoles as UserRole[];
+  const {
+    locationData,
+    loading,
+    getFilteredDistricts,
+    getFilteredUpazilas,
+    getFilteredUnions,
+    getFilteredVillages,
+    getLocationNames,
+  } = useLocationData();
 
-  React.useEffect(() => {
-    if (isOpen) {
-      const loadData = async () => {
-        try {
-          const data = await loadLocationData();
-          setLocationData({
-            divisions: data.divisions,
-            districts: data.districts,
-            upazilas: data.upazilas,
-            unions: data.unions,
-            villages: data.villages
-          });
-        } catch (error) {
-          console.error('Error loading location data:', error);
-        }
-      };
-      loadData();
+  // Reset location when dialog opens/closes or role changes
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedRole('');
+      setSelectedLocation({
+        division_id: '',
+        district_id: '',
+        upazila_id: '',
+        union_id: '',
+        village_id: ''
+      });
     }
   }, [isOpen]);
 
-  // Filtered lists for dropdowns based on parent selection
-  const filteredDistricts = locationData.districts.filter(
-    d => selectedLocation.division_id ? d.division_id === selectedLocation.division_id : true
-  );
-  const filteredUpazilas = locationData.upazilas.filter(
-    u => selectedLocation.district_id ? u.district_id === selectedLocation.district_id : true
-  );
-  const filteredUnions = locationData.unions.filter(
-    u => selectedLocation.upazila_id ? u.upazilla_id === selectedLocation.upazila_id : true
-  );
-  
-  // Fixed village filtering to work with your actual data structure
-  const filteredVillages = locationData.villages.filter(
-    v => selectedLocation.union_id ? v.union_id.toString() === selectedLocation.union_id : true
-  ).map((village, index) => ({
-    id: village.id || `village_${village.union_id}_${index}`,
-    name: village.village,
-    bn_name: village.village,
-    union_id: village.union_id
-  }));
-
-  const handleLocationChange = async (level: string, value: string) => {
-    const newLocation = { ...selectedLocation };
-
-    // Set the selected value
-    newLocation[level as keyof typeof selectedLocation] = value;
-
-    // Clear dependent fields
-    if (level === 'division_id') {
-      newLocation.district_id = '';
-      newLocation.upazila_id = '';
-      newLocation.union_id = '';
-      newLocation.village_id = '';
-    } else if (level === 'district_id') {
-      newLocation.upazila_id = '';
-      newLocation.union_id = '';
-      newLocation.village_id = '';
-    } else if (level === 'upazila_id') {
-      newLocation.union_id = '';
-      newLocation.village_id = '';
-    } else if (level === 'union_id') {
-      newLocation.village_id = '';
+  useEffect(() => {
+    if (selectedRole) {
+      setSelectedLocation({
+        division_id: '',
+        district_id: '',
+        upazila_id: '',
+        union_id: '',
+        village_id: ''
+      });
     }
+  }, [selectedRole]);
 
-    setSelectedLocation(newLocation);
-  };
-
-  const handleRoleChange = (value: string) => {
-    setSelectedRole(value as User['role']);
-    // Reset location when role changes
-    setSelectedLocation({
-      division_id: '',
-      district_id: '',
-      upazila_id: '',
-      union_id: '',
-      village_id: ''
+  // Handle location change and reset dependent fields
+  const handleLocationChange = (field: keyof typeof selectedLocation, value: string) => {
+    setSelectedLocation(prev => {
+      const updated = { ...prev, [field]: value };
+      if (field === 'division_id') {
+        updated.district_id = '';
+        updated.upazila_id = '';
+        updated.union_id = '';
+        updated.village_id = '';
+      } else if (field === 'district_id') {
+        updated.upazila_id = '';
+        updated.union_id = '';
+        updated.village_id = '';
+      } else if (field === 'upazila_id') {
+        updated.union_id = '';
+        updated.village_id = '';
+      } else if (field === 'union_id') {
+        updated.village_id = '';
+      }
+      return updated;
     });
   };
 
+  // Validate before submit based on role requirements
+  const isValid = () => {
+    if (!selectedRole) return false;
+    
+    switch (selectedRole) {
+      case 'super_admin':
+        return true;
+      case 'division_admin':
+        return !!selectedLocation.division_id;
+      case 'district_admin':
+        return !!selectedLocation.division_id && !!selectedLocation.district_id;
+      case 'upazila_admin':
+        return !!selectedLocation.division_id && !!selectedLocation.district_id && !!selectedLocation.upazila_id;
+      case 'union_admin':
+        return !!selectedLocation.division_id && !!selectedLocation.district_id && !!selectedLocation.upazila_id && !!selectedLocation.union_id;
+      case 'village_admin':
+        return !!selectedLocation.division_id && !!selectedLocation.district_id && !!selectedLocation.upazila_id && !!selectedLocation.union_id && !!selectedLocation.village_id;
+      default:
+        return false;
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!selectedRole) return;
-
-    const division = locationData.divisions.find(d => d.id === selectedLocation.division_id);
-    const district = locationData.districts.find(d => d.id === selectedLocation.district_id);
-    const upazila = locationData.upazilas.find(d => d.id === selectedLocation.upazila_id);
-    const union = locationData.unions.find(d => d.id === selectedLocation.union_id);
-    const village = filteredVillages.find(v => v.id === selectedLocation.village_id);
-
+    if (!selectedRole || !isValid()) return;
+    const locationNames = getLocationNames(selectedLocation);
     const accessScope = {
-      ...(selectedLocation.division_id && { division_id: selectedLocation.division_id }),
-      ...(selectedLocation.district_id && { district_id: selectedLocation.district_id }),
-      ...(selectedLocation.upazila_id && { upazila_id: selectedLocation.upazila_id }),
-      ...(selectedLocation.union_id && { union_id: selectedLocation.union_id }),
-      ...(selectedLocation.village_id && { village_id: selectedLocation.village_id }),
-      ...(division?.bn_name && { division_name: division.bn_name }),
-      ...(district?.bn_name && { district_name: district.bn_name }),
-      ...(upazila?.bn_name && { upazila_name: upazila.bn_name }),
-      ...(union?.bn_name && { union_name: union.bn_name }),
-      ...(village?.bn_name && { village_name: village.bn_name })
+      ...selectedLocation,
+      ...locationNames,
     };
-
     const updates: Partial<User> = {
       role: selectedRole,
       approved: true,
@@ -153,10 +143,8 @@ const UserAssignmentDialog = ({
       assignedBy: currentUserProfile.uid,
       verifiedBy: currentUserProfile.uid
     };
-
     onUpdate(user.uid, updates);
     setIsOpen(false);
-    // Reset form
     setSelectedRole('');
     setSelectedLocation({
       division_id: '',
@@ -167,58 +155,18 @@ const UserAssignmentDialog = ({
     });
   };
 
-  const getLocationRequirement = (role: string) => {
-    switch (role) {
-      case 'division_admin': return 'division_id';
-      case 'district_admin': return 'district_id';
-      case 'upazila_admin': return 'upazila_id';
-      case 'union_admin': return 'union_id';
-      case 'village_admin': return 'village_id';
-      default: return null;
-    }
-  };
-
-  const isValidAssignment = () => {
-    if (!selectedRole) return false;
-
-    const requiredLocation = getLocationRequirement(selectedRole);
-    if (!requiredLocation) return true; // super_admin doesn't need location
-    return selectedLocation[requiredLocation as keyof typeof selectedLocation];
-  };
-
-  // Check if location dropdown should be shown based on role
-  const shouldShowLocationLevel = (level: string) => {
-    if (!selectedRole || selectedRole === 'super_admin') return false;
-    
-    const levels = ['division_id', 'district_id', 'upazila_id', 'union_id', 'village_id'];
-    const roleRequiredLevel = getLocationRequirement(selectedRole);
-    const roleIndex = levels.indexOf(roleRequiredLevel || '');
-    const levelIndex = levels.indexOf(level);
-    
-    return levelIndex <= roleIndex;
-  };
-
   // Get current selection preview
   const getSelectionPreview = () => {
     if (!selectedRole) return null;
 
-    const division = locationData.divisions.find(d => d.id === selectedLocation.division_id);
-    const district = locationData.districts.find(d => d.id === selectedLocation.district_id);
-    const upazila = locationData.upazilas.find(u => u.id === selectedLocation.upazila_id);
-    const union = locationData.unions.find(u => u.id === selectedLocation.union_id);
-    const village = filteredVillages.find(v => v.id === selectedLocation.village_id);
-
-    const hierarchy = [];
-    if (division) hierarchy.push(division.bn_name);
-    if (district) hierarchy.push(district.bn_name);
-    if (upazila) hierarchy.push(upazila.bn_name);
-    if (union) hierarchy.push(union.bn_name);
-    if (village) hierarchy.push(village.bn_name);
+    const locationNames = getLocationNames(selectedLocation);
+    const location = Object.values(locationNames).join(' → ') || 'কোনো অবস্থান নির্বাচিত নয়';
+    const isComplete = isValid();
 
     return {
       role: getRoleDisplayName(selectedRole),
-      location: hierarchy.join(' → ') || 'কোনো অবস্থান নির্বাচিত নয়',
-      isComplete: isValidAssignment()
+      location,
+      isComplete
     };
   };
 
@@ -239,7 +187,7 @@ const UserAssignmentDialog = ({
         <div className="space-y-4">
           <div>
             <Label>ভূমিকা নির্বাচন করুন *</Label>
-            <Select value={selectedRole} onValueChange={handleRoleChange}>
+            <Select value={selectedRole} onValueChange={(value) => setSelectedRole(value as UserRole)}>
               <SelectTrigger>
                 <SelectValue placeholder="ভূমিকা নির্বাচন করুন" />
               </SelectTrigger>
@@ -253,32 +201,33 @@ const UserAssignmentDialog = ({
             </Select>
           </div>
 
+          {/* Location Selection Dropdowns - Role-based */}
           {selectedRole && selectedRole !== 'super_admin' && (
             <div className="space-y-3">
-              {shouldShowLocationLevel('division_id') && (
-                <div>
-                  <Label>বিভাগ {getLocationRequirement(selectedRole) === 'division_id' && '*'}</Label>
-                  <Select
-                    value={selectedLocation.division_id}
-                    onValueChange={(value) => handleLocationChange('division_id', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locationData.divisions.map(division => (
-                        <SelectItem key={division.id} value={division.id}>
-                          {division.bn_name} ({division.name})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              {/* Division - Required for all roles except super_admin */}
+              <div>
+                <Label>বিভাগ *</Label>
+                <Select
+                  value={selectedLocation.division_id}
+                  onValueChange={(value) => handleLocationChange('division_id', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locationData.divisions.map(division => (
+                      <SelectItem key={division.id} value={division.id}>
+                        {division.bn_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-              {shouldShowLocationLevel('district_id') && (
+              {/* District - Required for district_admin, upazila_admin, union_admin, village_admin */}
+              {(selectedRole === 'district_admin' || selectedRole === 'upazila_admin' || selectedRole === 'union_admin' || selectedRole === 'village_admin') && (
                 <div>
-                  <Label>জেলা {getLocationRequirement(selectedRole) === 'district_id' && '*'}</Label>
+                  <Label>জেলা *</Label>
                   <Select
                     value={selectedLocation.district_id}
                     onValueChange={(value) => handleLocationChange('district_id', value)}
@@ -288,9 +237,9 @@ const UserAssignmentDialog = ({
                       <SelectValue placeholder={!selectedLocation.division_id ? "প্রথমে বিভাগ নির্বাচন করুন" : "জেলা নির্বাচন করুন"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {filteredDistricts.map(district => (
+                      {getFilteredDistricts(selectedLocation.division_id).map(district => (
                         <SelectItem key={district.id} value={district.id}>
-                          {district.bn_name} ({district.name})
+                          {district.bn_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -298,9 +247,10 @@ const UserAssignmentDialog = ({
                 </div>
               )}
 
-              {shouldShowLocationLevel('upazila_id') && (
+              {/* Upazila - Required for upazila_admin, union_admin, village_admin */}
+              {(selectedRole === 'upazila_admin' || selectedRole === 'union_admin' || selectedRole === 'village_admin') && (
                 <div>
-                  <Label>উপজেলা {getLocationRequirement(selectedRole) === 'upazila_id' && '*'}</Label>
+                  <Label>উপজেলা *</Label>
                   <Select
                     value={selectedLocation.upazila_id}
                     onValueChange={(value) => handleLocationChange('upazila_id', value)}
@@ -310,9 +260,9 @@ const UserAssignmentDialog = ({
                       <SelectValue placeholder={!selectedLocation.district_id ? "প্রথমে জেলা নির্বাচন করুন" : "উপজেলা নির্বাচন করুন"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {filteredUpazilas.map(upazila => (
+                      {getFilteredUpazilas(selectedLocation.district_id).map(upazila => (
                         <SelectItem key={upazila.id} value={upazila.id}>
-                          {upazila.bn_name} ({upazila.name})
+                          {upazila.bn_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -320,9 +270,10 @@ const UserAssignmentDialog = ({
                 </div>
               )}
 
-              {shouldShowLocationLevel('union_id') && (
+              {/* Union - Required for union_admin, village_admin */}
+              {(selectedRole === 'union_admin' || selectedRole === 'village_admin') && (
                 <div>
-                  <Label>ইউনিয়ন {getLocationRequirement(selectedRole) === 'union_id' && '*'}</Label>
+                  <Label>ইউনিয়ন *</Label>
                   <Select
                     value={selectedLocation.union_id}
                     onValueChange={(value) => handleLocationChange('union_id', value)}
@@ -332,9 +283,9 @@ const UserAssignmentDialog = ({
                       <SelectValue placeholder={!selectedLocation.upazila_id ? "প্রথমে উপজেলা নির্বাচন করুন" : "ইউনিয়ন নির্বাচন করুন"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {filteredUnions.map(union => (
+                      {getFilteredUnions(selectedLocation.upazila_id).map(union => (
                         <SelectItem key={union.id} value={union.id}>
-                          {union.bn_name} ({union.name})
+                          {union.bn_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -342,7 +293,8 @@ const UserAssignmentDialog = ({
                 </div>
               )}
 
-              {shouldShowLocationLevel('village_id') && (
+              {/* Village - Required for village_admin */}
+              {selectedRole === 'village_admin' && (
                 <div>
                   <Label>গ্রাম *</Label>
                   <Select
@@ -354,7 +306,7 @@ const UserAssignmentDialog = ({
                       <SelectValue placeholder={!selectedLocation.union_id ? "প্রথমে ইউনিয়ন নির্বাচন করুন" : "গ্রাম নির্বাচন করুন"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {filteredVillages.map(village => (
+                      {getFilteredVillages(selectedLocation.union_id).map(village => (
                         <SelectItem key={village.id} value={village.id}>
                           {village.bn_name}
                         </SelectItem>
@@ -366,40 +318,34 @@ const UserAssignmentDialog = ({
             </div>
           )}
 
-          {/* Selection Preview */}
+          {/* Preview */}
           {preview && (
-            <div className="border rounded-lg p-3 bg-gray-50">
-              <div className="flex items-center gap-2 mb-2">
-                <Eye className="w-4 h-4 text-blue-600" />
-                <span className="font-medium text-sm">বরাদ্দ প্রিভিউ</span>
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">ভূমিকা:</span>
-                  <Badge variant="outline">{preview.role}</Badge>
-                </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-600">অবস্থান:</span>
-                  <div className="text-right max-w-[60%]">
-                    <span className="text-xs">{preview.location}</span>
-                  </div>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">অবস্থা:</span>
-                  <Badge variant={preview.isComplete ? "default" : "secondary"}>
-                    {preview.isComplete ? "সম্পূর্ণ" : "অসম্পূর্ণ"}
-                  </Badge>
-                </div>
-              </div>
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <h4 className="font-medium text-sm mb-2">নির্বাচন প্রিভিউ:</h4>
+              <p className="text-sm text-gray-600 mb-1">
+                <strong>ভূমিকা:</strong> {preview.role}
+              </p>
+              <p className="text-sm text-gray-600">
+                <strong>অবস্থান:</strong> {preview.location}
+              </p>
+              {!preview.isComplete && (
+                <p className="text-sm text-red-600 mt-2">
+                  ⚠️ সব প্রয়োজনীয় ফিল্ড পূরণ করুন
+                </p>
+              )}
             </div>
           )}
 
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsOpen(false)}>
               বাতিল
             </Button>
-            <Button onClick={handleSubmit} disabled={!isValidAssignment()}>
-              ভূমিকা বরাদ্দ করুন
+            <Button 
+              onClick={handleSubmit} 
+              disabled={!isValid() || loading}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {loading ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
             </Button>
           </div>
         </div>
@@ -408,115 +354,205 @@ const UserAssignmentDialog = ({
   );
 };
 
+// Helper to get location names from IDs using location data
+function getLocationNamesFromIds({ division_id, district_id, upazila_id, union_id, village_id }, locationData) {
+  const division = locationData.divisions.find(d => d.id === division_id);
+  const district = locationData.districts.find(d => d.id === district_id);
+  const upazila = locationData.upazilas.find(u => u.id === upazila_id);
+  const union = locationData.unions.find(u => u.id === union_id);
+  const village = locationData.villages.find(v => v.id === village_id);
+  return {
+    division_name: division?.name || '',
+    district_name: district?.name || '',
+    upazila_name: upazila?.name || '',
+    union_name: union?.name || '',
+    village_name: village?.name || '',
+  };
+}
+
+const UserRow = React.memo(({ index, style, data }: ListChildComponentProps) => {
+  const { users, permissions, handleUpdateUser, handleVerifyUser, userProfile } = data;
+  const user = users[index];
+  return (
+    <div style={style}>
+      <div key={user.uid} className="border rounded-lg p-4 space-y-3">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <h3 className="font-medium">{user.displayName || user.email}</h3>
+              <Badge variant={user.approved ? 'default' : 'secondary'}>
+                {user.approved ? 'যাচাইকৃত' : 'অযাচাইকৃত'}
+              </Badge>
+              {user.role && (
+                <Badge variant="outline">
+                  {getRoleDisplayName(user.role)}
+                </Badge>
+              )}
+            </div>
+            <p className="text-sm text-gray-600">{user.email}</p>
+            {user.accessScope && user.role !== 'super_admin' && (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <MapPin className="w-4 h-4" />
+                <span>
+                  {user.accessScope.division_name && `${user.accessScope.division_name}`}
+                  {user.accessScope.district_name && ` → ${user.accessScope.district_name}`}
+                  {user.accessScope.upazila_name && ` → ${user.accessScope.upazila_name}`}
+                  {user.accessScope.union_name && ` → ${user.accessScope.union_name}`}
+                  {user.accessScope.village_name && ` → ${user.accessScope.village_name}`}
+                </span>
+              </div>
+            )}
+            <div className="text-xs text-gray-400">
+              <p>যোগদান: {new Date(user.createdAt).toLocaleDateString('bn-BD')}</p>
+              {user.lastLogin && (
+                <p>শেষ লগইন: {new Date(user.lastLogin).toLocaleDateString('bn-BD')}</p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {permissions.canAssignRoles.length > 0 && (
+              <UserAssignmentDialog
+                user={user}
+                onUpdate={handleUpdateUser}
+                currentUserProfile={userProfile}
+              />
+            )}
+            {!user.approved && (
+              <Button
+                size="sm"
+                onClick={() => handleVerifyUser(user.uid, true)}
+                className="bg-green-600 hover:bg-green-700 h-7 px-2 text-xs"
+              >
+                <CheckCircle className="w-3 h-3 mr-1" />
+                যাচাই করুন
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const [users, setUsers] = useState<User[]>([]);
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch all users ordered by creation date (newest first)
-  const { data: allUsers = [], isLoading } = useQuery({
-    queryKey: ['users', refreshKey],
-    queryFn: async () => {
+  // Fetch users with pagination and .select()
+  const fetchUsers = useCallback(async (afterDoc?: QueryDocumentSnapshot<DocumentData> | null, append = false) => {
+    setIsLoading(true);
+    setError(null);
+    try {
       const usersRef = collection(db, 'users');
-      const q = query(usersRef, orderBy('createdAt', 'desc'));
+      let q = query(usersRef, orderBy('createdAt', 'desc'), limit(PAGE_SIZE));
+      if (afterDoc) {
+        q = query(usersRef, orderBy('createdAt', 'desc'), startAfter(afterDoc), limit(PAGE_SIZE));
+      }
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        uid: doc.id,
-        ...doc.data()
-      } as User));
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // For super admin, show all users. For others, filter by location scope
-  const filteredUsers = React.useMemo(() => {
-    if (!userProfile) return [];
-
-    if (userProfile.role === 'super_admin') {
-      return allUsers;
+      const docs = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() })) as User[];
+      setLastDoc(snapshot.docs[snapshot.docs.length - 1] || null);
+      setHasMore(snapshot.docs.length === PAGE_SIZE);
+      setUsers(prev => append ? [...prev, ...docs] : docs);
+    } catch (err: any) {
+      setError('ব্যবহারকারী ডেটা আনতে সমস্যা হয়েছে।');
+      setHasMore(false);
+    } finally {
+      setIsLoading(false);
     }
+  }, []);
 
-    return allUsers.filter(user => {
-      if (!user.accessScope || !userProfile.accessScope) return false;
+  useEffect(() => {
+    fetchUsers();
+  }, [refreshKey, fetchUsers]);
 
-      const userScope = userProfile.accessScope;
-      const targetScope = user.accessScope;
-
-      switch (userProfile.role) {
-        case 'division_admin':
-          return targetScope.division_id === userScope.division_id;
-        case 'district_admin':
-          return targetScope.district_id === userScope.district_id;
-        case 'upazila_admin':
-          return targetScope.upazila_id === userScope.upazila_id;
-        case 'union_admin':
-          return targetScope.union_id === userScope.union_id;
-        default:
-          return false;
-      }
-    });
-  }, [allUsers, userProfile]);
-
-  const permissions = userProfile ? getRolePermissions(userProfile.role) : null;
-
-  // Update user mutation
-  const updateUserMutation = useMutation({
-    mutationFn: async ({ userId, updates }: { userId: string; updates: Partial<User> }) => {
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
-        ...updates,
-        lastUpdated: new Date().toISOString()
+  // Debounced search filter
+  const filteredUsers = useMemo(() => {
+    if (!Array.isArray(users)) return [];
+    let filtered = users;
+    if (debouncedSearchTerm) {
+      const term = debouncedSearchTerm.toLowerCase();
+      filtered = filtered.filter(user =>
+        user.displayName?.toLowerCase().includes(term) ||
+        user.email?.toLowerCase().includes(term)
+      );
+    }
+    // Role/location-based filtering
+    if (userProfile && userProfile.role !== 'super_admin') {
+      filtered = filtered.filter(user => {
+        if (!user.accessScope || !userProfile.accessScope) return false;
+        const userScope = userProfile.accessScope;
+        const targetScope = user.accessScope;
+        switch (userProfile.role) {
+          case 'division_admin':
+            return targetScope.division_id === userScope.division_id;
+          case 'district_admin':
+            return targetScope.district_id === userScope.district_id;
+          case 'upazila_admin':
+            return targetScope.upazila_id === userScope.upazila_id;
+          case 'union_admin':
+            return targetScope.union_id === userScope.union_id;
+          default:
+            return false;
+        }
       });
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+    }
+    return filtered;
+  }, [users, debouncedSearchTerm, userProfile]);
 
-      if (variables.updates.role) {
-        toast({
-          title: 'সফল',
-          description: 'ব্যবহারকারীর ভূমিকা বরাদ্দ হয়েছে এবং অনুমোদিত হয়েছে',
-        });
-      } else {
-        toast({
-          title: 'সফল',
-          description: 'ব্যবহারকারী আপডেট হয়েছে',
-        });
-      }
-    },
-    onError: (error) => {
-      console.error('User update error:', error);
-      toast({
-        title: 'ত্রুটি',
-        description: 'আপডেট করতে সমস্যা হয়েছে',
-        variant: 'destructive',
+  // Batch update mutation for multi-user actions
+  const batchUpdateUsers = useMutation({
+    mutationFn: async (updates: { userId: string; updates: Partial<User> }[]) => {
+      const batch = writeBatch(db);
+      updates.forEach(({ userId, updates }) => {
+        const userRef = doc(db, 'users', userId);
+        batch.update(userRef, { ...updates, lastUpdated: new Date().toISOString() });
       });
-    },
-  });
-
-  // Simple verify user mutation for basic approval
-  const verifyUserMutation = useMutation({
-    mutationFn: async ({ userId, approved }: { userId: string; approved: boolean }) => {
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
-        approved,
-        verifiedBy: userProfile?.uid,
-        lastUpdated: new Date().toISOString()
-      });
+      await batch.commit();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast({
-        title: 'সফল',
-        description: 'ব্যবহারকারী যাচাই সম্পন্ন হয়েছে',
-      });
+      toast({ title: 'সফল', description: 'একাধিক ব্যবহারকারী আপডেট হয়েছে' });
     },
     onError: (error) => {
-      console.error('User verification error:', error);
-      toast({
-        title: 'ত্রুটি',
-        description: 'যাচাই করতে সমস্যা হয়েছে',
-        variant: 'destructive',
-      });
+      toast({ title: 'ত্রুটি', description: 'ব্যাচ আপডেট করতে সমস্যা হয়েছে', variant: 'destructive' });
+    },
+  });
+
+  // Single user update mutation
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ userId, updates }: { userId: string; updates: Partial<User> }) => {
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, { ...updates, lastUpdated: new Date().toISOString() });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast({ title: 'সফল', description: 'ব্যবহারকারী আপডেট হয়েছে' });
+    },
+    onError: (error) => {
+      toast({ title: 'ত্রুটি', description: 'আপডেট করতে সমস্যা হয়েছে', variant: 'destructive' });
+    },
+  });
+
+  // Verify user mutation
+  const verifyUserMutation = useMutation({
+    mutationFn: async ({ userId, approved }: { userId: string; approved: boolean }) => {
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, { approved, verifiedBy: userProfile?.uid, lastUpdated: new Date().toISOString() });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast({ title: 'সফল', description: 'ব্যবহারকারী যাচাই সম্পন্ন হয়েছে' });
+    },
+    onError: (error) => {
+      toast({ title: 'ত্রুটি', description: 'যাচাই করতে সমস্যা হয়েছে', variant: 'destructive' });
     },
   });
 
@@ -527,6 +563,14 @@ const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
   const handleUpdateUser = (userId: string, updates: Partial<User>) => {
     updateUserMutation.mutate({ userId, updates });
   };
+
+  const handleLoadMore = useCallback(() => {
+    if (hasMore && lastDoc) {
+      fetchUsers(lastDoc, true);
+    }
+  }, [hasMore, lastDoc, fetchUsers]);
+
+  const permissions = userProfile ? getRolePermissions(userProfile.role) : null;
 
   if (!userProfile || !permissions?.canVerifyUsers) {
     return (
@@ -548,99 +592,50 @@ const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
     );
   }
 
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <p className="text-center text-red-500">{error}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
+        <CardHeader className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <UserCheck className="w-5 h-5" />
             ব্যবহারকারী যাচাই ও ভূমিকা বরাদ্দ
           </CardTitle>
+          <Input
+            placeholder="নাম বা ইমেইল দিয়ে খুঁজুন..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="max-w-xs"
+          />
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {filteredUsers.length === 0 ? (
               <p className="text-center text-gray-500 py-8">কোনো ব্যবহারকারী পাওয়া যায়নি</p>
             ) : (
-              filteredUsers.map((user) => (
-                <div key={user.uid} className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">{user.displayName || user.email}</h3>
-                        <Badge variant={user.approved ? 'default' : 'secondary'}>
-                          {user.approved ? 'যাচাইকৃত' : 'অযাচাইকৃত'}
-                        </Badge>
-                        {user.role && (
-                          <Badge variant="outline">
-                            {getRoleDisplayName(user.role)}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-600">{user.email}</p>
-
-                      {user.accessScope && user.role !== 'super_admin' && (
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <MapPin className="w-4 h-4" />
-                          <span>
-                            {user.accessScope.division_name && `${user.accessScope.division_name}`}
-                            {user.accessScope.district_name && ` → ${user.accessScope.district_name}`}
-                            {user.accessScope.upazila_name && ` → ${user.accessScope.upazila_name}`}
-                            {user.accessScope.union_name && ` → ${user.accessScope.union_name}`}
-                            {user.accessScope.village_name && ` → ${user.accessScope.village_name}`}
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="text-xs text-gray-400">
-                        <p>যোগদান: {new Date(user.createdAt).toLocaleDateString('bn-BD')}</p>
-                        {user.lastLogin && (
-                          <p>শেষ লগইন: {new Date(user.lastLogin).toLocaleDateString('bn-BD')}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {permissions.canAssignRoles.length > 0 && (
-                        <UserAssignmentDialog
-                          user={user}
-                          onUpdate={handleUpdateUser}
-                          currentUserProfile={userProfile}
-                        />
-                      )}
-
-                      {!user.role && userProfile.role === 'super_admin' && (
-                        <>
-                          {!user.approved && (
-                            <Button
-                              size="sm"
-                              onClick={() => handleVerifyUser(user.uid, true)}
-                              disabled={verifyUserMutation.isPending}
-                              className="bg-green-600 hover:bg-green-700 h-7 px-2 text-xs"
-                            >
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              অনুমোদন
-                            </Button>
-                          )}
-
-                          {user.approved && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleVerifyUser(user.uid, false)}
-                              disabled={verifyUserMutation.isPending}
-                              className="h-7 px-2 text-xs"
-                            >
-                              <XCircle className="w-3 h-3 mr-1" />
-                              বাতিল
-                            </Button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
+              <List
+                height={600}
+                itemCount={filteredUsers.length}
+                itemSize={140}
+                width="100%"
+                itemData={{ users: filteredUsers, permissions, handleUpdateUser, handleVerifyUser, userProfile }}
+              >
+                {UserRow}
+              </List>
+            )}
+            {hasMore && !isLoading && (
+              <div className="flex justify-center mt-4">
+                <Button onClick={handleLoadMore} variant="outline">আরো লোড করুন</Button>
+              </div>
             )}
           </div>
         </CardContent>

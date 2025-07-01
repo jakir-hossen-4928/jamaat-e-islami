@@ -1,44 +1,29 @@
 
 import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Building, BarChart3, MapPin } from 'lucide-react';
-import { VoterData, User } from '@/lib/types';
+import { Users, Building, BarChart3, MapPin, TrendingUp } from 'lucide-react';
+import { StatsCard } from '@/components/ui/stats-card';
+import { useRealTimeStats } from '@/hooks/useRealTimeStats';
 import { useAuth } from '@/hooks/useAuth';
 import RoleBasedSidebar from '@/components/layout/RoleBasedSidebar';
 
 const DivisionAdminDashboard = () => {
   const { userProfile } = useAuth();
-
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ['division-admin-stats', userProfile?.accessScope?.division_id],
-    queryFn: async () => {
-      if (!userProfile?.accessScope?.division_id) return null;
-
-      const votersRef = collection(db, 'voters');
-      const votersQuery = query(votersRef, where('division_id', '==', userProfile.accessScope.division_id));
-      
-      const votersSnapshot = await getDocs(votersQuery);
-      const voters = votersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoterData));
-      
-      return {
-        totalVoters: voters.length,
-        highPriorityVoters: voters.filter(v => v['Priority Level'] === 'High').length,
-        maleVoters: voters.filter(v => v.Gender === 'Male').length,
-        femaleVoters: voters.filter(v => v.Gender === 'Female').length
-      };
-    },
+  const { stats, isLoading, refetch, isRefetching } = useRealTimeStats({
+    refetchInterval: 30000, // Refresh every 30 seconds
+    staleTime: 10000, // Consider data stale after 10 seconds
     enabled: !!userProfile?.accessScope?.division_id
   });
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">ডেটা লোড হচ্ছে...</div>
-      </div>
+      <RoleBasedSidebar>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-lg">ডেটা লোড হচ্ছে...</div>
+        </div>
+      </RoleBasedSidebar>
     );
   }
 
@@ -46,77 +31,96 @@ const DivisionAdminDashboard = () => {
     <RoleBasedSidebar>
       <div className="space-y-6">
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white">
-          <h1 className="text-2xl lg:text-3xl font-bold">বিভাগীয় অ্যাডমিন ড্যাশবোর্ড</h1>
-          <p className="mt-2 text-blue-100">আপনার বিভাগের ভোটার ব্যবস্থাপনা</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl lg:text-3xl font-bold">বিভাগীয় অ্যাডমিন ড্যাশবোর্ড</h1>
+              <p className="mt-2 text-blue-100">আপনার বিভাগের ভোটার ব্যবস্থাপনা</p>
+              {userProfile?.accessScope?.division_name && (
+                <p className="mt-1 text-blue-200">বিভাগ: {userProfile.accessScope.division_name}</p>
+              )}
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => refetch()}
+              disabled={isRefetching}
+              className="bg-white/10 hover:bg-white/20 text-white border-white/20"
+            >
+              <TrendingUp className="w-4 h-4 mr-2" />
+              {isRefetching ? 'রিফ্রেশ হচ্ছে...' : 'রিফ্রেশ'}
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-green-50 border-green-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">মোট ভোটার</CardTitle>
-              <Users className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-700">{stats?.totalVoters || 0}</div>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="মোট ভোটার"
+            value={stats?.totalVoters || 0}
+            subtitle="বিভাগের মোট ভোটার"
+            icon={Users}
+            color="green"
+            link="/admin/all-voters"
+          />
 
-          <Card className="bg-blue-50 border-blue-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">পুরুষ ভোটার</CardTitle>
-              <Users className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-700">{stats?.maleVoters || 0}</div>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="পুরুষ ভোটার"
+            value={stats?.maleVoters || 0}
+            subtitle="পুরুষ ভোটার"
+            icon={Users}
+            color="blue"
+            link="/admin/all-voters"
+          />
 
-          <Card className="bg-pink-50 border-pink-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">মহিলা ভোটার</CardTitle>
-              <Users className="h-4 w-4 text-pink-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-pink-700">{stats?.femaleVoters || 0}</div>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="মহিলা ভোটার"
+            value={stats?.femaleVoters || 0}
+            subtitle="মহিলা ভোটার"
+            icon={Users}
+            color="pink"
+            link="/admin/all-voters"
+          />
 
-          <Card className="bg-orange-50 border-orange-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">উচ্চ অগ্রাধিকার</CardTitle>
-              <BarChart3 className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-700">{stats?.highPriorityVoters || 0}</div>
-            </CardContent>
-          </Card>
+          <StatsCard
+            title="উচ্চ অগ্রাধিকার"
+            value={stats?.highPriorityVoters || 0}
+            subtitle="গুরুত্বপূর্ণ ভোটার"
+            icon={BarChart3}
+            color="orange"
+            link="/admin/all-voters"
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle>দ্রুত কার্যক্রম</CardTitle>
+              <CardTitle className="flex items-center space-x-2">
+                <MapPin className="w-5 h-5 text-green-600" />
+                <span>দ্রুত কার্যক্রম</span>
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button className="w-full" asChild>
-                <a href="/admin/add-voter">নতুন ভোটার যোগ করুন</a>
+                <Link to="/admin/add-new-voter">নতুন ভোটার যোগ করুন</Link>
               </Button>
               <Button className="w-full" variant="outline" asChild>
-                <a href="/admin/voters">সব ভোটার দেখুন</a>
+                <Link to="/admin/all-voters">সব ভোটার দেখুন ({stats?.totalVoters || 0})</Link>
               </Button>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>বিভাগীয় ব্যবস্থাপনা</CardTitle>
+              <CardTitle className="flex items-center space-x-2">
+                <Building className="w-5 h-5 text-blue-600" />
+                <span>বিভাগীয় ব্যবস্থাপনা</span>
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button className="w-full" variant="outline">
-                জেলা অ্যাডমিন নিয়োগ
+              <Button className="w-full" variant="outline" asChild>
+                <Link to="/admin/user-verification">জেলা অ্যাডমিন নিয়োগ</Link>
               </Button>
               <Button className="w-full" variant="outline" asChild>
-                <a href="/admin/analytics">রিপোর্ট দেখুন</a>
+                <Link to="/admin/analytics-reports">রিপোর্ট দেখুন</Link>
               </Button>
             </CardContent>
           </Card>
