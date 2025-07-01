@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { FixedSizeList as List, ListChildComponentProps } from 'react-window';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PAGE_SIZE = 30;
 
@@ -443,6 +444,7 @@ const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
     canAccessAllData 
   } = useDataAccess();
   
+  const { userProfile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
@@ -637,7 +639,7 @@ const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
                   itemCount={filteredUsers.length}
                   itemSize={140}
                   width="100%"
-                  itemData={{ users: filteredUsers, permissions: getRolePermissions(accessScope?.role || ''), handleUpdateUser, handleVerifyUser, userProfile: accessScope }}
+                  itemData={{ users: filteredUsers, permissions: getRolePermissions(userProfile?.role || ''), handleUpdateUser, handleVerifyUser, userProfile }}
                 >
                   {UserRow}
                 </List>
