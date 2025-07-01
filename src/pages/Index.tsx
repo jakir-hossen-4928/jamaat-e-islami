@@ -128,7 +128,7 @@ const Index = () => {
                       <Link to="/login">লগইন</Link>
                     </Button>
                     <Button asChild variant="outline" size="sm" className="hover:bg-green-50">
-                      <Link to="/register">রেজিস্টার</Link>
+                      <Link to="/registe">রেজিস্টার</Link>
                     </Button>
                   </>
                 ) : (
