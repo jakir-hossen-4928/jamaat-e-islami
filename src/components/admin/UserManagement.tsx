@@ -112,31 +112,44 @@ const UserAssignmentDialog = ({
   const isValid = () => {
     if (!selectedRole) return false;
     
+    // All roles except super_admin require location scope
+    if (selectedRole === 'super_admin') return true;
+    
+    // Check required fields based on role
+    const hasRequiredDivision = !!selectedLocation.division_id;
+    const hasRequiredDistrict = !!selectedLocation.district_id;
+    const hasRequiredUpazila = !!selectedLocation.upazila_id;
+    const hasRequiredUnion = !!selectedLocation.union_id;
+    const hasRequiredVillage = !!selectedLocation.village_id;
+
     switch (selectedRole) {
-      case 'super_admin':
-        return true;
       case 'division_admin':
-        return !!selectedLocation.division_id;
+        return hasRequiredDivision;
       case 'district_admin':
-        return !!selectedLocation.division_id && !!selectedLocation.district_id;
+        return hasRequiredDivision && hasRequiredDistrict;
       case 'upazila_admin':
-        return !!selectedLocation.division_id && !!selectedLocation.district_id && !!selectedLocation.upazila_id;
+        return hasRequiredDivision && hasRequiredDistrict && hasRequiredUpazila;
       case 'union_admin':
-        return !!selectedLocation.division_id && !!selectedLocation.district_id && !!selectedLocation.upazila_id && !!selectedLocation.union_id;
+        return hasRequiredDivision && hasRequiredDistrict && hasRequiredUpazila && hasRequiredUnion;
       case 'village_admin':
-        return !!selectedLocation.division_id && !!selectedLocation.district_id && !!selectedLocation.upazila_id && !!selectedLocation.union_id && !!selectedLocation.village_id;
+        return hasRequiredDivision && hasRequiredDistrict && hasRequiredUpazila && hasRequiredUnion && hasRequiredVillage;
       default:
         return false;
     }
   };
 
   const handleSubmit = async () => {
-    if (!selectedRole || !isValid()) return;
+    if (!selectedRole || !isValid()) {
+      toast.error('সব প্রয়োজনীয় ফিল্ড পূরণ করুন');
+      return;
+    }
+
     const locationNames = getLocationNames(selectedLocation);
     const accessScope = {
       ...selectedLocation,
       ...locationNames,
     };
+
     const updates: Partial<User> = {
       role: selectedRole,
       approved: true,
@@ -144,6 +157,7 @@ const UserAssignmentDialog = ({
       assignedBy: currentUserProfile.uid,
       verifiedBy: currentUserProfile.uid
     };
+
     onUpdate(user.uid, updates);
     setIsOpen(false);
     setSelectedRole('');
@@ -186,6 +200,12 @@ const UserAssignmentDialog = ({
           <DialogTitle>ব্যবহারকারী ভূমিকা বরাদ্দ</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          <Alert>
+            <AlertDescription>
+              <strong>গুরুত্বপূর্ণ:</strong> সব অ্যাডমিনের জন্য লোকেশন স্কোপ আবশ্যক। লোকেশন ছাড়া কোনো ভূমিকা বরাদ্দ করা যাবে না।
+            </AlertDescription>
+          </Alert>
+
           <div>
             <Label>ভূমিকা নির্বাচন করুন *</Label>
             <Select value={selectedRole} onValueChange={(value) => setSelectedRole(value as UserRole)}>
@@ -202,10 +222,9 @@ const UserAssignmentDialog = ({
             </Select>
           </div>
 
-          {/* Location Selection Dropdowns - Role-based */}
+          {/* Location Selection - Required for all roles except super_admin */}
           {selectedRole && selectedRole !== 'super_admin' && (
             <div className="space-y-3">
-              {/* Division - Required for all roles except super_admin */}
               <div>
                 <Label>বিভাগ *</Label>
                 <Select
@@ -225,7 +244,6 @@ const UserAssignmentDialog = ({
                 </Select>
               </div>
 
-              {/* District - Required for district_admin, upazila_admin, union_admin, village_admin */}
               {(selectedRole === 'district_admin' || selectedRole === 'upazila_admin' || selectedRole === 'union_admin' || selectedRole === 'village_admin') && (
                 <div>
                   <Label>জেলা *</Label>
@@ -248,7 +266,6 @@ const UserAssignmentDialog = ({
                 </div>
               )}
 
-              {/* Upazila - Required for upazila_admin, union_admin, village_admin */}
               {(selectedRole === 'upazila_admin' || selectedRole === 'union_admin' || selectedRole === 'village_admin') && (
                 <div>
                   <Label>উপজেলা *</Label>
@@ -271,7 +288,6 @@ const UserAssignmentDialog = ({
                 </div>
               )}
 
-              {/* Union - Required for union_admin, village_admin */}
               {(selectedRole === 'union_admin' || selectedRole === 'village_admin') && (
                 <div>
                   <Label>ইউনিয়ন *</Label>
@@ -294,7 +310,6 @@ const UserAssignmentDialog = ({
                 </div>
               )}
 
-              {/* Village - Required for village_admin */}
               {selectedRole === 'village_admin' && (
                 <div>
                   <Label>গ্রাম *</Label>
@@ -579,6 +594,18 @@ const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
     return getRolePermissions(userProfile.role);
   }, [userProfile]);
 
+  // Enhanced validation for user assignment
+  const canAssignToUser = useCallback((targetUser: User) => {
+    if (!userProfile) return false;
+    
+    // Check if user has location scope (required for all assignments)
+    if (!targetUser.accessScope || Object.keys(targetUser.accessScope).length === 0) {
+      return false;
+    }
+
+    return canManageUser(targetUser);
+  }, [userProfile]);
+
   if (!canAccessAllData && !canAssignRole('village_admin')) {
     return (
       <Card>
@@ -640,6 +667,12 @@ const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
           </div>
         </CardHeader>
         <CardContent>
+          <Alert className="mb-4">
+            <AlertDescription>
+              <strong>নিয়ম:</strong> সব ব্যবহারকারীর অবশ্যই লোকেশন স্কোপ থাকতে হবে। লোকেশন স্কোপ ছাড়া কোনো ভূমিকা বরাদ্দ করা যাবে না।
+            </AlertDescription>
+          </Alert>
+          
           <div className="space-y-4">
             {filteredUsers.length === 0 ? (
               <p className="text-center text-gray-500 py-8">
