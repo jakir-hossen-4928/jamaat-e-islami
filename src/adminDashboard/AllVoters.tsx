@@ -42,8 +42,8 @@ const AllVoters = () => {
 
   const additionalFilters = useMemo(() => {
     const filters: Record<string, string> = {};
-    if (genderFilter) filters.Gender = genderFilter;
-    if (priorityFilter) filters['Priority Level'] = priorityFilter;
+    if (genderFilter && genderFilter !== 'all') filters.Gender = genderFilter;
+    if (priorityFilter && priorityFilter !== 'all') filters['Priority Level'] = priorityFilter;
     return filters;
   }, [genderFilter, priorityFilter]);
 

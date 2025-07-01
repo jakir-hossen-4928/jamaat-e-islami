@@ -639,7 +639,13 @@ const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
                   itemCount={filteredUsers.length}
                   itemSize={140}
                   width="100%"
-                  itemData={{ users: filteredUsers, permissions: getRolePermissions(userProfile?.role || ''), handleUpdateUser, handleVerifyUser, userProfile }}
+                  itemData={{ 
+                    users: filteredUsers, 
+                    permissions: userProfile?.role ? getRolePermissions(userProfile.role) : { canAssignRoles: [], canVerifyUsers: false }, 
+                    handleUpdateUser, 
+                    handleVerifyUser, 
+                    userProfile 
+                  }}
                 >
                   {UserRow}
                 </List>

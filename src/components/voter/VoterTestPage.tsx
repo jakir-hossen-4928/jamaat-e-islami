@@ -16,9 +16,11 @@ import { Plus, Search, Users } from 'lucide-react';
 const VoterTestPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [newVoter, setNewVoter] = useState({
-    'Voter Name': '',
-    'ID': '',
-    'Phone': '',
+    Name: '',
+    'Fathers Name': '',
+    'Mothers Name': '',
+    ID: '',
+    Phone: '',
     'Village Name': '',
     'Will Vote': 'Yes' as 'Yes' | 'No',
     'Vote Probability (%)': 50
@@ -26,9 +28,11 @@ const VoterTestPage = () => {
   const [mockVoters, setMockVoters] = useState<VoterData[]>([
     {
       id: '1',
-      'Voter Name': 'আহমেদ হাসান',
-      'ID': 'V001',
-      'Phone': '01711111111',
+      Name: 'আহমেদ হাসান',
+      'Fathers Name': 'আবদুল হাসান',
+      'Mothers Name': 'ফাতেমা বেগম',
+      ID: 'V001',
+      Phone: '01711111111',
       'Village Name': 'রামপুর',
       'Will Vote': 'Yes',
       'Vote Probability (%)': 85,
@@ -36,9 +40,11 @@ const VoterTestPage = () => {
     },
     {
       id: '2',
-      'Voter Name': 'ফাতেমা খাতুন',
-      'ID': 'V002',
-      'Phone': '01722222222',
+      Name: 'ফাতেমা খাতুন',
+      'Fathers Name': 'আবদুল করিম',
+      'Mothers Name': 'রাবিয়া বেগম',
+      ID: 'V002',
+      Phone: '01722222222',
       'Village Name': 'শ্যামপুর',
       'Will Vote': 'No',
       'Vote Probability (%)': 30,
@@ -57,7 +63,7 @@ const VoterTestPage = () => {
   });
 
   const filteredVoters = mockVoters.filter(voter =>
-    voter['Voter Name']?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+    voter.Name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
     voter.ID?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
     voter.Phone?.includes(debouncedSearchTerm)
   );
@@ -76,9 +82,11 @@ const VoterTestPage = () => {
       
       // Reset form
       setNewVoter({
-        'Voter Name': '',
-        'ID': '',
-        'Phone': '',
+        Name: '',
+        'Fathers Name': '',
+        'Mothers Name': '',
+        ID: '',
+        Phone: '',
         'Village Name': '',
         'Will Vote': 'Yes',
         'Vote Probability (%)': 50
@@ -173,9 +181,27 @@ const VoterTestPage = () => {
                     <div>
                       <label className="block text-sm font-medium mb-2">নাম</label>
                       <Input
-                        value={newVoter['Voter Name']}
-                        onChange={(e) => setNewVoter(prev => ({ ...prev, 'Voter Name': e.target.value }))}
+                        value={newVoter.Name}
+                        onChange={(e) => setNewVoter(prev => ({ ...prev, Name: e.target.value }))}
                         placeholder="ভোটারের নাম"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium mb-2">পিতার নাম</label>
+                      <Input
+                        value={newVoter['Fathers Name']}
+                        onChange={(e) => setNewVoter(prev => ({ ...prev, 'Fathers Name': e.target.value }))}
+                        placeholder="পিতার নাম"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">মাতার নাম</label>
+                      <Input
+                        value={newVoter['Mothers Name']}
+                        onChange={(e) => setNewVoter(prev => ({ ...prev, 'Mothers Name': e.target.value }))}
+                        placeholder="মাতার নাম"
                       />
                     </div>
                     
@@ -183,7 +209,7 @@ const VoterTestPage = () => {
                       <label className="block text-sm font-medium mb-2">আইডি</label>
                       <Input
                         value={newVoter.ID}
-                        onChange={(e) => setNewVoter(prev => ({ ...prev, 'ID': e.target.value }))}
+                        onChange={(e) => setNewVoter(prev => ({ ...prev, ID: e.target.value }))}
                         placeholder="ভোটার আইডি"
                       />
                     </div>
@@ -192,7 +218,7 @@ const VoterTestPage = () => {
                       <label className="block text-sm font-medium mb-2">ফোন</label>
                       <Input
                         value={newVoter.Phone}
-                        onChange={(e) => setNewVoter(prev => ({ ...prev, 'Phone': e.target.value }))}
+                        onChange={(e) => setNewVoter(prev => ({ ...prev, Phone: e.target.value }))}
                         placeholder="ফোন নম্বর"
                       />
                     </div>
@@ -232,7 +258,7 @@ const VoterTestPage = () => {
 
                   <Button 
                     onClick={handleAddVoter}
-                    disabled={isLoading || !newVoter['Voter Name'] || !newVoter.ID}
+                    disabled={isLoading || !newVoter.Name || !newVoter.ID || !newVoter['Fathers Name'] || !newVoter['Mothers Name']}
                     className="w-full"
                   >
                     {isLoading ? 'যোগ করা হচ্ছে...' : 'ভোটার যোগ করুন'}
