@@ -111,12 +111,18 @@ const AddVoters = () => {
 
   // State for selected columns, initialized from localStorage
   const [selectedColumns, setSelectedColumns] = useState<string[]>(() => {
-    const saved = localStorage.getItem('voterFormColumns');
-    return saved
-      ? JSON.parse(saved).filter((col: string) => col !== 'WhatsApp' && col !== 'Priority Level')
-      : Object.keys(formData).filter(
-        (key) => key !== 'Voter Name' && key !== 'WhatsApp' && key !== 'Priority Level'
-      );
+    try {
+      const saved = localStorage.getItem('voterFormColumns');
+      const parsed = saved ? JSON.parse(saved) : null;
+      if (Array.isArray(parsed) && parsed.length < 100) { // Defensive: limit to 100
+        return parsed.filter((col: string) => col !== 'WhatsApp' && col !== 'Priority Level');
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+    return Object.keys(formData).filter(
+      (key) => key !== 'Voter Name' && key !== 'WhatsApp' && key !== 'Priority Level'
+    );
   });
 
   // Load location data
@@ -219,11 +225,15 @@ const AddVoters = () => {
   }, []);
 
   const handleColumnToggle = useCallback((column: string) => {
-    setSelectedColumns((prev) =>
-      prev.includes(column)
-        ? prev.filter((c) => c !== column)
-        : [...prev, column]
-    );
+    setSelectedColumns((prev) => {
+      if (prev.includes(column)) {
+        return prev.filter((c) => c !== column);
+      } else {
+        // Defensive: limit max columns
+        if (prev.length >= 100) return prev;
+        return [...prev, column];
+      }
+    });
   }, []);
 
   const addSingleVoterMutation = useMutation({

@@ -9,7 +9,7 @@ import AuthWrapper from "@/components/layout/AuthWrapper";
 import { addTransitionStyles } from "@/lib/barbaTransitions";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/common/ErrorBoundary";
-import { LocationBasedAccessWrapper } from "./components/LocationBasedAccessWrapper";
+import { LocationBasedAccessWrapper } from "@/components/LocationBasedAccessWrapper";
 import Loading from "./components/loader/Loading";
 
 // Lazy load all pages and dashboard components
@@ -22,7 +22,6 @@ const Unauthorized = lazy(() => import("./auth/Unauthorized"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const LocationDemo = lazy(() => import("./pages/LocationDemo"));
 const DashboardRouter = lazy(() => import("./components/DashboardRouter"));
-const Register = lazy(() => import("./auth/Register"));
 
 // Admin Dashboard Components
 const AdminDashboard = lazy(() => import("./adminDashboard/AdminDashboard"));
@@ -72,8 +71,9 @@ const App = () => {
             <AuthProvider>
               <AuthWrapper>
                 <div className="min-h-screen">
-                  <Suspense fallback={<Loading fullScreen message="পেজ লোড হচ্ছে..." />}> 
+                  <Suspense fallback={<Loading fullScreen message="পেজ লোড হচ্ছে..." />}>
                     <Routes>
+                      {/* Public Routes */}
                       <Route path="/" element={<Index />} />
                       <Route path="/login" element={<Login />} />
                       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -81,7 +81,6 @@ const App = () => {
                       <Route path="/verification-loading" element={<VerificationLoading />} />
                       <Route path="/unauthorized" element={<Unauthorized />} />
                       <Route path="/location-demo" element={<LocationDemo />} />
-                      <Route path="/register" element={<Register />} />
 
                       {/* Documentation Routes */}
                       <Route path="/docs" element={<Documentation />} />
@@ -93,109 +92,32 @@ const App = () => {
                       <Route path="/documentation/system-settings" element={<SystemSettingsDocs />} />
                       <Route path="/documentation/api-reference" element={<APIReference />} />
 
-                      {/* Main Dashboard Route - Role-based routing */}
-                      <Route path="/dashboard" element={
-                        <ProtectedRoute>
-                          <DashboardRouter />
-                        </ProtectedRoute>
-                      } />
-
-                      {/* Admin Routes with user-friendly names */}
-                      <Route path="/admin" element={
-                        <ProtectedRoute>
-                          <LocationBasedAccessWrapper requiredFeature="user_management">
-                            <AdminDashboard />
-                          </LocationBasedAccessWrapper>
-                        </ProtectedRoute>
-                      } />
-
-                      <Route path="/admin/home" element={
-                        <ProtectedRoute>
-                          <LocationBasedAccessWrapper requiredFeature="user_management">
-                            <AdminDashboard />
-                          </LocationBasedAccessWrapper>
-                        </ProtectedRoute>
-                      } />
-
-                      <Route path="/admin/all-voters" element={
-                        <ProtectedRoute>
-                          <LocationBasedAccessWrapper requiredFeature="voter_management">
-                            <AllVoters />
-                          </LocationBasedAccessWrapper>
-                        </ProtectedRoute>
-                      } />
-
-                      <Route path="/admin/pdf-preview" element={
-                        <ProtectedRoute>
-                          <LocationBasedAccessWrapper requiredFeature="voter_management">
-                            <PDFPreview />
-                          </LocationBasedAccessWrapper>
-                        </ProtectedRoute>
-                      } />
-
-                      <Route path="/admin/add-new-voter" element={
-                        <ProtectedRoute>
-                          <LocationBasedAccessWrapper requiredFeature="voter_management">
-                            <AddVoters />
-                          </LocationBasedAccessWrapper>
-                        </ProtectedRoute>
-                      } />
-
-                      <Route path="/admin/google-forms" element={
-                        <ProtectedRoute>
-                          <LocationBasedAccessWrapper requiredFeature="voter_management">
-                            <GoogleForm />
-                          </LocationBasedAccessWrapper>
-                        </ProtectedRoute>
-                      } />
-
-                      <Route path="/admin/analytics-reports" element={
-                        <ProtectedRoute>
-                          <LocationBasedAccessWrapper requiredFeature="analytics">
-                            <Analytics />
-                          </LocationBasedAccessWrapper>
-                        </ProtectedRoute>
-                      } />
-
-                      <Route path="/admin/sms-campaigns" element={
-                        <ProtectedRoute>
-                          <LocationBasedAccessWrapper requiredFeature="sms_campaigns">
-                            <SMSCampaign />
-                          </LocationBasedAccessWrapper>
-                        </ProtectedRoute>
-                      } />
-
-                      <Route path="/admin/data-management" element={
-                        <ProtectedRoute>
-                          <LocationBasedAccessWrapper requiredFeature="system_settings">
-                            <DataHub />
-                          </LocationBasedAccessWrapper>
-                        </ProtectedRoute>
-                      } />
-
-                      <Route path="/admin/user-verification" element={
-                        <ProtectedRoute>
-                          <LocationBasedAccessWrapper requiredFeature="user_management">
-                            <UserVerify />
-                          </LocationBasedAccessWrapper>
-                        </ProtectedRoute>
-                      } />
-
-                      <Route path="/admin/location-management" element={
-                        <ProtectedRoute>
-                          <LocationBasedAccessWrapper requiredFeature="system_settings">
-                            <LocationManagement />
-                          </LocationBasedAccessWrapper>
-                        </ProtectedRoute>
-                      } />
-
-                      <Route path="/admin/system-configuration" element={
-                        <ProtectedRoute>
-                          <LocationBasedAccessWrapper requiredFeature="system_settings">
-                            <SystemSettings />
-                          </LocationBasedAccessWrapper>
-                        </ProtectedRoute>
-                      } />
+                      {/* Protected Routes - wrap all in LocationBasedAccessWrapper */}
+                      <Route
+                        path="/*"
+                        element={
+                          <ProtectedRoute>
+                            <LocationBasedAccessWrapper>
+                              <Routes>
+                                <Route path="dashboard" element={<DashboardRouter />} />
+                                <Route path="admin" element={<AdminDashboard />} />
+                                <Route path="admin/home" element={<AdminDashboard />} />
+                                <Route path="admin/all-voters" element={<AllVoters />} />
+                                <Route path="admin/pdf-preview" element={<PDFPreview />} />
+                                <Route path="admin/add-new-voter" element={<AddVoters />} />
+                                <Route path="admin/google-forms" element={<GoogleForm />} />
+                                <Route path="admin/analytics-reports" element={<Analytics />} />
+                                <Route path="admin/sms-campaigns" element={<SMSCampaign />} />
+                                <Route path="admin/data-management" element={<DataHub />} />
+                                <Route path="admin/user-verification" element={<UserVerify />} />
+                                <Route path="admin/location-management" element={<LocationManagement />} />
+                                <Route path="admin/system-configuration" element={<SystemSettings />} />
+                                {/* Add more protected routes as needed */}
+                              </Routes>
+                            </LocationBasedAccessWrapper>
+                          </ProtectedRoute>
+                        }
+                      />
 
                       {/* Catch-all route */}
                       <Route path="*" element={<NotFound />} />

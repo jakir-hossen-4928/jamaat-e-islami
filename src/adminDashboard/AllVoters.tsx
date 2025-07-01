@@ -18,7 +18,7 @@ import {
   BarChart3,
   Menu
 } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useLocationAccess } from '@/components/LocationBasedAccessWrapper';
 import VoterLocationFilter from '@/components/admin/VoterLocationFilter';
 import { useLocationFilter } from '@/hooks/useLocationFilter';
 import { VoterData } from '@/lib/types';
@@ -36,7 +36,7 @@ const PAGE_SIZE = 50;
 const AllVoters = () => {
   usePageTitle('সকল ভোটার - অ্যাডমিন প্যানেল');
 
-  const { userProfile } = useAuth();
+  const { userProfile, role, accessScope } = useLocationAccess();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,35 +62,34 @@ const AllVoters = () => {
     const votersCollection = collection(db, 'voters');
     let q: Query<DocumentData>;
     // Role/location-based filtering
-    if (userProfile.role !== 'super_admin') {
-      const userScope = userProfile.accessScope;
-      if (userScope.village_id) {
+    if (role !== 'super_admin') {
+      if (accessScope.village_id) {
         q = query(votersCollection,
-          where('village_id', '==', userScope.village_id),
+          where('village_id', '==', accessScope.village_id),
           orderBy('Last Updated', 'desc'),
           limit(PAGE_SIZE)
         );
-      } else if (userScope.union_id) {
+      } else if (accessScope.union_id) {
         q = query(votersCollection,
-          where('union_id', '==', userScope.union_id),
+          where('union_id', '==', accessScope.union_id),
           orderBy('Last Updated', 'desc'),
           limit(PAGE_SIZE)
         );
-      } else if (userScope.upazila_id) {
+      } else if (accessScope.upazila_id) {
         q = query(votersCollection,
-          where('upazila_id', '==', userScope.upazila_id),
+          where('upazila_id', '==', accessScope.upazila_id),
           orderBy('Last Updated', 'desc'),
           limit(PAGE_SIZE)
         );
-      } else if (userScope.district_id) {
+      } else if (accessScope.district_id) {
         q = query(votersCollection,
-          where('district_id', '==', userScope.district_id),
+          where('district_id', '==', accessScope.district_id),
           orderBy('Last Updated', 'desc'),
           limit(PAGE_SIZE)
         );
-      } else if (userScope.division_id) {
+      } else if (accessScope.division_id) {
         q = query(votersCollection,
-          where('division_id', '==', userScope.division_id),
+          where('division_id', '==', accessScope.division_id),
           orderBy('Last Updated', 'desc'),
           limit(PAGE_SIZE)
         );
@@ -303,12 +302,12 @@ const AllVoters = () => {
           </div>
 
           {/* Location Filter - Only show for super admin */}
-          {userProfile?.role === 'super_admin' && (
+          {role === 'super_admin' && (
             <VoterLocationFilter
               locationData={locationData}
               selectedLocation={selectedLocation}
               onLocationChange={setSelectedLocation}
-              userRole={userProfile.role}
+              userRole={role}
               disabled={locationLoading}
             />
           )}
