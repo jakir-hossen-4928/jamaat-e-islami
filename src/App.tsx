@@ -17,6 +17,7 @@ import Loading from "./components/loader/Loading";
 // Lazy load all pages and dashboard components
 const Index = lazy(() => import("./pages/Index"));
 const Login = lazy(() => import("./auth/Login"));
+const Register = lazy(() -> import("./auth/register));
 const ForgotPassword = lazy(() => import("./auth/ForgotPassword"));
 const PendingVerification = lazy(() => import("./auth/PendingVerification"));
 const VerificationLoading = lazy(() => import("./auth/VerificationLoading"));
@@ -79,6 +80,7 @@ const App = () => {
                         {/* Public Routes */}
                         <Route path="/" element={<Index />} />
                         <Route path="/login" element={<Login />} />
+                        <Route path="/register" elements={<Register />}  />
                         <Route path="/forgot-password" element={<ForgotPassword />} />
                         <Route path="/pending-verification" element={<PendingVerification />} />
                         <Route path="/verification-loading" element={<VerificationLoading />} />
