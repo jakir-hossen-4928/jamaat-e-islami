@@ -35,9 +35,8 @@ const AllVoters = () => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  const [genderFilter, setGenderFilter] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState('');
-  const [voters, setVoters] = useState<VoterData[]>([]);
+  const [genderFilter, setGenderFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
   const { toast } = useToast();
 
   const additionalFilters = useMemo(() => {
@@ -104,99 +103,167 @@ const AllVoters = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Header Card with Search and Filters */}
       <Card>
-        <CardHeader className="flex items-center justify-between">
-          <CardTitle>সকল ভোটার</CardTitle>
-          <div className="flex items-center space-x-4">
-            <Input
-              type="search"
-              placeholder="নাম, আইডি, ঠিকানা দিয়ে খুঁজুন..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-            <Select value={genderFilter} onValueChange={setGenderFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="লিঙ্গ" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">সব</SelectItem>
-                <SelectItem value="পুরুষ">পুরুষ</SelectItem>
-                <SelectItem value="মহিলা">মহিলা</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="অগ্রাধিকার" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">সব</SelectItem>
-                <SelectItem value="উচ্চ">উচ্চ</SelectItem>
-                <SelectItem value="মাঝারি">মাঝারি</SelectItem>
-                <SelectItem value="নিম্ন">নিম্ন</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span>সকল ভোটার ({filteredVoters.length})</span>
+            <div className="flex items-center space-x-4">
+              <Input
+                type="search"
+                placeholder="নাম, আইডি, ঠিকানা দিয়ে খুঁজুন..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-64"
+              />
+              <Select value={genderFilter} onValueChange={setGenderFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="লিঙ্গ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">সব</SelectItem>
+                  <SelectItem value="পুরুষ">পুরুষ</SelectItem>
+                  <SelectItem value="মহিলা">মহিলা</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="অগ্রাধিকার" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">সব</SelectItem>
+                  <SelectItem value="উচ্চ">উচ্চ</SelectItem>
+                  <SelectItem value="মাঝারি">মাঝারি</SelectItem>
+                  <SelectItem value="নিম্ন">নিম্ন</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardTitle>
+        </CardHeader>
+      </Card>
+
+      {/* Voters Grid Display */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredVoters.length === 0 ? (
+          <Card className="col-span-full">
+            <CardContent className="p-8">
+              <p className="text-center text-gray-500">কোনো ভোটার পাওয়া যায়নি</p>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredVoters.map((voter) => (
+            <Card key={voter.id} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-lg">{voter.Name}</h3>
+                    <p className="text-sm text-gray-600">ভোটার আইডি: {voter['Voter ID']}</p>
+                  </div>
+                  <Badge variant={voter.Gender === 'পুরুষ' ? 'default' : 'secondary'}>
+                    {voter.Gender}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <p className="text-gray-500">পিতার নাম:</p>
+                    <p className="font-medium">{voter['Fathers Name']}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">মাতার নাম:</p>
+                    <p className="font-medium">{voter['Mothers Name']}</p>
+                  </div>
+                </div>
+                
+                <div className="pt-2 border-t">
+                  <p className="text-sm text-gray-500">ঠিকানা:</p>
+                  <p className="text-sm font-medium">
+                    {voter.Village}, {voter.Union}, {voter.Upazila}, {voter.District}
+                  </p>
+                </div>
+
+                {voter.Mobile && (
+                  <div>
+                    <p className="text-sm text-gray-500">মোবাইল:</p>
+                    <p className="text-sm font-medium">{voter.Mobile}</p>
+                  </div>
+                )}
+
+                {voter.Occupation && (
+                  <div>
+                    <p className="text-sm text-gray-500">পেশা:</p>
+                    <p className="text-sm font-medium">{voter.Occupation}</p>
+                  </div>
+                )}
+
+                {voter['Priority Level'] && (
+                  <div className="pt-2">
+                    <Badge 
+                      variant={
+                        voter['Priority Level'] === 'উচ্চ' ? 'destructive' : 
+                        voter['Priority Level'] === 'মাঝারি' ? 'default' : 'secondary'
+                      }
+                    >
+                      অগ্রাধিকার: {voter['Priority Level']}
+                    </Badge>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      {/* Table View Toggle */}
+      <Card>
+        <CardHeader>
+          <CardTitle>বিস্তারিত তালিকা</CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredVoters.length === 0 ? (
-            <p className="text-center">কোনো ভোটার পাওয়া যায়নি</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[100px]">নাম</TableHead>
-                    <TableHead>পিতার নাম</TableHead>
-                    <TableHead>মাতার নাম</TableHead>
-                    <TableHead>লিঙ্গ</TableHead>
-                    <TableHead>গ্রাম</TableHead>
-                    <TableHead>ইউনিয়ন</TableHead>
-                    <TableHead>উপজেলা</TableHead>
-                    <TableHead>জেলা</TableHead>
-                    <TableHead>বিভাগ</TableHead>
-                    <TableHead>সিরিয়াল</TableHead>
-                    <TableHead>ভোটার আইডি</TableHead>
-                    <TableHead>মোবাইল</TableHead>
-                    <TableHead>পেশা</TableHead>
-                    <TableHead>রক্তের গ্রুপ</TableHead>
-                    <TableHead>শিক্ষাগত যোগ্যতা</TableHead>
-                    <TableHead>বৈবাহিক অবস্থা</TableHead>
-                    <TableHead>বিশেষ নোট</TableHead>
-                    <TableHead>ছবি</TableHead>
-                    <TableHead>ঠিকানা</TableHead>
-                    <TableHead>Last Updated</TableHead>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>নাম</TableHead>
+                  <TableHead>পিতার নাম</TableHead>
+                  <TableHead>মাতার নাম</TableHead>
+                  <TableHead>লিঙ্গ</TableHead>
+                  <TableHead>গ্রাম</TableHead>
+                  <TableHead>ইউনিয়ন</TableHead>
+                  <TableHead>উপজেলা</TableHead>
+                  <TableHead>জেলা</TableHead>
+                  <TableHead>বিভাগ</TableHead>
+                  <TableHead>ভোটার আইডি</TableHead>
+                  <TableHead>মোবাইল</TableHead>
+                  <TableHead>পেশা</TableHead>
+                  <TableHead>রক্তের গ্রুপ</TableHead>
+                  <TableHead>শিক্ষাগত যোগ্যতা</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredVoters.map((voter) => (
+                  <TableRow key={voter.id}>
+                    <TableCell className="font-medium">{voter.Name}</TableCell>
+                    <TableCell>{voter['Fathers Name']}</TableCell>
+                    <TableCell>{voter['Mothers Name']}</TableCell>
+                    <TableCell>{voter.Gender}</TableCell>
+                    <TableCell>{voter.Village}</TableCell>
+                    <TableCell>{voter.Union}</TableCell>
+                    <TableCell>{voter.Upazila}</TableCell>
+                    <TableCell>{voter.District}</TableCell>
+                    <TableCell>{voter.Division}</TableCell>
+                    <TableCell>{voter['Voter ID']}</TableCell>
+                    <TableCell>{voter.Mobile}</TableCell>
+                    <TableCell>{voter.Occupation}</TableCell>
+                    <TableCell>{voter['Blood Group']}</TableCell>
+                    <TableCell>{voter.Education}</TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredVoters.map((voter) => (
-                    <TableRow key={voter.id}>
-                      <TableCell className="font-medium">{voter.Name}</TableCell>
-                      <TableCell>{voter['Fathers Name']}</TableCell>
-                      <TableCell>{voter['Mothers Name']}</TableCell>
-                      <TableCell>{voter.Gender}</TableCell>
-                      <TableCell>{voter.Village}</TableCell>
-                      <TableCell>{voter.Union}</TableCell>
-                      <TableCell>{voter.Upazila}</TableCell>
-                      <TableCell>{voter.District}</TableCell>
-                      <TableCell>{voter.Division}</TableCell>
-                      <TableCell>{voter.Serial}</TableCell>
-                      <TableCell>{voter['Voter ID']}</TableCell>
-                      <TableCell>{voter.Mobile}</TableCell>
-                      <TableCell>{voter.Occupation}</TableCell>
-                      <TableCell>{voter['Blood Group']}</TableCell>
-                      <TableCell>{voter.Education}</TableCell>
-                      <TableCell>{voter['Marital Status']}</TableCell>
-                      <TableCell>{voter['Special Note']}</TableCell>
-                      <TableCell>{voter.Picture}</TableCell>
-                      <TableCell>{voter.Address}</TableCell>
-                      <TableCell>{voter['Last Updated']}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

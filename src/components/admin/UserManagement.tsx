@@ -418,7 +418,7 @@ const UserRow = React.memo(({ index, style, data }: ListChildComponentProps) => 
                 currentUserProfile={userProfile}
               />
             )}
-            {!user.approved && (
+            {!user.approved && permissions.canVerifyUsers && (
               <Button
                 size="sm"
                 onClick={() => handleVerifyUser(user.uid, true)}
@@ -426,6 +426,17 @@ const UserRow = React.memo(({ index, style, data }: ListChildComponentProps) => 
               >
                 <CheckCircle className="w-3 h-3 mr-1" />
                 যাচাই করুন
+              </Button>
+            )}
+            {user.approved && permissions.canVerifyUsers && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleVerifyUser(user.uid, false)}
+                className="h-7 px-2 text-xs border-red-500 text-red-600 hover:bg-red-50"
+              >
+                <XCircle className="w-3 h-3 mr-1" />
+                বাতিল করুন
               </Button>
             )}
           </div>
@@ -563,6 +574,11 @@ const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
     }
   }, [hasMore, lastDoc, fetchUsers]);
 
+  const permissions = useMemo(() => {
+    if (!userProfile?.role) return { canAssignRoles: [], canVerifyUsers: false };
+    return getRolePermissions(userProfile.role);
+  }, [userProfile]);
+
   if (!canAccessAllData && !canAssignRole('village_admin')) {
     return (
       <Card>
@@ -641,7 +657,7 @@ const UserManagement = ({ refreshKey = 0 }: { refreshKey?: number }) => {
                   width="100%"
                   itemData={{ 
                     users: filteredUsers, 
-                    permissions: userProfile?.role ? getRolePermissions(userProfile.role) : { canAssignRoles: [], canVerifyUsers: false }, 
+                    permissions, 
                     handleUpdateUser, 
                     handleVerifyUser, 
                     userProfile 

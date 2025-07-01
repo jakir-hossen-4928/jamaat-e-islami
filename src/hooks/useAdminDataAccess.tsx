@@ -20,7 +20,14 @@ export const useSuperAdminAccess = () => {
     getAllVoters: (voters: VoterData[]) => voters, // No filtering for super admin
     getAllUsers: (users: User[]) => users, // No filtering for super admin
     canManageAllUsers: true,
-    canAssignAnyRole: true
+    canAssignAnyRole: true,
+    getAccessibleLocations: () => ({
+      divisions: 'all',
+      districts: 'all', 
+      upazilas: 'all',
+      unions: 'all',
+      villages: 'all'
+    })
   };
 };
 
@@ -53,7 +60,14 @@ export const useDivisionAdminAccess = () => {
     divisionScope,
     getDivisionVoters: filterDivisionData,
     getDivisionUsers: filterDivisionUsers,
-    canAssignRoles: ['district_admin', 'upazila_admin', 'union_admin', 'village_admin']
+    canAssignRoles: ['district_admin', 'upazila_admin', 'union_admin', 'village_admin'],
+    getAccessibleLocations: () => ({
+      divisions: [divisionScope],
+      districts: 'within_division',
+      upazilas: 'within_division', 
+      unions: 'within_division',
+      villages: 'within_division'
+    })
   };
 };
 
@@ -86,7 +100,14 @@ export const useDistrictAdminAccess = () => {
     districtScope,
     getDistrictVoters: filterDistrictData,
     getDistrictUsers: filterDistrictUsers,
-    canAssignRoles: ['upazila_admin', 'union_admin', 'village_admin']
+    canAssignRoles: ['upazila_admin', 'union_admin', 'village_admin'],
+    getAccessibleLocations: () => ({
+      divisions: [userProfile?.accessScope?.division_id],
+      districts: [districtScope],
+      upazilas: 'within_district',
+      unions: 'within_district', 
+      villages: 'within_district'
+    })
   };
 };
 
@@ -119,7 +140,14 @@ export const useUpazilaAdminAccess = () => {
     upazilaScope,
     getUpazilaVoters: filterUpazilaData,
     getUpazilaUsers: filterUpazilaUsers,
-    canAssignRoles: ['union_admin', 'village_admin']
+    canAssignRoles: ['union_admin', 'village_admin'],
+    getAccessibleLocations: () => ({
+      divisions: [userProfile?.accessScope?.division_id],
+      districts: [userProfile?.accessScope?.district_id],
+      upazilas: [upazilaScope],
+      unions: 'within_upazila',
+      villages: 'within_upazila'
+    })
   };
 };
 
@@ -152,7 +180,14 @@ export const useUnionAdminAccess = () => {
     unionScope,
     getUnionVoters: filterUnionData,
     getUnionUsers: filterUnionUsers,
-    canAssignRoles: ['village_admin']
+    canAssignRoles: ['village_admin'],
+    getAccessibleLocations: () => ({
+      divisions: [userProfile?.accessScope?.division_id],
+      districts: [userProfile?.accessScope?.district_id], 
+      upazilas: [userProfile?.accessScope?.upazila_id],
+      unions: [unionScope],
+      villages: 'within_union'
+    })
   };
 };
 
@@ -193,6 +228,42 @@ export const useVillageAdminAccess = () => {
     getVillageVoters: filterVillageData,
     getAutoVoterLocation,
     canAssignRoles: [], // Village admin cannot assign roles
-    autoLocationEnabled: true
+    autoLocationEnabled: true,
+    getAccessibleLocations: () => ({
+      divisions: [userProfile?.accessScope?.division_id],
+      districts: [userProfile?.accessScope?.district_id],
+      upazilas: [userProfile?.accessScope?.upazila_id], 
+      unions: [userProfile?.accessScope?.union_id],
+      villages: [villageScope]
+    })
   };
+};
+
+// Main hook that returns appropriate access based on user role
+export const useRoleBasedAccess = () => {
+  const { userProfile } = useAuth();
+  
+  const superAdminAccess = useSuperAdminAccess();
+  const divisionAdminAccess = useDivisionAdminAccess();
+  const districtAdminAccess = useDistrictAdminAccess();
+  const upazilaAdminAccess = useUpazilaAdminAccess();
+  const unionAdminAccess = useUnionAdminAccess();
+  const villageAdminAccess = useVillageAdminAccess();
+
+  switch (userProfile?.role) {
+    case 'super_admin':
+      return superAdminAccess;
+    case 'division_admin':
+      return divisionAdminAccess;
+    case 'district_admin':
+      return districtAdminAccess;
+    case 'upazila_admin':
+      return upazilaAdminAccess;
+    case 'union_admin':
+      return unionAdminAccess;
+    case 'village_admin':
+      return villageAdminAccess;
+    default:
+      return villageAdminAccess; // Default to most restricted access
+  }
 };
