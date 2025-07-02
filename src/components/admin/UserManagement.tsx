@@ -36,6 +36,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ refreshKey }) => {
     try {
       await updateDoc(doc(db, 'users', userId), {
         approved: true,
+        rejected: false,
         verifiedBy: userProfile?.uid,
         verifiedAt: new Date()
       });
@@ -152,7 +153,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ refreshKey }) => {
             
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex gap-2">
-                {!user.approved && (
+                {!user.approved && !user.rejected && (
                   <Button
                     onClick={() => handleApproveUser(user.uid)}
                     className="bg-green-600 hover:bg-green-700"
@@ -160,6 +161,16 @@ const UserManagement: React.FC<UserManagementProps> = ({ refreshKey }) => {
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
                     অনুমোদন করুন
+                  </Button>
+                )}
+                {!user.approved && !user.rejected && (
+                  <Button
+                    onClick={() => handleRejectUser(user.uid)}
+                    variant="destructive"
+                    size="sm"
+                  >
+                    <XCircle className="w-4 h-4 mr-2" />
+                    প্রত্যাখ্যান করুন
                   </Button>
                 )}
                 {user.approved && (
@@ -170,6 +181,16 @@ const UserManagement: React.FC<UserManagementProps> = ({ refreshKey }) => {
                   >
                     <XCircle className="w-4 h-4 mr-2" />
                     প্রত্যাখ্যান করুন
+                  </Button>
+                )}
+                {user.rejected && (
+                  <Button
+                    onClick={() => handleApproveUser(user.uid)}
+                    className="bg-green-600 hover:bg-green-700"
+                    size="sm"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    অনুমোদন করুন
                   </Button>
                 )}
               </div>

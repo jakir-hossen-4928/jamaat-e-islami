@@ -1,4 +1,3 @@
-
 export interface VoterData {
   id?: string; // Firestore Document ID
   ID: string;
@@ -67,8 +66,10 @@ export interface User {
   uid: string;
   email: string;
   displayName?: string;
+  phone?: string; // Added phone field
   role: 'super_admin' | 'village_admin'; // Only two roles now
   approved: boolean;
+  rejected?: boolean; // Added rejected field
   createdAt: string;
   lastLogin?: string;
   // Location-based access scope - defines what areas user can access
@@ -88,6 +89,9 @@ export interface User {
   // Assigned by role hierarchy
   assignedBy?: string; // UID of the admin who assigned this role
   verifiedBy?: string; // UID of the admin who verified this user
+  rejectedBy?: string; // UID of the admin who rejected this user
+  verifiedAt?: Date;
+  rejectedAt?: Date;
 }
 
 export interface SMSCampaign {
