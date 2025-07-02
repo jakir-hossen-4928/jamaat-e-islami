@@ -118,7 +118,7 @@ const SuperAdminDashboard = () => {
           />
         </div>
 
-        {/* Role Distribution */}
+        {/* Role Distribution - Updated for two-role system */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
@@ -127,26 +127,14 @@ const SuperAdminDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
-                <div className="text-lg font-bold text-red-600">{stats?.roleDistribution?.super_admin || 0}</div>
-                <div className="text-xs text-gray-600">সুপার অ্যাডমিন</div>
+                <div className="text-2xl font-bold text-red-600">{stats?.roleDistribution?.super_admin || 0}</div>
+                <div className="text-sm text-gray-600">সুপার অ্যাডমিন</div>
               </div>
               <div className="text-center">
-                <div className="text-lg font-bold text-blue-600">{stats?.roleDistribution?.division_admin || 0}</div>
-                <div className="text-xs text-gray-600">বিভাগীয় অ্যাডমিন</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-green-600">{stats?.roleDistribution?.district_admin || 0}</div>
-                <div className="text-xs text-gray-600">জেলা অ্যাডমিন</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-purple-600">{stats?.roleDistribution?.upazila_admin || 0}</div>
-                <div className="text-xs text-gray-600">উপজেলা অ্যাডমিন</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-gray-600">{stats?.roleDistribution?.union_admin || 0}</div>
-                <div className="text-xs text-gray-600">ইউনিয়ন অ্যাডমিন</div>
+                <div className="text-2xl font-bold text-green-600">{stats?.roleDistribution?.village_admin || 0}</div>
+                <div className="text-sm text-gray-600">গ্রাম অ্যাডমিন</div>
               </div>
             </div>
           </CardContent>
