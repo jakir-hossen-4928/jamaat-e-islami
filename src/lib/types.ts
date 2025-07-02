@@ -41,23 +41,23 @@ export interface VoterData {
   village_id?: string;
 
   // Location Names (for display)
-  Division?: string; // Added Division name field
-  District?: string; // Added District name field
-  Upazila?: string; // Added Upazila name field
-  Union?: string; // Added Union name field
-  Village?: string; // Added Village name field
+  Division?: string;
+  District?: string;
+  Upazila?: string;
+  Union?: string;
+  Village?: string;
   'Village Name'?: string;
 
   // Additional fields
-  Serial?: string; // Added Serial field
-  'Blood Group'?: string; // Added Blood Group field
-  Picture?: string; // Added Picture field
-  Address?: string; // Added Address field
+  Serial?: string;
+  'Blood Group'?: string;
+  Picture?: string;
+  Address?: string;
 
   // Metadata
   'House Name'?: string;
   Remarks?: string;
-  'Special Note'?: string; // Added Special Note field
+  'Special Note'?: string;
   Collector?: string;
   'Collection Date'?: string;
   'Last Updated'?: string;
@@ -67,7 +67,7 @@ export interface User {
   uid: string;
   email: string;
   displayName?: string;
-  role: 'super_admin' | 'division_admin' | 'district_admin' | 'upazila_admin' | 'union_admin' | 'village_admin';
+  role: 'super_admin' | 'village_admin'; // Only two roles now
   approved: boolean;
   createdAt: string;
   lastLogin?: string;
@@ -77,13 +77,13 @@ export interface User {
     district_id?: string;
     upazila_id?: string;
     union_id?: string;
-    village_id?: string; // Added village_id
+    village_id?: string;
     // Location names for display
     division_name?: string;
     district_name?: string;
     upazila_name?: string;
     union_name?: string;
-    village_name?: string; // Added village_name
+    village_name?: string;
   };
   // Assigned by role hierarchy
   assignedBy?: string; // UID of the admin who assigned this role
@@ -105,7 +105,7 @@ export interface SMSCampaign {
     district_id?: string;
     upazila_id?: string;
     union_id?: string;
-    village_id?: string; // Added village_id
+    village_id?: string;
   };
 }
 
@@ -182,7 +182,7 @@ export interface RolePermissions {
   canVerifyUsers: boolean;
   canAccessDataHub: boolean;
   canAccessAllVoters: boolean;
-  locationScope: 'all' | 'division' | 'district' | 'upazila' | 'union' | 'village';
+  locationScope: 'all' | 'village';
 }
 
-export type UserRole = 'super_admin' | 'division_admin' | 'district_admin' | 'upazila_admin' | 'union_admin' | 'village_admin';
+export type UserRole = 'super_admin' | 'village_admin'; // Only two roles now

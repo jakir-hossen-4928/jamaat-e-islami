@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useRoleBasedDataAccess } from '@/hooks/useRoleBasedDataAccess';
+import { useOptimizedVoterAccess } from '@/hooks/useOptimizedVoterAccess';
 import { VoterData, User } from '@/lib/types';
 
 interface DataAccessContextType {
@@ -21,6 +22,10 @@ interface DataAccessContextType {
   
   // Location validation
   validateLocationAccess: (location: any) => boolean;
+  
+  // Performance optimization methods
+  getOptimizedQueryConstraints: () => any;
+  shouldApplyLocationFilter: () => boolean;
 }
 
 const DataAccessContext = createContext<DataAccessContextType | undefined>(undefined);
@@ -46,3 +51,6 @@ export const DataAccessProvider: React.FC<DataAccessProviderProps> = ({ children
     </DataAccessContext.Provider>
   );
 };
+
+// Re-export the optimized voter access hook for components that need it
+export { useOptimizedVoterAccess };

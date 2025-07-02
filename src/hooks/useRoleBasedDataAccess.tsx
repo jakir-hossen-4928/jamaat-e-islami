@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 import { collection, query, where, getDocs, orderBy, limit, startAfter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { VoterData, User } from '@/lib/types';
-import { canAccessLocation } from '@/lib/rbac';
+import { canAccessLocation, createOptimizedQuery, validateVoterLocationAccess } from '@/lib/rbac';
 
 interface DataAccessScope {
   division_id?: string;
@@ -32,61 +32,53 @@ interface UseRoleBasedDataAccessReturn {
   // Location validation
   validateLocationAccess: (location: DataAccessScope) => boolean;
   getDefaultVoterLocation: () => DataAccessScope;
+  
+  // Performance optimized methods
+  getOptimizedQueryConstraints: () => any;
+  shouldApplyLocationFilter: () => boolean;
 }
 
 export const useRoleBasedDataAccess = (): UseRoleBasedDataAccessReturn => {
   const { userProfile } = useAuth();
 
-  // Get user's access scope
+  // Get user's access scope with memoization
   const accessScope = useMemo(() => {
     if (!userProfile?.accessScope) return {};
     return userProfile.accessScope;
-  }, [userProfile]);
+  }, [userProfile?.accessScope]);
 
-  // Check if user can access all data (super admin)
+  // Check if user can access all data (super admin only)
   const canAccessAllData = useMemo(() => {
     return userProfile?.role === 'super_admin';
-  }, [userProfile]);
+  }, [userProfile?.role]);
 
-  // Filter voters based on user's role and location scope
-  const getAccessibleVoters = (voters: VoterData[]): VoterData[] => {
-    if (!userProfile || !Array.isArray(voters)) return [];
-    
-    if (canAccessAllData) return voters;
+  // Optimized voter filtering
+  const getAccessibleVoters = useMemo(() => {
+    return (voters: VoterData[]): VoterData[] => {
+      if (!userProfile || !Array.isArray(voters)) return [];
+      
+      if (canAccessAllData) return voters;
 
-    return voters.filter(voter => {
-      return canAccessLocation(userProfile, {
-        division_id: voter.division_id,
-        district_id: voter.district_id,
-        upazila_id: voter.upazila_id,
-        union_id: voter.union_id,
-        village_id: voter.village_id
-      });
-    });
-  };
+      // For village admin, filter by village_id only
+      if (userProfile.role === 'village_admin') {
+        return voters.filter(voter => voter.village_id === userProfile.accessScope.village_id);
+      }
 
-  // Create Firestore query based on user's access scope
+      return [];
+    };
+  }, [userProfile, canAccessAllData]);
+
+  // Optimized Firestore query creation
   const createVoterQuery = (additionalFilters: any = {}) => {
     if (!userProfile) return null;
 
     const votersRef = collection(db, 'voters');
     let constraints = [];
 
-    // Add role-based location filters
-    if (userProfile.role !== 'super_admin') {
-      const scope = userProfile.accessScope;
-      
-      if (scope.village_id) {
-        constraints.push(where('village_id', '==', scope.village_id));
-      } else if (scope.union_id) {
-        constraints.push(where('union_id', '==', scope.union_id));
-      } else if (scope.upazila_id) {
-        constraints.push(where('upazila_id', '==', scope.upazila_id));
-      } else if (scope.district_id) {
-        constraints.push(where('district_id', '==', scope.district_id));
-      } else if (scope.division_id) {
-        constraints.push(where('division_id', '==', scope.division_id));
-      }
+    // Apply role-based location filters for optimization
+    const queryConstraint = createOptimizedQuery(userProfile);
+    if (queryConstraint) {
+      constraints.push(where(queryConstraint.field, queryConstraint.operator, queryConstraint.value));
     }
 
     // Add additional filters
@@ -96,8 +88,11 @@ export const useRoleBasedDataAccess = (): UseRoleBasedDataAccessReturn => {
       }
     });
 
-    // Add default ordering
+    // Add optimized ordering
     constraints.push(orderBy('Last Updated', 'desc'));
+    
+    // Add limit for better performance
+    constraints.push(limit(100));
 
     return query(votersRef, ...constraints);
   };
@@ -110,32 +105,20 @@ export const useRoleBasedDataAccess = (): UseRoleBasedDataAccessReturn => {
     return canAccessLocation(userProfile, voterLocation);
   };
 
-  // Filter users based on role hierarchy and location scope
+  // Optimized user filtering
   const getAccessibleUsers = (users: User[]): User[] => {
     if (!userProfile || !Array.isArray(users)) return [];
     
     if (canAccessAllData) return users;
 
-    return users.filter(user => {
-      // Check if user is in the same location hierarchy
-      const userScope = userProfile.accessScope;
-      const targetScope = user.accessScope;
+    // Village admin can only see users in their village
+    if (userProfile.role === 'village_admin') {
+      return users.filter(user => 
+        user.accessScope?.village_id === userProfile.accessScope.village_id
+      );
+    }
 
-      if (!targetScope) return false;
-
-      switch (userProfile.role) {
-        case 'division_admin':
-          return targetScope.division_id === userScope.division_id;
-        case 'district_admin':
-          return targetScope.district_id === userScope.district_id;
-        case 'upazila_admin':
-          return targetScope.upazila_id === userScope.upazila_id;
-        case 'union_admin':
-          return targetScope.union_id === userScope.union_id;
-        default:
-          return false;
-      }
-    });
+    return [];
   };
 
   // Check if user can manage another user
@@ -143,35 +126,16 @@ export const useRoleBasedDataAccess = (): UseRoleBasedDataAccessReturn => {
     if (!userProfile) return false;
     if (canAccessAllData) return true;
 
-    // Check role hierarchy
-    const roleHierarchy = {
-      division_admin: ['district_admin', 'upazila_admin', 'union_admin', 'village_admin'],
-      district_admin: ['upazila_admin', 'union_admin', 'village_admin'],
-      upazila_admin: ['union_admin', 'village_admin'],
-      union_admin: ['village_admin']
-    };
-
-    const canAssignRoles = roleHierarchy[userProfile.role as keyof typeof roleHierarchy] || [];
-    if (!canAssignRoles.includes(targetUser.role)) return false;
-
-    // Check location scope
-    return canAccessLocation(userProfile, targetUser.accessScope);
+    // Only super admin can manage users in this simplified structure
+    return false;
   };
 
   // Check if user can assign specific role
   const canAssignRole = (role: string): boolean => {
     if (!userProfile) return false;
-    if (canAccessAllData) return true;
+    if (canAccessAllData) return role === 'village_admin';
 
-    const roleHierarchy = {
-      division_admin: ['district_admin', 'upazila_admin', 'union_admin', 'village_admin'],
-      district_admin: ['upazila_admin', 'union_admin', 'village_admin'],
-      upazila_admin: ['union_admin', 'village_admin'],
-      union_admin: ['village_admin']
-    };
-
-    const canAssignRoles = roleHierarchy[userProfile.role as keyof typeof roleHierarchy] || [];
-    return canAssignRoles.includes(role);
+    return false;
   };
 
   // Validate if user can access specific location
@@ -186,7 +150,7 @@ export const useRoleBasedDataAccess = (): UseRoleBasedDataAccessReturn => {
   const getDefaultVoterLocation = (): DataAccessScope => {
     if (!userProfile?.accessScope) return {};
     
-    // For village admin, automatically use their location
+    // For village admin, automatically use their complete location
     if (userProfile.role === 'village_admin') {
       return {
         division_id: userProfile.accessScope.division_id,
@@ -197,23 +161,16 @@ export const useRoleBasedDataAccess = (): UseRoleBasedDataAccessReturn => {
       };
     }
 
-    // For union admin, auto-fill up to union level
-    if (userProfile.role === 'union_admin') {
-      return {
-        division_id: userProfile.accessScope.division_id,
-        district_id: userProfile.accessScope.district_id,
-        upazila_id: userProfile.accessScope.upazila_id,
-        union_id: userProfile.accessScope.union_id
-      };
-    }
+    return {};
+  };
 
-    // For other roles, return partial auto-fill based on their scope
-    const scope: DataAccessScope = {};
-    if (userProfile.accessScope.division_id) scope.division_id = userProfile.accessScope.division_id;
-    if (userProfile.accessScope.district_id) scope.district_id = userProfile.accessScope.district_id;
-    if (userProfile.accessScope.upazila_id) scope.upazila_id = userProfile.accessScope.upazila_id;
-    
-    return scope;
+  // Performance optimization methods
+  const getOptimizedQueryConstraints = () => {
+    return createOptimizedQuery(userProfile);
+  };
+
+  const shouldApplyLocationFilter = () => {
+    return userProfile?.role === 'village_admin';
   };
 
   return {
@@ -226,6 +183,8 @@ export const useRoleBasedDataAccess = (): UseRoleBasedDataAccessReturn => {
     canManageUser,
     canAssignRole,
     validateLocationAccess,
-    getDefaultVoterLocation
+    getDefaultVoterLocation,
+    getOptimizedQueryConstraints,
+    shouldApplyLocationFilter
   };
 };

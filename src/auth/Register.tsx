@@ -47,7 +47,7 @@ const Register = () => {
       const updated = { ...prev };
       updated.location[field] = value;
       
-      // Reset dependent fields
+      // Reset dependent fields for cascading selects
       if (field === 'division_id') {
         updated.location.district_id = '';
         updated.location.upazila_id = '';
@@ -89,10 +89,9 @@ const Register = () => {
       setError('ভূমিকা নির্বাচন করুন');
       return false;
     }
-    // Location validation based on role
-    if (formData.role === 'super_admin') {
-      // Super admin doesn't need location
-    } else if (formData.role === 'village_admin') {
+    
+    // Location validation - village admin needs complete location data
+    if (formData.role === 'village_admin') {
       if (!formData.location.division_id || !formData.location.district_id || 
           !formData.location.upazila_id || !formData.location.union_id || !formData.location.village_id) {
         setError('গ্রাম অ্যাডমিনের জন্য সম্পূর্ণ লোকেশন তথ্য (বিভাগ, জেলা, উপজেলা, ইউনিয়ন, গ্রাম) প্রয়োজন');

@@ -53,12 +53,12 @@ export const canAccessLocation = (user: User, targetLocation: {
 
   const userScope = user.accessScope;
   
-  switch (user.role) {
-    case 'village_admin':
-      return targetLocation.village_id === userScope.village_id;
-    default:
-      return false;
+  // Village admin can only access their specific village
+  if (user.role === 'village_admin') {
+    return targetLocation.village_id === userScope.village_id;
   }
+
+  return false;
 };
 
 export const getAccessibleVoters = async (user: User, allVoters: any[]) => {
@@ -99,12 +99,11 @@ export const getLocationBasedUsers = (currentUser: User, allUsers: User[]): User
     const userScope = currentUser.accessScope;
     const targetScope = user.accessScope;
 
-    switch (currentUser.role) {
-      case 'village_admin':
-        return targetScope.village_id === userScope.village_id;
-      default:
-        return false;
+    if (currentUser.role === 'village_admin') {
+      return targetScope.village_id === userScope.village_id;
     }
+
+    return false;
   });
 };
 
@@ -118,4 +117,43 @@ export const canManageUser = (managerUser: User, targetUser: User): boolean => {
 
   // Check location scope
   return canAccessLocation(managerUser, targetUser.accessScope);
+};
+
+// Production optimization: Cache permissions to reduce calculations
+const permissionsCache = new Map<string, RolePermissions>();
+
+export const getCachedPermissions = (role: User['role']): RolePermissions => {
+  if (permissionsCache.has(role)) {
+    return permissionsCache.get(role)!;
+  }
+  
+  const permissions = getRolePermissions(role);
+  permissionsCache.set(role, permissions);
+  return permissions;
+};
+
+export const validateVoterLocationAccess = (user: User, voterData: any): boolean => {
+  if (user.role === 'super_admin') return true;
+  
+  if (user.role === 'village_admin') {
+    return voterData.village_id === user.accessScope.village_id;
+  }
+  
+  return false;
+};
+
+export const createOptimizedQuery = (user: User) => {
+  if (user.role === 'super_admin') {
+    return null; // No restrictions for super admin
+  }
+  
+  if (user.role === 'village_admin') {
+    return {
+      field: 'village_id',
+      operator: '==',
+      value: user.accessScope.village_id
+    };
+  }
+  
+  return null;
 };
