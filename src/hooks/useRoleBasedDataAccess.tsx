@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 import { collection, query, where, getDocs, orderBy, limit, startAfter, QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { VoterData, User } from '@/lib/types';
-import { canAccessLocation, createOptimizedQuery, validateVoterLocationAccess } from '@/lib/rbac';
+import { canAccessLocation, validateVoterLocationAccess } from '@/lib/rbac';
 
 interface DataAccessScope {
   division_id?: string;
@@ -76,9 +76,8 @@ export const useRoleBasedDataAccess = (): UseRoleBasedDataAccessReturn => {
     let constraints = [];
 
     // Apply role-based location filters for optimization
-    const queryConstraint = createOptimizedQuery(userProfile);
-    if (queryConstraint) {
-      constraints.push(where(queryConstraint.field, queryConstraint.operator, queryConstraint.value));
+    if (userProfile.role === 'village_admin' && userProfile.accessScope?.village_id) {
+      constraints.push(where('village_id', '==', userProfile.accessScope.village_id));
     }
 
     // Add additional filters
@@ -166,7 +165,14 @@ export const useRoleBasedDataAccess = (): UseRoleBasedDataAccessReturn => {
 
   // Performance optimization methods
   const getOptimizedQueryConstraints = () => {
-    return createOptimizedQuery(userProfile);
+    if (userProfile?.role === 'village_admin' && userProfile.accessScope?.village_id) {
+      return {
+        field: 'village_id',
+        operator: '==',
+        value: userProfile.accessScope.village_id
+      };
+    }
+    return null;
   };
 
   const shouldApplyLocationFilter = () => {

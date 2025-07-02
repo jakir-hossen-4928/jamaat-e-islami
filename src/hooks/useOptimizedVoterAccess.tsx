@@ -5,7 +5,6 @@ import { collection, query, where, orderBy, limit, getDocs } from 'firebase/fire
 import { db } from '@/lib/firebase';
 import { useAuth } from './useAuth';
 import { VoterData } from '@/lib/types';
-import { createOptimizedQuery } from '@/lib/rbac';
 
 interface UseOptimizedVoterAccessOptions {
   pageSize?: number;
@@ -37,9 +36,8 @@ export const useOptimizedVoterAccess = (options: UseOptimizedVoterAccessOptions 
     const constraints = [];
 
     // Apply role-based filtering
-    const roleConstraint = createOptimizedQuery(userProfile);
-    if (roleConstraint) {
-      constraints.push(where(roleConstraint.field, roleConstraint.operator, roleConstraint.value));
+    if (userProfile.role === 'village_admin' && userProfile.accessScope?.village_id) {
+      constraints.push(where('village_id', '==', userProfile.accessScope.village_id));
     }
 
     // Apply additional filters
@@ -75,7 +73,7 @@ export const useOptimizedVoterAccess = (options: UseOptimizedVoterAccessOptions 
     },
     enabled: !!userProfile && !!createQuery,
     staleTime: enableCache ? 5 * 60 * 1000 : 0, // 5 minutes cache
-    cacheTime: enableCache ? 10 * 60 * 1000 : 0, // 10 minutes cache
+    gcTime: enableCache ? 10 * 60 * 1000 : 0, // 10 minutes cache (renamed from cacheTime)
   });
 
   // Memoized statistics for better performance

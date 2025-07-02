@@ -61,108 +61,7 @@ export const loadLocationData = async () => {
   }
 };
 
-// Optimized lookup functions with in-memory maps
-let locationMaps: {
-  divisions: Map<string, Division>;
-  districts: Map<string, District>;
-  upazilas: Map<string, Upazila>;
-  unions: Map<string, Union>;
-  villages: Map<string, any>;
-} | null = null;
-
-const createLocationMaps = async () => {
-  if (locationMaps) return locationMaps;
-  
-  const data = await loadLocationData();
-  
-  locationMaps = {
-    divisions: new Map(data.divisions.map(d => [d.id, d])),
-    districts: new Map(data.districts.map(d => [d.id, d])),
-    upazilas: new Map(data.upazilas.map(u => [u.id, u])),
-    unions: new Map(data.unions.map(u => [u.id, u])),
-    villages: new Map(data.villages.map((v, index) => [`village_${v.union_id}_${index}`, v]))
-  };
-  
-  return locationMaps;
-};
-
-// Get all divisions
-export const getDivisions = async (): Promise<Division[]> => {
-  const data = await loadLocationData();
-  return data.divisions;
-};
-
-// Get districts by division ID with optimized filtering
-export const getDistrictsByDivision = async (divisionId: string): Promise<District[]> => {
-  const data = await loadLocationData();
-  return data.districts.filter(district => district.division_id === divisionId);
-};
-
-// Get upazilas by district ID with optimized filtering
-export const getUpazilasByDistrict = async (districtId: string): Promise<Upazila[]> => {
-  const data = await loadLocationData();
-  return data.upazilas.filter(upazila => upazila.district_id === districtId);
-};
-
-// Get unions by upazila ID with optimized filtering
-export const getUnionsByUpazila = async (upazilaId: string): Promise<Union[]> => {
-  const data = await loadLocationData();
-  return data.unions.filter(union => union.upazilla_id === upazilaId);
-};
-
-// Get villages by union ID - now properly implemented
-export const getVillagesByUnion = async (unionId: string): Promise<any[]> => {
-  const data = await loadLocationData();
-  return data.villages.filter(village => village.union_id.toString() === unionId.toString()).map((village, index) => ({
-    id: `village_${village.union_id}_${index}`,
-    name: village.village,
-    bn_name: village.village,
-    union_id: village.union_id,
-    union_name: village.union_name
-  }));
-};
-
-// Optimized location name lookup using Maps
-export const getLocationNameById = async (type: 'division' | 'district' | 'upazila' | 'union' | 'village', id: string): Promise<string> => {
-  const maps = await createLocationMaps();
-  
-  switch (type) {
-    case 'division':
-      return maps.divisions.get(id)?.bn_name || '';
-    case 'district':
-      return maps.districts.get(id)?.bn_name || '';
-    case 'upazila':
-      return maps.upazilas.get(id)?.bn_name || '';
-    case 'union':
-      return maps.unions.get(id)?.bn_name || '';
-    case 'village':
-      return maps.villages.get(id)?.village || '';
-    default:
-      return '';
-  }
-};
-
-// Optimized English name lookup
-export const getLocationNameByIdEn = async (type: 'division' | 'district' | 'upazila' | 'union' | 'village', id: string): Promise<string> => {
-  const maps = await createLocationMaps();
-  
-  switch (type) {
-    case 'division':
-      return maps.divisions.get(id)?.name || '';
-    case 'district':
-      return maps.districts.get(id)?.name || '';
-    case 'upazila':
-      return maps.upazilas.get(id)?.name || '';
-    case 'union':
-      return maps.unions.get(id)?.name || '';
-    case 'village':
-      return maps.villages.get(id)?.village || '';
-    default:
-      return '';
-  }
-};
-
-// Batch location hierarchy lookup to reduce API calls
+// Optimized location hierarchy lookup
 export const getFullLocationHierarchy = async (locationIds: {
   division_id?: string;
   district_id?: string;
@@ -170,77 +69,69 @@ export const getFullLocationHierarchy = async (locationIds: {
   union_id?: string;
   village_id?: string;
 }) => {
-  const maps = await createLocationMaps();
-  
+  const locationData = await loadLocationData();
+
   const hierarchy = {
     division: '',
     district: '',
     upazila: '',
     union: '',
-    village: '',
-    division_en: '',
-    district_en: '',
-    upazila_en: '',
-    union_en: '',
-    village_en: ''
+    village: ''
   };
 
-  if (locationIds.division_id) {
-    const division = maps.divisions.get(locationIds.division_id);
-    if (division) {
-      hierarchy.division = division.bn_name;
-      hierarchy.division_en = division.name;
+  try {
+    if (locationIds.division_id) {
+      const division = locationData.divisions.find(d => d.id === locationIds.division_id);
+      hierarchy.division = division?.name || '';
     }
-  }
-  
-  if (locationIds.district_id) {
-    const district = maps.districts.get(locationIds.district_id);
-    if (district) {
-      hierarchy.district = district.bn_name;
-      hierarchy.district_en = district.name;
-    }
-  }
-  
-  if (locationIds.upazila_id) {
-    const upazila = maps.upazilas.get(locationIds.upazila_id);
-    if (upazila) {
-      hierarchy.upazila = upazila.bn_name;
-      hierarchy.upazila_en = upazila.name;
-    }
-  }
-  
-  if (locationIds.union_id) {
-    const union = maps.unions.get(locationIds.union_id);
-    if (union) {
-      hierarchy.union = union.bn_name;
-      hierarchy.union_en = union.name;
-    }
-  }
 
-  if (locationIds.village_id) {
-    const village = maps.villages.get(locationIds.village_id);
-    if (village) {
-      hierarchy.village = village.village;
-      hierarchy.village_en = village.village;
+    if (locationIds.district_id) {
+      const district = locationData.districts.find(d => d.id === locationIds.district_id);
+      hierarchy.district = district?.name || '';
     }
+
+    if (locationIds.upazila_id) {
+      const upazila = locationData.upazilas.find(u => u.id === locationIds.upazila_id);
+      hierarchy.upazila = upazila?.name || '';
+    }
+
+    if (locationIds.union_id) {
+      const union = locationData.unions.find(u => u.id === locationIds.union_id);
+      hierarchy.union = union?.name || '';
+    }
+
+    if (locationIds.village_id) {
+      const village = locationData.villages.find(v => v.id.toString() === locationIds.village_id);
+      hierarchy.village = village?.village || '';
+    }
+  } catch (error) {
+    console.error('Error getting location hierarchy:', error);
   }
 
   return hierarchy;
 };
 
-// Optimized filtering utility functions
-export const filterDistrictsByDivision = (districts: District[], divisionId: string): District[] => {
-  return districts.filter(district => district.division_id === divisionId);
+// Get filtered data based on parent selection
+export const getFilteredDistricts = async (divisionId?: string) => {
+  const locationData = await loadLocationData();
+  if (!divisionId) return locationData.districts;
+  return locationData.districts.filter(d => d.division_id === divisionId);
 };
 
-export const filterUpazilasByDistrict = (upazilas: Upazila[], districtId: string): Upazila[] => {
-  return upazilas.filter(upazila => upazila.district_id === districtId);
+export const getFilteredUpazilas = async (districtId?: string) => {
+  const locationData = await loadLocationData();
+  if (!districtId) return locationData.upazilas;
+  return locationData.upazilas.filter(u => u.district_id === districtId);
 };
 
-export const filterUnionsByUpazila = (unions: Union[], upazilaId: string): Union[] => {
-  return unions.filter(union => union.upazilla_id === upazilaId);
+export const getFilteredUnions = async (upazilaId?: string) => {
+  const locationData = await loadLocationData();
+  if (!upazilaId) return locationData.unions;
+  return locationData.unions.filter(u => u.upazilla_id === upazilaId);
 };
 
-export const filterVillagesByUnion = (villages: any[], unionId: string): any[] => {
-  return villages.filter(village => village.union_id.toString() === unionId.toString());
+export const getFilteredVillages = async (unionId?: string) => {
+  const locationData = await loadLocationData();
+  if (!unionId) return locationData.villages;
+  return locationData.villages.filter(v => v.union_id.toString() === unionId);
 };

@@ -28,7 +28,7 @@ import { useToast } from '@/hooks/use-toast';
 import RoleBasedSidebar from '@/components/layout/RoleBasedSidebar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useVotersQuery } from '@/hooks/useOptimizedQuery';
-import { getFullLocationHierarchy } from '@/lib/locationUtils';
+import { loadLocationData } from '@/lib/locationUtils';
 
 const AllVoters = () => {
   usePageTitle('সকল ভোটার - অ্যাডমিন প্যানেল');
@@ -48,42 +48,19 @@ const AllVoters = () => {
     isLoading: locationLoading
   } = useLocationFilter();
 
-  // Create optimized query without limits to reduce complexity
+  // Create optimized query for role-based access
   const createVotersQuery = () => {
     if (!userProfile) return null;
 
     const votersCollection = collection(db, 'voters');
 
-    // Apply role-based filtering without limits for better performance
-    if (userProfile.role !== 'super_admin') {
-      const userScope = userProfile.accessScope;
-      if (userScope.village_id) {
-        return query(votersCollection,
-          where('village_id', '==', userScope.village_id),
-          orderBy('Last Updated', 'desc')
-        );
-      } else if (userScope.union_id) {
-        return query(votersCollection,
-          where('union_id', '==', userScope.union_id),
-          orderBy('Last Updated', 'desc')
-        );
-      } else if (userScope.upazila_id) {
-        return query(votersCollection,
-          where('upazila_id', '==', userScope.upazila_id),
-          orderBy('Last Updated', 'desc')
-        );
-      } else if (userScope.district_id) {
-        return query(votersCollection,
-          where('district_id', '==', userScope.district_id),
-          orderBy('Last Updated', 'desc')
-        );
-      } else if (userScope.division_id) {
-        return query(votersCollection,
-          where('division_id', '==', userScope.division_id),
-          orderBy('Last Updated', 'desc')
-        );
-      }
-    } else {
+    // Apply role-based filtering to reduce database reads
+    if (userProfile.role === 'village_admin' && userProfile.accessScope?.village_id) {
+      return query(votersCollection,
+        where('village_id', '==', userProfile.accessScope.village_id),
+        orderBy('Last Updated', 'desc')
+      );
+    } else if (userProfile.role === 'super_admin') {
       // For super admin, apply selected location filters
       if (selectedLocation.village_id) {
         return query(votersCollection,
@@ -113,18 +90,18 @@ const AllVoters = () => {
       }
     }
 
-    // Default query
-    return query(votersCollection,
-      orderBy('Last Updated', 'desc')
-    );
+    // Default query for super admin without filters
+    return query(votersCollection, orderBy('Last Updated', 'desc'));
   };
 
   const votersQuery = createVotersQuery();
 
-  // Create proper query key with stringified objects
+  // Create proper query key
   const createQueryKey = () => {
-    const baseKey = ['voters-optimized', userProfile?.uid];
-    if (selectedLocation && Object.keys(selectedLocation).length > 0) {
+    const baseKey = ['voters-optimized', userProfile?.uid, userProfile?.role];
+    if (userProfile?.role === 'village_admin') {
+      baseKey.push(userProfile.accessScope?.village_id);
+    } else if (selectedLocation && Object.keys(selectedLocation).length > 0) {
       baseKey.push(JSON.stringify(selectedLocation));
     }
     return baseKey;
@@ -140,7 +117,7 @@ const AllVoters = () => {
   // Ensure allVoters is always an array
   const allVoters: VoterData[] = Array.isArray(queryData) ? queryData : [];
 
-  // Load location names efficiently using static data
+  // Load location names from local JSON files
   React.useEffect(() => {
     const loadLocationNames = async () => {
       if (!allVoters || allVoters.length === 0) return;
@@ -148,27 +125,37 @@ const AllVoters = () => {
       const names: { [key: string]: string } = {};
 
       try {
-        // Get unique location combinations to reduce API calls
-        const uniqueVoters = allVoters.filter((voter, index, self) =>
-          index === self.findIndex(v =>
-            v.division_id === voter.division_id &&
-            v.district_id === voter.district_id &&
-            v.upazila_id === voter.upazila_id &&
-            v.union_id === voter.union_id
-          )
-        );
+        const locationData = await loadLocationData();
+        
+        // Create lookup maps for faster access
+        const divisionsMap = new Map(locationData.divisions.map(d => [d.id, d.name]));
+        const districtsMap = new Map(locationData.districts.map(d => [d.id, d.name]));
+        const upazilasMap = new Map(locationData.upazilas.map(u => [u.id, u.name]));
+        const unionsMap = new Map(locationData.unions.map(u => [u.id, u.name]));
+        const villagesMap = new Map(locationData.villages.map(v => [v.id.toString(), v.village]));
 
-        // Limit location lookups to reduce static file reads
-        for (const voter of uniqueVoters.slice(0, 100)) {
-          const hierarchy = await getFullLocationHierarchy({
-            division_id: voter.division_id,
-            district_id: voter.district_id,
-            upazila_id: voter.upazila_id,
-            union_id: voter.union_id
-          });
-
-          const locationKey = `${voter.division_id}_${voter.district_id}_${voter.upazila_id}_${voter.union_id}`;
-          names[locationKey] = [hierarchy.union, hierarchy.upazila, hierarchy.district].filter(Boolean).join(', ');
+        // Build location names efficiently
+        for (const voter of allVoters) {
+          const locationKey = `${voter.division_id}_${voter.district_id}_${voter.upazila_id}_${voter.union_id}_${voter.village_id}`;
+          
+          if (!names[locationKey]) {
+            const parts = [];
+            
+            if (voter.village_id && villagesMap.has(voter.village_id)) {
+              parts.push(villagesMap.get(voter.village_id));
+            }
+            if (voter.union_id && unionsMap.has(voter.union_id)) {
+              parts.push(unionsMap.get(voter.union_id));
+            }
+            if (voter.upazila_id && upazilasMap.has(voter.upazila_id)) {
+              parts.push(upazilasMap.get(voter.upazila_id));
+            }
+            if (voter.district_id && districtsMap.has(voter.district_id)) {
+              parts.push(districtsMap.get(voter.district_id));
+            }
+            
+            names[locationKey] = parts.filter(Boolean).join(', ') || 'অজানা এলাকা';
+          }
         }
 
         setLocationNames(names);
@@ -190,7 +177,7 @@ const AllVoters = () => {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(voter =>
-        voter['Voter Name']?.toLowerCase().includes(term) ||
+        voter.Name?.toLowerCase().includes(term) ||
         voter.ID?.toLowerCase().includes(term) ||
         voter.Phone?.includes(term) ||
         voter.NID?.includes(term)
@@ -214,13 +201,13 @@ const AllVoters = () => {
   }, [allVoters, searchTerm, selectedTab]);
 
   const getLocationName = (voter: VoterData) => {
-    const locationKey = `${voter.division_id}_${voter.district_id}_${voter.upazila_id}_${voter.union_id}`;
+    const locationKey = `${voter.division_id}_${voter.district_id}_${voter.upazila_id}_${voter.union_id}_${voter.village_id}`;
     return locationNames[locationKey] || 'অজানা এলাকা';
   };
 
   // Statistics with memoization
   const stats = useMemo(() => {
-    if (!Array.isArray(allVoters)) return { total: 0, willVote: 0, wontVote: 0, highProbability: 0, withPhone: 0 };
+    if (!Array.isArray(allVoters)) return { total: 0, willVote: 0, highProbability: 0, withPhone: 0 };
 
     const total = allVoters.length;
     const willVote = allVoters.filter(v => v['Will Vote'] === 'Yes').length;
@@ -291,6 +278,11 @@ const AllVoters = () => {
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-4 lg:p-6 text-white">
             <h1 className="text-xl lg:text-3xl font-bold">সকল ভোটার</h1>
             <p className="mt-2 text-blue-100 text-sm lg:text-base">ভোটারদের তালিকা ও বিস্তারিত তথ্য</p>
+            {userProfile?.role === 'village_admin' && userProfile.accessScope?.village_name && (
+              <p className="text-sm text-blue-200 mt-1">
+                গ্রাম: {userProfile.accessScope.village_name}
+              </p>
+            )}
           </div>
 
           {/* Location Filter - Only show for super admin */}
@@ -443,12 +435,12 @@ const AllVoters = () => {
                                 <div className="flex items-start space-x-3 lg:space-x-4">
                                   <Avatar className="h-10 w-10 lg:h-12 lg:w-12">
                                     <AvatarFallback className="bg-blue-100 text-blue-600">
-                                      {voter['Voter Name']?.charAt(0) || 'V'}
+                                      {voter.Name?.charAt(0) || 'V'}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div className="space-y-1">
                                     <h3 className="font-medium text-gray-900 text-sm lg:text-base">
-                                      {voter['Voter Name']}
+                                      {voter.Name}
                                     </h3>
                                     <p className="text-xs lg:text-sm text-gray-600">আইডি: {voter.ID}</p>
                                     {voter.Phone && (
@@ -466,7 +458,6 @@ const AllVoters = () => {
                                         সমর্থন: {voter['Political Support']}
                                       </p>
                                     )}
-                                    {/* No Priority Level or WhatsApp shown */}
                                   </div>
                                 </div>
                                 <div className="flex flex-col lg:flex-row items-end lg:items-center space-y-2 lg:space-y-0 lg:space-x-2">
@@ -503,4 +494,3 @@ const AllVoters = () => {
 };
 
 export default AllVoters;
-//dont change this ui...if have any error then only solve errors..but you dont change ui adn styles 
