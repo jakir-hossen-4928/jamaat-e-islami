@@ -24,7 +24,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ refreshKey }) => {
       const usersRef = collection(db, 'users');
       const q = query(usersRef, where('approved', '==', false));
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+      return snapshot.docs.map(doc => ({ 
+        uid: doc.id, 
+        ...doc.data() 
+      } as User));
     },
     enabled: userProfile?.role === 'super_admin'
   });
@@ -81,7 +84,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ refreshKey }) => {
   return (
     <div className="space-y-4">
       {users.map((user) => (
-        <Card key={user.id}>
+        <Card key={user.uid}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">{user.displayName || user.email}</CardTitle>
@@ -95,7 +98,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ refreshKey }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <p><strong>ইমেইল:</strong> {user.email}</p>
-                <p><strong>ফোন:</strong> {user.phone || 'N/A'}</p>
                 <p><strong>ভূমিকা:</strong> {user.role === 'village_admin' ? 'গ্রাম অ্যাডমিন' : user.role}</p>
               </div>
               <div>
@@ -108,14 +110,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ refreshKey }) => {
             </div>
             <div className="flex gap-2">
               <Button
-                onClick={() => handleApproveUser(user.id)}
+                onClick={() => handleApproveUser(user.uid)}
                 className="bg-green-600 hover:bg-green-700"
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
                 অনুমোদন করুন
               </Button>
               <Button
-                onClick={() => handleRejectUser(user.id)}
+                onClick={() => handleRejectUser(user.uid)}
                 variant="destructive"
               >
                 <XCircle className="w-4 h-4 mr-2" />

@@ -19,10 +19,6 @@ interface StatsData {
   roleDistribution: {
     super_admin: number;
     village_admin: number;
-    division_admin: number;
-    district_admin: number;
-    upazila_admin: number;
-    union_admin: number;
   };
 }
 
@@ -44,7 +40,7 @@ export const useRealTimeStats = (options: UseRealTimeStatsOptions = {}) => {
 
       // Fetch voters data
       const votersRef = collection(db, 'voters');
-      let votersQuery = votersRef;
+      let votersQuery = query(votersRef);
 
       // Apply role-based filtering
       if (userProfile.role === 'village_admin' && userProfile.accessScope?.village_id) {
@@ -59,7 +55,10 @@ export const useRealTimeStats = (options: UseRealTimeStatsOptions = {}) => {
       if (userProfile.role === 'super_admin') {
         const usersRef = collection(db, 'users');
         const usersSnapshot = await getDocs(usersRef);
-        users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+        users = usersSnapshot.docs.map(doc => ({ 
+          uid: doc.id, 
+          ...doc.data() 
+        } as User));
       }
 
       // Calculate voter statistics
@@ -76,10 +75,6 @@ export const useRealTimeStats = (options: UseRealTimeStatsOptions = {}) => {
       const roleDistribution = {
         super_admin: users.filter(u => u.role === 'super_admin').length,
         village_admin: users.filter(u => u.role === 'village_admin').length,
-        division_admin: 0, // Not used in simplified structure
-        district_admin: 0, // Not used in simplified structure
-        upazila_admin: 0, // Not used in simplified structure
-        union_admin: 0, // Not used in simplified structure
       };
 
       return {
