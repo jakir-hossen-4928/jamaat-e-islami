@@ -1,120 +1,89 @@
-
 {
   "indexes": [
     {
       "collectionGroup": "voters",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "village_id", "order": "ASCENDING" },
-        { "fieldPath": "Last Updated", "order": "DESCENDING" }
+        {
+          "fieldPath": "`Marital Status`",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "Religion",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "voters",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "union_id", "order": "ASCENDING" },
-        { "fieldPath": "Last Updated", "order": "DESCENDING" }
+        {
+          "fieldPath": "`Priority Level`",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "`Will Vote`",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "voters",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "upazila_id", "order": "ASCENDING" },
-        { "fieldPath": "Last Updated", "order": "DESCENDING" }
+        {
+          "fieldPath": "`Vote Probability (%)`",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "`Political Support`",
+          "order": "ASCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "voters",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "district_id", "order": "ASCENDING" },
-        { "fieldPath": "Last Updated", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "voters",
-      "queryScope": "COLLECTION", 
-      "fields": [
-        { "fieldPath": "division_id", "order": "ASCENDING" },
-        { "fieldPath": "Last Updated", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "voters",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "Will Vote", "order": "ASCENDING" },
-        { "fieldPath": "Last Updated", "order": "DESCENDING" }
+        {
+          "fieldPath": "`Voter Name`",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "`Last Updated`",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "voters",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "village_id", "order": "ASCENDING" },
-        { "fieldPath": "Will Vote", "order": "ASCENDING" },
-        { "fieldPath": "Last Updated", "order": "DESCENDING" }
+        {
+          "fieldPath": "Collector",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "`Collection Date`",
+          "order": "DESCENDING"
+        }
       ]
     },
     {
       "collectionGroup": "voters",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "Phone", "order": "ASCENDING" },
-        { "fieldPath": "Last Updated", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "voters",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "village_id", "order": "ASCENDING" },
-        { "fieldPath": "Phone", "order": "ASCENDING" },
-        { "fieldPath": "Last Updated", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "users",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "role", "order": "ASCENDING" },
-        { "fieldPath": "approved", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "users",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "accessScope.village_id", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "sms_campaigns",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "createdBy", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "sms_campaigns",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "locationScope.village_id", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "sms_campaigns",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        {
+          "fieldPath": "Student",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "`Has Disability`",
+          "order": "ASCENDING"
+        }
       ]
     }
-  ]
+  ],
+  "fieldOverrides": []
 }
