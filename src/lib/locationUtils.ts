@@ -61,6 +61,32 @@ export const loadLocationData = async () => {
   }
 };
 
+// Export functions needed by components
+export const getDivisions = async () => {
+  const data = await loadLocationData();
+  return data.divisions;
+};
+
+export const getDistrictsByDivision = async (divisionId: string) => {
+  const data = await loadLocationData();
+  return data.districts.filter(d => d.division_id === divisionId);
+};
+
+export const getUpazilasByDistrict = async (districtId: string) => {
+  const data = await loadLocationData();
+  return data.upazilas.filter(u => u.district_id === districtId);
+};
+
+export const getUnionsByUpazila = async (upazilaId: string) => {
+  const data = await loadLocationData();
+  return data.unions.filter(u => u.upazilla_id === upazilaId);
+};
+
+export const getVillagesByUnion = async (unionId: string) => {
+  const data = await loadLocationData();
+  return data.villages.filter(v => v.union_id.toString() === unionId);
+};
+
 // Optimized location hierarchy lookup
 export const getFullLocationHierarchy = async (locationIds: {
   division_id?: string;

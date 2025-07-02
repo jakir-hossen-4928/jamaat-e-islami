@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { VoterData } from '@/lib/types';
 import { canAccessLocation } from '@/lib/rbac';
-import { loadLocationData, getVillagesByUnion } from '@/lib/locationUtils';
+import { loadLocationData, getFilteredVillages } from '@/lib/locationUtils';
 
 interface LocationFilter {
   division_id?: string;
