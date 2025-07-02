@@ -156,6 +156,15 @@ const Login = () => {
               >
                 পাসওয়ার্ড ভুলে গেছেন?
               </Link>
+              <div className="text-sm text-gray-600">
+                অ্যাকাউন্ট নেই?{' '}
+                <Link
+                  to="/register"
+                  className="text-green-600 hover:text-green-800 hover:underline"
+                >
+                  নিবন্ধন করুন
+                </Link>
+              </div>
             </div>
           </CardContent>
         </Card>
