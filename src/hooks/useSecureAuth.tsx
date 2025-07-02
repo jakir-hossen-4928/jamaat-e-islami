@@ -49,32 +49,28 @@ export const useSecureAuth = () => {
     email: string, 
     password: string, 
     displayName: string,
-    role: 'union_admin' | 'village_admin',
+    role: 'super_admin' | 'village_admin',
     accessScope: {
-      division_id: string;
-      district_id: string;
-      upazila_id: string;
-      union_id: string;
+      division_id?: string;
+      district_id?: string;
+      upazila_id?: string;
+      union_id?: string;
       village_id?: string;
-      division_name: string;
-      district_name: string;
-      upazila_name: string;
-      union_name: string;
+      division_name?: string;
+      district_name?: string;
+      upazila_name?: string;
+      union_name?: string;
       village_name?: string;
     }
   ) => {
     const identifier = `register_${email}`;
     
-    // Validate required location scope
-    if (!accessScope.division_id || !accessScope.district_id || !accessScope.upazila_id || !accessScope.union_id) {
-      toast.error('সম্পূর্ণ লোকেশন তথ্য প্রয়োজন');
-      return { success: false, error: 'missing_location_scope' };
-    }
-
-    // For village admin, village_id is required
-    if (role === 'village_admin' && !accessScope.village_id) {
-      toast.error('গ্রাম অ্যাডমিনের জন্য গ্রামের তথ্য প্রয়োজন');
-      return { success: false, error: 'missing_village_scope' };
+    // For village admin, all location data is required
+    if (role === 'village_admin') {
+      if (!accessScope.division_id || !accessScope.district_id || !accessScope.upazila_id || !accessScope.union_id || !accessScope.village_id) {
+        toast.error('গ্রাম অ্যাডমিনের জন্য সম্পূর্ণ লোকেশন তথ্য প্রয়োজন');
+        return { success: false, error: 'missing_location_scope' };
+      }
     }
     
     // Check rate limiting

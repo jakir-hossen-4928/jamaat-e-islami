@@ -9,59 +9,11 @@ export const getRolePermissions = (role: User['role']): RolePermissions => {
         canRead: true,
         canUpdate: true,
         canDelete: true,
-        canAssignRoles: ['division_admin', 'district_admin', 'upazila_admin', 'union_admin', 'village_admin'],
+        canAssignRoles: ['village_admin'],
         canVerifyUsers: true,
         canAccessDataHub: true,
         canAccessAllVoters: true,
         locationScope: 'all'
-      };
-    case 'division_admin':
-      return {
-        canCreate: true,
-        canRead: true,
-        canUpdate: true,
-        canDelete: true,
-        canAssignRoles: ['district_admin', 'upazila_admin', 'union_admin', 'village_admin'],
-        canVerifyUsers: true,
-        canAccessDataHub: false,
-        canAccessAllVoters: false,
-        locationScope: 'division'
-      };
-    case 'district_admin':
-      return {
-        canCreate: true,
-        canRead: true,
-        canUpdate: true,
-        canDelete: true,
-        canAssignRoles: ['upazila_admin', 'union_admin', 'village_admin'],
-        canVerifyUsers: true,
-        canAccessDataHub: false,
-        canAccessAllVoters: false,
-        locationScope: 'district'
-      };
-    case 'upazila_admin':
-      return {
-        canCreate: true,
-        canRead: true,
-        canUpdate: true,
-        canDelete: false,
-        canAssignRoles: ['union_admin', 'village_admin'],
-        canVerifyUsers: true,
-        canAccessDataHub: false,
-        canAccessAllVoters: false,
-        locationScope: 'upazila'
-      };
-    case 'union_admin':
-      return {
-        canCreate: true,
-        canRead: true,
-        canUpdate: false,
-        canDelete: false,
-        canAssignRoles: ['village_admin'],
-        canVerifyUsers: true,
-        canAccessDataHub: false,
-        canAccessAllVoters: false,
-        locationScope: 'union'
       };
     case 'village_admin':
       return {
@@ -102,14 +54,6 @@ export const canAccessLocation = (user: User, targetLocation: {
   const userScope = user.accessScope;
   
   switch (user.role) {
-    case 'division_admin':
-      return targetLocation.division_id === userScope.division_id;
-    case 'district_admin':
-      return targetLocation.district_id === userScope.district_id;
-    case 'upazila_admin':
-      return targetLocation.upazila_id === userScope.upazila_id;
-    case 'union_admin':
-      return targetLocation.union_id === userScope.union_id;
     case 'village_admin':
       return targetLocation.village_id === userScope.village_id;
     default:
@@ -132,10 +76,6 @@ export const getAccessibleVoters = async (user: User, allVoters: any[]) => {
 export const getRoleDisplayName = (role: string): string => {
   const roleNames = {
     super_admin: 'সুপার অ্যাডমিন',
-    division_admin: 'বিভাগীয় অ্যাডমিন',
-    district_admin: 'জেলা অ্যাডমিন',
-    upazila_admin: 'উপজেলা অ্যাডমিন',
-    union_admin: 'ইউনিয়ন অ্যাডমিন',
     village_admin: 'গ্রাম অ্যাডমিন'
   };
   return roleNames[role as keyof typeof roleNames] || 'অজানা';
@@ -143,11 +83,7 @@ export const getRoleDisplayName = (role: string): string => {
 
 export const canVerifyRole = (verifierRole: string, roleToVerify: string): boolean => {
   const hierarchy = {
-    super_admin: ['division_admin', 'district_admin', 'upazila_admin', 'union_admin', 'village_admin'],
-    division_admin: ['district_admin', 'upazila_admin', 'union_admin', 'village_admin'],
-    district_admin: ['upazila_admin', 'union_admin', 'village_admin'],
-    upazila_admin: ['union_admin', 'village_admin'],
-    union_admin: ['village_admin']
+    super_admin: ['village_admin']
   };
   
   return hierarchy[verifierRole as keyof typeof hierarchy]?.includes(roleToVerify) || false;
@@ -159,19 +95,11 @@ export const getLocationBasedUsers = (currentUser: User, allUsers: User[]): User
   }
 
   return allUsers.filter(user => {
-    // Users can manage users in their location scope
+    // Village admin can only see users in their village
     const userScope = currentUser.accessScope;
     const targetScope = user.accessScope;
 
     switch (currentUser.role) {
-      case 'division_admin':
-        return targetScope.division_id === userScope.division_id;
-      case 'district_admin':
-        return targetScope.district_id === userScope.district_id;
-      case 'upazila_admin':
-        return targetScope.upazila_id === userScope.upazila_id;
-      case 'union_admin':
-        return targetScope.union_id === userScope.union_id;
       case 'village_admin':
         return targetScope.village_id === userScope.village_id;
       default:
