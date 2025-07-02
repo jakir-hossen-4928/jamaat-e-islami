@@ -127,9 +127,9 @@ const Index = () => {
                     <Button asChild variant="outline" size="sm" className="hover:bg-green-50">
                       <Link to="/login">লগইন</Link>
                     </Button>
-                    <Button asChild variant="outline" size="sm" className="hover:bg-green-50">
+                    {/* <Button asChild variant="outline" size="sm" className="hover:bg-green-50">
                       <Link to="/registe">রেজিস্টার</Link>
-                    </Button>
+                    </Button> */}
                   </>
                 ) : (
                   <Button asChild size="sm" className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg">
@@ -187,9 +187,9 @@ const Index = () => {
                       <Button asChild variant="outline" size="sm" className="w-full">
                         <Link to="/login">লগইন</Link>
                       </Button>
-                      <Button asChild variant="outline" size="sm" className="w-full">
+                      {/* <Button asChild variant="outline" size="sm" className="w-full">
                         <Link to="/register">রেজিস্টার</Link>
-                      </Button>
+                      </Button> */}
                     </>
                   ) : (
                     <Button asChild size="sm" className="w-full bg-gradient-to-r from-green-600 to-green-700">
