@@ -142,7 +142,7 @@ const AddVoters = () => {
       }
     };
 
-    if (userProfile?.role === 'super_admin') {
+    if (userProfile?.role === 'super_admin' || userProfile?.role === 'admin') {
       loadData();
     }
   }, [userProfile]);
@@ -531,7 +531,7 @@ const AddVoters = () => {
 
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
               {/* Location Selection for Super Admin */}
-              {userProfile?.role === 'super_admin' && (
+              {(userProfile?.role === 'super_admin' || userProfile?.role === 'admin') && (
                 <Card className="shadow-lg">
                   <CardHeader className="bg-blue-50">
                     <CardTitle className="flex items-center gap-2 text-blue-800 text-base sm:text-lg">

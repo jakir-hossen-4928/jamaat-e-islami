@@ -49,7 +49,7 @@ export const useRoleBasedDataAccess = (): UseRoleBasedDataAccessReturn => {
 
   // Check if user can access all data (super admin only)
   const canAccessAllData = useMemo(() => {
-    return userProfile?.role === 'super_admin';
+    return userProfile?.role === 'super_admin' || userProfile?.role === 'admin';
   }, [userProfile?.role]);
 
   // Optimized voter filtering

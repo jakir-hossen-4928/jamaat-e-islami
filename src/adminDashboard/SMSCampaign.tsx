@@ -51,7 +51,7 @@ const SMSCampaignComponent = () => {
     
     const votersCollection = collection(db, 'voters');
     
-    if (userProfile.role !== 'super_admin') {
+    if (userProfile.role === 'village_admin') {
       const userScope = userProfile.accessScope;
       if (userScope.village_id) {
         return query(votersCollection, 
@@ -79,7 +79,7 @@ const SMSCampaignComponent = () => {
           orderBy('Last Updated', 'desc')
         );
       }
-    } else {
+    } else if (userProfile.role === 'super_admin' || userProfile.role === 'admin') {
       if (selectedLocation.village_id) {
         return query(votersCollection, 
           where('village_id', '==', selectedLocation.village_id), 
@@ -237,7 +237,7 @@ const SMSCampaignComponent = () => {
           </div>
 
           {/* Location Filter */}
-          {userProfile?.role === 'super_admin' && (
+          {(userProfile?.role === 'super_admin' || userProfile?.role === 'admin') && (
             <VoterLocationFilter
               locationData={locationData}
               selectedLocation={selectedLocation}
