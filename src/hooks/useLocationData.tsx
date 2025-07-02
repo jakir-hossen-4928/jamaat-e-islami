@@ -44,8 +44,16 @@ export const useLocationData = () => {
           divisions: divisionsRes || [],
           districts: districtsRes || [],
           upazilas: upazilasRes || [],
-          unions: unionsRes || [],
-          villages: villagesRes || []
+          unions: unionsRes ? unionsRes.map((union: any) => ({
+            ...union,
+            upazila_id: union.upazilla_id || union.upazila_id
+          })) : [],
+          villages: villagesRes ? villagesRes.map((village: any) => ({
+            ...village,
+            id: village.id?.toString(),
+            bn_name: village.village || village.bn_name,
+            union_id: village.union_id?.toString()
+          })) : []
         });
       } catch (error) {
         console.error('Error loading location data:', error);
@@ -66,11 +74,15 @@ export const useLocationData = () => {
   };
 
   const getFilteredUnions = (upazilaId: string) => {
-    return locationData.unions.filter(union => union.upazila_id === upazilaId);
+    return locationData.unions.filter(union => 
+      union.upazila_id === upazilaId || (union as any).upazilla_id === upazilaId
+    );
   };
 
   const getFilteredVillages = (unionId: string) => {
-    return locationData.villages.filter(village => village.union_id === unionId);
+    return locationData.villages.filter(village => 
+      village.union_id === unionId || (village as any).union_id === parseInt(unionId)
+    );
   };
 
   const getLocationNames = (locationIds: {
