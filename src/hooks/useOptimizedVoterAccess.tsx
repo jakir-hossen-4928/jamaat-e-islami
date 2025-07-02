@@ -73,7 +73,7 @@ export const useOptimizedVoterAccess = (options: UseOptimizedVoterAccessOptions 
     },
     enabled: !!userProfile && !!createQuery,
     staleTime: enableCache ? 5 * 60 * 1000 : 0, // 5 minutes cache
-    gcTime: enableCache ? 10 * 60 * 1000 : 0, // 10 minutes cache (renamed from cacheTime)
+    gcTime: enableCache ? 10 * 60 * 1000 : 0, // 10 minutes cache
   });
 
   // Memoized statistics for better performance

@@ -95,8 +95,8 @@ service cloud.firestore {
                    canCreateVoterInLocation(request.resource.data) &&
                    request.resource.data.keys().hasAll(['Name', 'ID', 'Last Updated']);
       
-      // Update access - super admin can update all, village admin can't update
-      allow update: if hasRole('super_admin') && isApproved() && canAccessLocation(resource.data);
+      // Update access - super admin can update all, village admin can update their village only
+      allow update: if isAuthenticated() && isApproved() && canAccessLocation(resource.data);
       
       // Delete access - only super admin
       allow delete: if hasRole('super_admin') && isApproved();

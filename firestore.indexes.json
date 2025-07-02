@@ -5,23 +5,7 @@
       "collectionGroup": "voters",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "division_id", "order": "ASCENDING" },
-        { "fieldPath": "Last Updated", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "voters",
-      "queryScope": "COLLECTION", 
-      "fields": [
-        { "fieldPath": "district_id", "order": "ASCENDING" },
-        { "fieldPath": "Last Updated", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "voters",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "upazila_id", "order": "ASCENDING" },
+        { "fieldPath": "village_id", "order": "ASCENDING" },
         { "fieldPath": "Last Updated", "order": "DESCENDING" }
       ]
     },
@@ -37,7 +21,23 @@
       "collectionGroup": "voters",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "village_id", "order": "ASCENDING" },
+        { "fieldPath": "upazila_id", "order": "ASCENDING" },
+        { "fieldPath": "Last Updated", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "voters",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "district_id", "order": "ASCENDING" },
+        { "fieldPath": "Last Updated", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "voters",
+      "queryScope": "COLLECTION", 
+      "fields": [
+        { "fieldPath": "division_id", "order": "ASCENDING" },
         { "fieldPath": "Last Updated", "order": "DESCENDING" }
       ]
     },
@@ -53,6 +53,24 @@
       "collectionGroup": "voters",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "village_id", "order": "ASCENDING" },
+        { "fieldPath": "Will Vote", "order": "ASCENDING" },
+        { "fieldPath": "Last Updated", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "voters",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "Phone", "order": "ASCENDING" },
+        { "fieldPath": "Last Updated", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "voters",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "village_id", "order": "ASCENDING" },
         { "fieldPath": "Phone", "order": "ASCENDING" },
         { "fieldPath": "Last Updated", "order": "DESCENDING" }
       ]
@@ -70,7 +88,7 @@
       "collectionGroup": "users",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "accessScope.division_id", "order": "ASCENDING" },
+        { "fieldPath": "accessScope.village_id", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
@@ -79,6 +97,14 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "createdBy", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "sms_campaigns",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "locationScope.village_id", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
