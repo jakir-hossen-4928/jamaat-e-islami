@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -11,10 +11,12 @@ import {
   Database, 
   MessageSquare,
   Settings,
-  LogOut
+  LogOut,
+  Menu,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 interface ResponsiveSidebarProps {
   children: React.ReactNode;
@@ -23,6 +25,7 @@ interface ResponsiveSidebarProps {
 const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ children }) => {
   const { userProfile, logout } = useAuth();
   const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -47,89 +50,107 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ children }) => {
 
   const menuItems = userProfile?.role === 'super_admin' ? superAdminMenuItems : villageAdminMenuItems;
 
-  return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0">
-        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4 overflow-y-auto">
-          <div className="flex items-center flex-shrink-0 px-4">
-            <img className="h-8 w-auto" src="/bangladesh-jamaat-e-islami-seeklogo.svg" alt="Logo" />
-            <span className="ml-2 text-lg font-semibold text-gray-900">জামায়াত</span>
-          </div>
-          
-          <div className="mt-5 flex-grow flex flex-col">
-            <nav className="flex-1 px-2 space-y-1">
-              {menuItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.path}
-                    className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
-                      isActive(item.path)
-                        ? 'bg-green-100 text-green-900'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }`}
-                  >
-                    <Icon
-                      className={`mr-3 flex-shrink-0 h-5 w-5 ${
-                        isActive(item.path) ? 'text-green-500' : 'text-gray-400'
-                      }`}
-                    />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
+  const SidebarContent = () => (
+    <>
+      <div className="flex items-center flex-shrink-0 px-4 py-4 border-b border-gray-200">
+        <img className="h-8 w-auto" src="/bangladesh-jamaat-e-islami-seeklogo.svg" alt="Logo" />
+        <span className="ml-2 text-lg font-semibold text-gray-900">জামায়াত</span>
+      </div>
+      
+      <div className="flex-1 flex flex-col overflow-y-auto">
+        <nav className="flex-1 px-2 py-4 space-y-1">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.name}
+                to={item.path}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                  isActive(item.path)
+                    ? 'bg-green-100 text-green-900'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <Icon
+                  className={`mr-3 flex-shrink-0 h-5 w-5 ${
+                    isActive(item.path) ? 'text-green-500' : 'text-gray-400'
+                  }`}
+                />
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
 
-          <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
-            <div className="flex-shrink-0 w-full group block">
-              <div className="flex items-center">
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-700">
-                    {userProfile?.displayName || userProfile?.email}
-                  </p>
-                  <p className="text-xs font-medium text-gray-500">
-                    {userProfile?.role === 'super_admin' ? 'সুপার অ্যাডমিন' : 'গ্রাম অ্যাডমিন'}
-                  </p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => logout()}
-                    className="mt-2 text-xs"
-                  >
-                    <LogOut className="w-3 h-3 mr-1" />
-                    লগআউট
-                  </Button>
-                </div>
-              </div>
+        <div className="flex-shrink-0 border-t border-gray-200 p-4">
+          <div className="flex items-center space-x-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-700 truncate">
+                {userProfile?.displayName || userProfile?.email}
+              </p>
+              <p className="text-xs text-gray-500">
+                {userProfile?.role === 'super_admin' ? 'সুপার অ্যাডমিন' : 'গ্রাম অ্যাডমিন'}
+              </p>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                logout();
+                setIsMobileMenuOpen(false);
+              }}
+              className="flex-shrink-0"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="sr-only">লগআউট</span>
+            </Button>
           </div>
         </div>
       </div>
+    </>
+  );
 
-      {/* Mobile sidebar - simplified */}
-      <div className="lg:hidden">
-        <Card className="m-2 p-2">
-          <div className="flex items-center justify-between">
-            <img className="h-6 w-auto" src="/bangladesh-jamaat-e-islami-seeklogo.svg" alt="Logo" />
-            <Button variant="ghost" size="sm" onClick={() => logout()}>
-              <LogOut className="w-4 h-4" />
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Mobile Header */}
+      <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <img className="h-6 w-auto" src="/bangladesh-jamaat-e-islami-seeklogo.svg" alt="Logo" />
+          <span className="text-lg font-semibold text-gray-900">জামায়াত</span>
+        </div>
+        
+        <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="sm" className="lg:hidden">
+              <Menu className="w-5 h-5" />
+              <span className="sr-only">মেনু খুলুন</span>
             </Button>
-          </div>
-        </Card>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-64 p-0">
+            <div className="flex flex-col h-full bg-white">
+              <SidebarContent />
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
 
-      {/* Main content */}
-      <div className="lg:pl-64 flex flex-col flex-1">
-        <main className="flex-1">
-          <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              {children}
+      <div className="flex">
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:bg-white lg:border-r lg:border-gray-200">
+          <SidebarContent />
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1 lg:pl-64">
+          <main className="flex-1">
+            <div className="py-6">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                {children}
+              </div>
             </div>
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
     </div>
   );
