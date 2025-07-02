@@ -89,14 +89,36 @@ const Register = () => {
       setError('ভূমিকা নির্বাচন করুন');
       return false;
     }
-    if (!formData.location.division_id || !formData.location.district_id || 
-        !formData.location.upazila_id || !formData.location.union_id) {
-      setError('সম্পূর্ণ লোকেশন তথ্য প্রয়োজন');
-      return false;
-    }
-    if (formData.role === 'village_admin' && !formData.location.village_id) {
-      setError('গ্রাম অ্যাডমিনের জন্য গ্রাম নির্বাচন প্রয়োজন');
-      return false;
+    // Location validation based on role
+    if (formData.role === 'super_admin') {
+      // Super admin doesn't need location
+    } else if (formData.role === 'division_admin') {
+      if (!formData.location.division_id) {
+        setError('বিভাগীয় অ্যাডমিনের জন্য বিভাগ নির্বাচন প্রয়োজন');
+        return false;
+      }
+    } else if (formData.role === 'district_admin') {
+      if (!formData.location.division_id || !formData.location.district_id) {
+        setError('জেলা অ্যাডমিনের জন্য বিভাগ ও জেলা নির্বাচন প্রয়োজন');
+        return false;
+      }
+    } else if (formData.role === 'upazila_admin') {
+      if (!formData.location.division_id || !formData.location.district_id || !formData.location.upazila_id) {
+        setError('উপজেলা অ্যাডমিনের জন্য বিভাগ, জেলা ও উপজেলা নির্বাচন প্রয়োজন');
+        return false;
+      }
+    } else if (formData.role === 'union_admin') {
+      if (!formData.location.division_id || !formData.location.district_id || 
+          !formData.location.upazila_id || !formData.location.union_id) {
+        setError('ইউনিয়ন অ্যাডমিনের জন্য সম্পূর্ণ লোকেশন তথ্য প্রয়োজন');
+        return false;
+      }
+    } else if (formData.role === 'village_admin') {
+      if (!formData.location.division_id || !formData.location.district_id || 
+          !formData.location.upazila_id || !formData.location.union_id || !formData.location.village_id) {
+        setError('গ্রাম অ্যাডমিনের জন্য গ্রাম সহ সম্পূর্ণ লোকেশন তথ্য প্রয়োজন');
+        return false;
+      }
     }
     return true;
   };
@@ -174,115 +196,132 @@ const Register = () => {
                   <SelectValue placeholder="ভূমিকা নির্বাচন করুন" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="super_admin">সুপার অ্যাডমিন</SelectItem>
+                  <SelectItem value="division_admin">বিভাগীয় অ্যাডমিন</SelectItem>
+                  <SelectItem value="district_admin">জেলা অ্যাডমিন</SelectItem>
+                  <SelectItem value="upazila_admin">উপজেলা অ্যাডমিন</SelectItem>
                   <SelectItem value="union_admin">ইউনিয়ন অ্যাডমিন</SelectItem>
                   <SelectItem value="village_admin">গ্রাম অ্যাডমিন</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Location Selection */}
-            <div className="space-y-3">
-              <div>
-                <Label>বিভাগ *</Label>
-                <Select
-                  value={formData.location.division_id}
-                  onValueChange={(value) => handleLocationChange('division_id', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locationData.divisions.map(division => (
-                      <SelectItem key={division.id} value={division.id}>
-                        {division.bn_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>জেলা *</Label>
-                <Select
-                  value={formData.location.district_id}
-                  onValueChange={(value) => handleLocationChange('district_id', value)}
-                  disabled={!formData.location.division_id}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={!formData.location.division_id ? "প্রথমে বিভাগ নির্বাচন করুন" : "জেলা নির্বাচন করুন"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getFilteredDistricts(formData.location.division_id).map(district => (
-                      <SelectItem key={district.id} value={district.id}>
-                        {district.bn_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>উপজেলা *</Label>
-                <Select
-                  value={formData.location.upazila_id}
-                  onValueChange={(value) => handleLocationChange('upazila_id', value)}
-                  disabled={!formData.location.district_id}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={!formData.location.district_id ? "প্রথমে জেলা নির্বাচন করুন" : "উপজেলা নির্বাচন করুন"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getFilteredUpazilas(formData.location.district_id).map(upazila => (
-                      <SelectItem key={upazila.id} value={upazila.id}>
-                        {upazila.bn_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>ইউনিয়ন *</Label>
-                <Select
-                  value={formData.location.union_id}
-                  onValueChange={(value) => handleLocationChange('union_id', value)}
-                  disabled={!formData.location.upazila_id}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={!formData.location.upazila_id ? "প্রথমে উপজেলা নির্বাচন করুন" : "ইউনিয়ন নির্বাচন করুন"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getFilteredUnions(formData.location.upazila_id).map(union => (
-                      <SelectItem key={union.id} value={union.id}>
-                        {union.bn_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {formData.role === 'village_admin' && (
+            {/* Location Selection - Show based on role */}
+            {formData.role && formData.role !== 'super_admin' && (
+              <div className="space-y-3">
+                {/* Division - Show for all roles except super_admin */}
                 <div>
-                  <Label>গ্রাম *</Label>
+                  <Label>বিভাগ *</Label>
                   <Select
-                    value={formData.location.village_id}
-                    onValueChange={(value) => handleLocationChange('village_id', value)}
-                    disabled={!formData.location.union_id}
+                    value={formData.location.division_id}
+                    onValueChange={(value) => handleLocationChange('division_id', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={!formData.location.union_id ? "প্রথমে ইউনিয়ন নির্বাচন করুন" : "গ্রাম নির্বাচন করুন"} />
+                      <SelectValue placeholder="বিভাগ নির্বাচন করুন" />
                     </SelectTrigger>
                     <SelectContent>
-                      {getFilteredVillages(formData.location.union_id).map(village => (
-                        <SelectItem key={village.id} value={village.id}>
-                          {village.bn_name}
+                      {locationData.divisions.map(division => (
+                        <SelectItem key={division.id} value={division.id}>
+                          {division.bn_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              )}
-            </div>
+
+                {/* District - Show for district_admin, upazila_admin, union_admin, village_admin */}
+                {['district_admin', 'upazila_admin', 'union_admin', 'village_admin'].includes(formData.role) && (
+                  <div>
+                    <Label>জেলা *</Label>
+                    <Select
+                      value={formData.location.district_id}
+                      onValueChange={(value) => handleLocationChange('district_id', value)}
+                      disabled={!formData.location.division_id}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={!formData.location.division_id ? "প্রথমে বিভাগ নির্বাচন করুন" : "জেলা নির্বাচন করুন"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getFilteredDistricts(formData.location.division_id).map(district => (
+                          <SelectItem key={district.id} value={district.id}>
+                            {district.bn_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Upazila - Show for upazila_admin, union_admin, village_admin */}
+                {['upazila_admin', 'union_admin', 'village_admin'].includes(formData.role) && (
+                  <div>
+                    <Label>উপজেলা *</Label>
+                    <Select
+                      value={formData.location.upazila_id}
+                      onValueChange={(value) => handleLocationChange('upazila_id', value)}
+                      disabled={!formData.location.district_id}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={!formData.location.district_id ? "প্রথমে জেলা নির্বাচন করুন" : "উপজেলা নির্বাচন করুন"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getFilteredUpazilas(formData.location.district_id).map(upazila => (
+                          <SelectItem key={upazila.id} value={upazila.id}>
+                            {upazila.bn_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Union - Show for union_admin, village_admin */}
+                {['union_admin', 'village_admin'].includes(formData.role) && (
+                  <div>
+                    <Label>ইউনিয়ন *</Label>
+                    <Select
+                      value={formData.location.union_id}
+                      onValueChange={(value) => handleLocationChange('union_id', value)}
+                      disabled={!formData.location.upazila_id}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={!formData.location.upazila_id ? "প্রথমে উপজেলা নির্বাচন করুন" : "ইউনিয়ন নির্বাচন করুন"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getFilteredUnions(formData.location.upazila_id).map(union => (
+                          <SelectItem key={union.id} value={union.id}>
+                            {union.bn_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Village - Show only for village_admin */}
+                {formData.role === 'village_admin' && (
+                  <div>
+                    <Label>গ্রাম *</Label>
+                    <Select
+                      value={formData.location.village_id}
+                      onValueChange={(value) => handleLocationChange('village_id', value)}
+                      disabled={!formData.location.union_id}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={!formData.location.union_id ? "প্রথমে ইউনিয়ন নির্বাচন করুন" : "গ্রাম নির্বাচন করুন"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getFilteredVillages(formData.location.union_id).map(village => (
+                          <SelectItem key={village.id} value={village.id}>
+                            {village.bn_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div>
               <Label htmlFor="password">পাসওয়ার্ড *</Label>
