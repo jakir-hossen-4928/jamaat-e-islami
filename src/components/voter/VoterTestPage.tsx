@@ -17,7 +17,7 @@ const VoterTestPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [newVoter, setNewVoter] = useState({
     Name: '',
-    'Fathers Name': '',
+    FatherOrHusband: '',
     'Mothers Name': '',
     ID: '',
     Phone: '',
@@ -29,7 +29,7 @@ const VoterTestPage = () => {
     {
       id: '1',
       Name: 'আহমেদ হাসান',
-      'Fathers Name': 'আবদুল হাসান',
+      FatherOrHusband: 'আবদুল হাসান',
       'Mothers Name': 'ফাতেমা বেগম',
       ID: 'V001',
       Phone: '01711111111',
@@ -41,7 +41,7 @@ const VoterTestPage = () => {
     {
       id: '2',
       Name: 'ফাতেমা খাতুন',
-      'Fathers Name': 'আবদুল করিম',
+      FatherOrHusband: 'আবদুল করিম',
       'Mothers Name': 'রাবিয়া বেগম',
       ID: 'V002',
       Phone: '01722222222',
@@ -83,7 +83,7 @@ const VoterTestPage = () => {
       // Reset form
       setNewVoter({
         Name: '',
-        'Fathers Name': '',
+        FatherOrHusband: '',
         'Mothers Name': '',
         ID: '',
         Phone: '',
@@ -188,11 +188,11 @@ const VoterTestPage = () => {
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium mb-2">পিতার নাম</label>
+                      <label className="block text-sm font-medium mb-2">পিতা/স্বামীর নাম</label>
                       <Input
-                        value={newVoter['Fathers Name']}
-                        onChange={(e) => setNewVoter(prev => ({ ...prev, 'Fathers Name': e.target.value }))}
-                        placeholder="পিতার নাম"
+                        value={newVoter.FatherOrHusband}
+                        onChange={(e) => setNewVoter(prev => ({ ...prev, FatherOrHusband: e.target.value }))}
+                        placeholder="পিতা/স্বামীর নাম"
                       />
                     </div>
 
@@ -258,7 +258,7 @@ const VoterTestPage = () => {
 
                   <Button 
                     onClick={handleAddVoter}
-                    disabled={isLoading || !newVoter.Name || !newVoter.ID || !newVoter['Fathers Name'] || !newVoter['Mothers Name']}
+                    disabled={isLoading || !newVoter.Name || !newVoter.ID || !newVoter.FatherOrHusband || !newVoter['Mothers Name']}
                     className="w-full"
                   >
                     {isLoading ? 'যোগ করা হচ্ছে...' : 'ভোটার যোগ করুন'}
