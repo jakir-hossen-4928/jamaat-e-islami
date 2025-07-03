@@ -2,9 +2,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
-import AuthWrapper from '@/components/auth/AuthWrapper';
-import Login from '@/pages/Login';
-import Register from '@/pages/Register';
+import AuthWrapper from '@/components/layout/AuthWrapper';
+import Login from '@/auth/Login';
+import Register from '@/auth/Register';
 import DashboardRouter from '@/components/DashboardRouter';
 import NotFound from '@/pages/NotFound';
 import AllVoters from '@/adminDashboard/AllVoters';
