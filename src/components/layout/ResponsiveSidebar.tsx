@@ -43,8 +43,8 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ children }) => {
 
   const villageAdminMenuItems = [
     { name: 'ড্যাশবোর্ড', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'সব ভোটার', path: '/admin/all-voters', icon: Users },
-    { name: 'ভোটার যোগ করুন', path: '/admin/add-new-voter', icon: Plus },
+    { name: 'সব ভোটার', path: '/admin/voters', icon: Users },
+    { name: 'ভোটার যোগ করুন', path: '/admin/add-voter', icon: Plus },
     { name: 'SMS ক্যাম্পেইন', path: '/admin/sms-campaign', icon: MessageSquare },
     { name: 'রিপোর্ট', path: '/admin/analytics-reports', icon: BarChart3 },
   ];

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -26,7 +27,8 @@ import { usePageTitle } from '@/lib/usePageTitle';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import RoleBasedSidebar from '@/components/layout/RoleBasedSidebar';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { useVotersQuery } from '@/hooks/useOptimizedQuery';
 import { loadLocationData } from '@/lib/locationUtils';
 
@@ -274,6 +276,10 @@ const AllVoters = () => {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-80">
+              <VisuallyHidden>
+                <SheetTitle>মোবাইল মেনু</SheetTitle>
+                <SheetDescription>অতিরিক্ত অপশন এবং কার্যক্রম</SheetDescription>
+              </VisuallyHidden>
               <div className="space-y-4 mt-6">
                 <Button onClick={handleExportToPDF} className="w-full">
                   <FileText className="h-4 w-4 mr-2" />

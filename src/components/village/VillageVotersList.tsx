@@ -7,16 +7,21 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Search, Users, Eye, Phone, MapPin } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useOptimizedVoterAccess } from '@/hooks/useOptimizedVoterAccess';
-import { VoterData } from '@/lib/types';
+import { useRoleBasedDataAccess } from '@/hooks/useRoleBasedDataAccess';
+import { useVotersQuery } from '@/hooks/useOptimizedQuery';
 
 const VillageVotersList = () => {
   const { userProfile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const { createVoterQuery } = useRoleBasedDataAccess();
   
-  const { voters, stats, isLoading, error } = useOptimizedVoterAccess({
-    pageSize: 100,
-    enableCache: true
+  // Create the query for village admin
+  const votersQuery = createVoterQuery();
+  
+  const { data: voters = [], isLoading, error } = useVotersQuery({
+    query: votersQuery!,
+    queryKey: ['village-voters', userProfile?.accessScope?.village_id],
+    enabled: !!userProfile?.accessScope?.village_id && !!votersQuery,
   });
 
   const filteredVoters = voters.filter(voter =>
@@ -24,6 +29,13 @@ const VillageVotersList = () => {
     voter.ID?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     voter.Phone?.includes(searchTerm)
   );
+
+  const stats = {
+    total: voters.length,
+    willVote: voters.filter(v => v['Will Vote'] === 'Yes').length,
+    highProbability: voters.filter(v => (v['Vote Probability (%)'] || 0) >= 70).length,
+    withPhone: voters.filter(v => v.Phone).length
+  };
 
   if (isLoading) {
     return (
