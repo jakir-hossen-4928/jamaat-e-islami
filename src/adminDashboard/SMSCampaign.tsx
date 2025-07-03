@@ -221,8 +221,8 @@ const SMSCampaignComponent = () => {
             <p className="mt-2 text-purple-100 text-sm lg:text-base">ভোটারদের কাছে বার্তা পাঠান</p>
           </div>
 
-          {/* Location Filter */}
-          {(userProfile?.role === 'super_admin' || userProfile?.role === 'admin') && (
+          {/* Location Filter - Show only for super_admin */}
+          {userProfile?.role === 'super_admin' && (
             <VoterLocationFilter
               locationData={locationData}
               selectedLocation={selectedLocation}
