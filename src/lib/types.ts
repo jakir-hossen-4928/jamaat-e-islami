@@ -1,12 +1,12 @@
+
 export interface VoterData {
   id?: string; // Firestore Document ID
   ID: string;
 
   // Personal Info
-  Name: string; // Changed from 'Voter Name' to 'Name'
-  'Fathers Name': string; // Keep this as is
-  'Mothers Name': string; // Keep this as is
-  FatherOrHusband?: string;
+  Name: string; // This maps to 'Voter Name' from form
+  FatherOrHusband?: string; // This maps to 'Father/Husband' from form
+  'Mothers Name'?: string; // This maps to 'Mother' from form
   Age?: number;
   Gender?: 'Male' | 'Female' | 'Other' | 'পুরুষ' | 'মহিলা';
   'Marital Status'?: 'Married' | 'Unmarried' | 'Widowed' | 'Divorced';
@@ -17,15 +17,15 @@ export interface VoterData {
 
   // Contact Info
   Phone?: string;
-  Mobile?: string; // Added Mobile field
+  Mobile?: string;
   NID?: string;
-  'Voter ID'?: string; // Added Voter ID field
+  'Voter ID'?: string;
 
   // Voting Info
   'Will Vote'?: 'Yes' | 'No';
   'Voted Before'?: 'Yes' | 'No';
   'Vote Probability (%)'?: number;
-  'Priority Level'?: string; // Added Priority Level
+  'Priority Level'?: string;
   'Political Support'?: string;
 
   // Special Conditions
@@ -66,30 +66,27 @@ export interface User {
   uid: string;
   email: string;
   displayName?: string;
-  phone?: string; // Added phone field
-  role: 'super_admin' | 'village_admin'; // Only two roles now
+  phone?: string;
+  role: 'super_admin' | 'village_admin';
   approved: boolean;
-  rejected?: boolean; // Added rejected field
+  rejected?: boolean;
   createdAt: string;
   lastLogin?: string;
-  // Location-based access scope - defines what areas user can access
   accessScope: {
     division_id?: string;
     district_id?: string;
     upazila_id?: string;
     union_id?: string;
     village_id?: string;
-    // Location names for display
     division_name?: string;
     district_name?: string;
     upazila_name?: string;
     union_name?: string;
     village_name?: string;
   };
-  // Assigned by role hierarchy
-  assignedBy?: string; // UID of the admin who assigned this role
-  verifiedBy?: string; // UID of the admin who verified this user
-  rejectedBy?: string; // UID of the admin who rejected this user
+  assignedBy?: string;
+  verifiedBy?: string;
+  rejectedBy?: string;
   verifiedAt?: Date;
   rejectedAt?: Date;
 }
@@ -102,8 +99,7 @@ export interface SMSCampaign {
   sentCount: number;
   status: 'draft' | 'sent' | 'scheduled';
   createdAt: string;
-  createdBy: string; // UID of creator
-  // Location-based targeting
+  createdBy: string;
   locationScope: {
     division_id?: string;
     district_id?: string;
@@ -147,15 +143,6 @@ export interface Union {
   url: string;
 }
 
-export interface Ward {
-  id: string;
-  union_id: string;
-  name: string;
-  bn_name: string;
-  ward_no: string;
-  type: 'city_corporation' | 'municipality' | 'union_council';
-}
-
 export interface Village {
   id: string;
   union_id: string;
@@ -166,13 +153,12 @@ export interface Village {
   division_id: string;
 }
 
-// Location data structure for JSON files
+// Location data structure for JSON files (removed Ward)
 export interface LocationData {
   divisions: Division[];
   districts: District[];
   upazilas: Upazila[];
   unions: Union[];
-  wards: Ward[];
   villages: Village[];
 }
 
@@ -182,11 +168,11 @@ export interface RolePermissions {
   canRead: boolean;
   canUpdate: boolean;
   canDelete: boolean;
-  canAssignRoles: string[]; // Array of roles this user can assign
+  canAssignRoles: string[];
   canVerifyUsers: boolean;
   canAccessDataHub: boolean;
   canAccessAllVoters: boolean;
   locationScope: 'all' | 'village';
 }
 
-export type UserRole = 'super_admin' | 'village_admin'; // Only two roles now
+export type UserRole = 'super_admin' | 'village_admin';

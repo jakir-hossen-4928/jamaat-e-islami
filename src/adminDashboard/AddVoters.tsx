@@ -126,12 +126,12 @@ const AddVoters = () => {
       // Generate a unique ID for the voter
       const voterID = `VOTER_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      // Map form data to VoterData interface requirements
+      // Map form data to VoterData interface with correct field names
       const voterData: VoterData = {
         ID: voterID,
-        Name: formData['Voter Name'],
-        'Fathers Name': formData['Father/Husband'],
-        'Mothers Name': formData['Mother'],
+        Name: formData['Voter Name'], // Maps to Name field
+        FatherOrHusband: formData['Father/Husband'], // Maps to FatherOrHusband field
+        'Mothers Name': formData['Mother'], // Maps to 'Mothers Name' field
         Address: formData['Address'],
         Age: parseInt(formData['Age']),
         Gender: formData['Gender'] as any,
@@ -146,6 +146,8 @@ const AddVoters = () => {
         village_id: selectedLocation.village_id || '',
         'Last Updated': new Date().toISOString()
       };
+
+      console.log('Saving voter data:', voterData);
 
       await addDoc(collection(db, 'voters'), voterData);
 
