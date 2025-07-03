@@ -123,13 +123,27 @@ const AddVoters = () => {
     setIsSubmitting(true);
 
     try {
+      // Generate a unique ID for the voter
+      const voterID = `VOTER_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Map form data to VoterData interface requirements
       const voterData: VoterData = {
-        ...formData,
-        division_id: selectedLocation.division_id || null,
-        district_id: selectedLocation.district_id || null,
-        upazila_id: selectedLocation.upazila_id || null,
-        union_id: selectedLocation.union_id || null,
-        village_id: selectedLocation.village_id || null,
+        ID: voterID,
+        Name: formData['Voter Name'],
+        'Fathers Name': formData['Father/Husband'],
+        'Mothers Name': formData['Mother'],
+        Address: formData['Address'],
+        Age: parseInt(formData['Age']),
+        Gender: formData['Gender'] as any,
+        Phone: formData['Phone'],
+        'Vote Probability (%)': parseInt(formData['Vote Probability (%)']),
+        'Will Vote': formData['Will Vote'] as any,
+        Remarks: formData['Remarks'],
+        division_id: selectedLocation.division_id || '',
+        district_id: selectedLocation.district_id || '',
+        upazila_id: selectedLocation.upazila_id || '',
+        union_id: selectedLocation.union_id || '',
+        village_id: selectedLocation.village_id || '',
         'Last Updated': new Date().toISOString()
       };
 
