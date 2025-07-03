@@ -41,6 +41,14 @@ const AllVoters = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [locationNames, setLocationNames] = useState<{ [key: string]: string }>({});
 
+  // Redirect village admin to their specific route
+  React.useEffect(() => {
+    if (userProfile?.role === 'village_admin') {
+      navigate('/admin/voters', { replace: true });
+      return;
+    }
+  }, [userProfile, navigate]);
+
   const {
     locationData,
     selectedLocation,

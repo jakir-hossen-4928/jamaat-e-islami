@@ -16,7 +16,8 @@ import {
   X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 interface ResponsiveSidebarProps {
   children: React.ReactNode;
@@ -42,8 +43,8 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ children }) => {
 
   const villageAdminMenuItems = [
     { name: 'ড্যাশবোর্ড', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'ভোটার দেখুন', path: '/admin/voters', icon: Users },
-    { name: 'ভোটার যোগ করুন', path: '/admin/add-voter', icon: Plus },
+    { name: 'সব ভোটার', path: '/admin/all-voters', icon: Users },
+    { name: 'ভোটার যোগ করুন', path: '/admin/add-new-voter', icon: Plus },
     { name: 'SMS ক্যাম্পেইন', path: '/admin/sms-campaign', icon: MessageSquare },
     { name: 'রিপোর্ট', path: '/admin/analytics-reports', icon: BarChart3 },
   ];
@@ -128,6 +129,10 @@ const ResponsiveSidebar: React.FC<ResponsiveSidebarProps> = ({ children }) => {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0">
+            <VisuallyHidden>
+              <SheetTitle>নেভিগেশন মেনু</SheetTitle>
+              <SheetDescription>অ্যাপ্লিকেশনের মূল মেনু</SheetDescription>
+            </VisuallyHidden>
             <div className="flex flex-col h-full bg-white">
               <SidebarContent />
             </div>
