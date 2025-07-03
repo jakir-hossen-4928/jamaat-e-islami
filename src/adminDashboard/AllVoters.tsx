@@ -56,6 +56,7 @@ const AllVoters = () => {
 
     // Apply role-based filtering to reduce database reads
     if (userProfile.role === 'village_admin' && userProfile.accessScope?.village_id) {
+      console.log('Creating village admin query for village:', userProfile.accessScope.village_id);
       return query(votersCollection,
         where('village_id', '==', userProfile.accessScope.village_id),
         orderBy('Last Updated', 'desc')
@@ -88,10 +89,11 @@ const AllVoters = () => {
           orderBy('Last Updated', 'desc')
         );
       }
+      // Default query for super admin without filters
+      return query(votersCollection, orderBy('Last Updated', 'desc'));
     }
 
-    // Default query for super admin without filters
-    return query(votersCollection, orderBy('Last Updated', 'desc'));
+    return null;
   };
 
   const votersQuery = createVotersQuery();
@@ -116,6 +118,9 @@ const AllVoters = () => {
 
   // Ensure allVoters is always an array
   const allVoters: VoterData[] = Array.isArray(queryData) ? queryData : [];
+  
+  console.log('All voters data:', allVoters.length, 'voters');
+  console.log('User profile:', userProfile?.role, userProfile?.accessScope);
 
   // Load location names from local JSON files
   React.useEffect(() => {
@@ -237,10 +242,12 @@ const AllVoters = () => {
   };
 
   if (error) {
+    console.error('Error in AllVoters:', error);
     return (
       <RoleBasedSidebar>
         <div className="text-center py-8">
           <p className="text-red-600">ডেটা লোড করতে সমস্যা হয়েছে</p>
+          <p className="text-sm text-gray-500 mt-2">Error: {error.message}</p>
         </div>
       </RoleBasedSidebar>
     );

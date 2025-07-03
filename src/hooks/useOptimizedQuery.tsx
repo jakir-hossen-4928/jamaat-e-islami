@@ -16,11 +16,21 @@ export const useVotersQuery = ({ query, queryKey, enabled = true, staleTime = 5 
     queryFn: async () => {
       if (!query) return [];
       
-      const snapshot = await getDocs(query);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as VoterData));
+      console.log('Executing voters query with key:', queryKey);
+      
+      try {
+        const snapshot = await getDocs(query);
+        const voters = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as VoterData));
+        
+        console.log('Query result:', voters.length, 'voters found');
+        return voters;
+      } catch (error) {
+        console.error('Error fetching voters:', error);
+        return [];
+      }
     },
     enabled,
     staleTime,

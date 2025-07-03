@@ -49,7 +49,7 @@ export const useRoleBasedDataAccess = (): UseRoleBasedDataAccessReturn => {
 
   // Check if user can access all data (super admin only)
   const canAccessAllData = useMemo(() => {
-    return userProfile?.role === 'super_admin' || userProfile?.role === 'admin';
+    return userProfile?.role === 'super_admin';
   }, [userProfile?.role]);
 
   // Optimized voter filtering
@@ -59,8 +59,8 @@ export const useRoleBasedDataAccess = (): UseRoleBasedDataAccessReturn => {
       
       if (canAccessAllData) return voters;
 
-      // For village admin, filter by village_id only
-      if (userProfile.role === 'village_admin') {
+      // For village admin, filter by village_id
+      if (userProfile.role === 'village_admin' && userProfile.accessScope?.village_id) {
         return voters.filter(voter => voter.village_id === userProfile.accessScope.village_id);
       }
 
@@ -87,11 +87,8 @@ export const useRoleBasedDataAccess = (): UseRoleBasedDataAccessReturn => {
       }
     });
 
-    // Add optimized ordering
+    // Add optimized ordering - use a field that exists in all documents
     constraints.push(orderBy('Last Updated', 'desc'));
-    
-    // Add limit for better performance
-    constraints.push(limit(100));
 
     return query(votersRef, ...constraints);
   };

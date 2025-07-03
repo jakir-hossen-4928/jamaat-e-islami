@@ -13,32 +13,77 @@ import RoleBasedSidebar from '@/components/layout/RoleBasedSidebar';
 const VillageAdminDashboard = () => {
   const { userProfile } = useAuth();
 
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, error } = useQuery({
     queryKey: ['village-admin-stats', userProfile?.accessScope?.village_id],
     queryFn: async () => {
-      if (!userProfile?.accessScope?.village_id) return null;
+      if (!userProfile?.accessScope?.village_id) {
+        console.log('No village_id found for user:', userProfile);
+        return null;
+      }
+
+      console.log('Fetching stats for village:', userProfile.accessScope.village_id);
 
       const votersRef = collection(db, 'voters');
       const votersQuery = query(votersRef, where('village_id', '==', userProfile.accessScope.village_id));
       
-      const votersSnapshot = await getDocs(votersQuery);
-      const voters = votersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoterData));
-      
-      return {
-        totalVoters: voters.length,
-        maleVoters: voters.filter(v => v.Gender === 'Male').length,
-        femaleVoters: voters.filter(v => v.Gender === 'Female').length,
-        highProbabilityVoters: voters.filter(v => (v['Vote Probability (%)'] || 0) >= 80).length
-      };
+      try {
+        const votersSnapshot = await getDocs(votersQuery);
+        const voters = votersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VoterData));
+        
+        console.log('Found voters:', voters.length);
+        
+        const stats = {
+          totalVoters: voters.length,
+          maleVoters: voters.filter(v => v.Gender === 'Male' || v.Gender === 'পুরুষ').length,
+          femaleVoters: voters.filter(v => v.Gender === 'Female' || v.Gender === 'মহিলা').length,
+          highProbabilityVoters: voters.filter(v => (v['Vote Probability (%)'] || 0) >= 80).length
+        };
+        
+        console.log('Calculated stats:', stats);
+        return stats;
+        
+      } catch (error) {
+        console.error('Error fetching village admin stats:', error);
+        throw error;
+      }
     },
     enabled: !!userProfile?.accessScope?.village_id
   });
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">ডেটা লোড হচ্ছে...</div>
-      </div>
+      <RoleBasedSidebar>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-lg">ডেটা লোড হচ্ছে...</div>
+        </div>
+      </RoleBasedSidebar>
+    );
+  }
+
+  if (error) {
+    console.error('Village Admin Dashboard error:', error);
+    return (
+      <RoleBasedSidebar>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="text-lg text-red-600">ডেটা লোড করতে সমস্যা হয়েছে</div>
+            <p className="text-sm text-gray-500 mt-2">Error: {error.message}</p>
+          </div>
+        </div>
+      </RoleBasedSidebar>
+    );
+  }
+
+  if (!userProfile?.accessScope?.village_id) {
+    return (
+      <RoleBasedSidebar>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="text-lg text-orange-600">গ্রামের তথ্য পাওয়া যায়নি</div>
+            <p className="text-sm text-gray-500 mt-2">আপনার গ্রামের তথ্য সিস্টেমে নেই</p>
+          </div>
+        </div>
+      </RoleBasedSidebar>
     );
   }
 
@@ -107,7 +152,7 @@ const VillageAdminDashboard = () => {
                 <a href="/admin/add-voter">নতুন ভোটার যোগ করুন</a>
               </Button>
               <Button className="w-full" variant="outline" asChild>
-                <a href="/admin/voters">গ্রামের ভোটার দেখুন</a>
+                <a href="/admin/all-voters">গ্রামের ভোটার দেখুন</a>
               </Button>
             </CardContent>
           </Card>
@@ -117,11 +162,11 @@ const VillageAdminDashboard = () => {
               <CardTitle>গ্রাম ব্যবস্থাপনা</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button className="w-full" variant="outline">
-                স্থানীয় রিপোর্ট
+              <Button className="w-full" variant="outline" asChild>
+                <a href="/admin/sms-campaign">SMS ক্যাম্পেইন</a>
               </Button>
-              <Button className="w-full" variant="outline">
-                সরাসরি যোগাযোগ
+              <Button className="w-full" variant="outline" asChild>
+                <a href="/admin/analytics-reports">রিপোর্ট দেখুন</a>
               </Button>
             </CardContent>
           </Card>

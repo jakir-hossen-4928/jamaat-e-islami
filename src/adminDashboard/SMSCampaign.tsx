@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { collection, query, where, orderBy, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -51,35 +50,13 @@ const SMSCampaignComponent = () => {
     
     const votersCollection = collection(db, 'voters');
     
-    if (userProfile.role === 'village_admin') {
-      const userScope = userProfile.accessScope;
-      if (userScope.village_id) {
-        return query(votersCollection, 
-          where('village_id', '==', userScope.village_id), 
-          orderBy('Last Updated', 'desc')
-        );
-      } else if (userScope.union_id) {
-        return query(votersCollection, 
-          where('union_id', '==', userScope.union_id), 
-          orderBy('Last Updated', 'desc')
-        );
-      } else if (userScope.upazila_id) {
-        return query(votersCollection, 
-          where('upazila_id', '==', userScope.upazila_id), 
-          orderBy('Last Updated', 'desc')
-        );
-      } else if (userScope.district_id) {
-        return query(votersCollection, 
-          where('district_id', '==', userScope.district_id), 
-          orderBy('Last Updated', 'desc')
-        );
-      } else if (userScope.division_id) {
-        return query(votersCollection, 
-          where('division_id', '==', userScope.division_id), 
-          orderBy('Last Updated', 'desc')
-        );
-      }
-    } else if (userProfile.role === 'super_admin' || userProfile.role === 'admin') {
+    if (userProfile.role === 'village_admin' && userProfile.accessScope?.village_id) {
+      console.log('Creating SMS campaign query for village admin:', userProfile.accessScope.village_id);
+      return query(votersCollection, 
+        where('village_id', '==', userProfile.accessScope.village_id), 
+        orderBy('Last Updated', 'desc')
+      );
+    } else if (userProfile.role === 'super_admin') {
       if (selectedLocation.village_id) {
         return query(votersCollection, 
           where('village_id', '==', selectedLocation.village_id), 
@@ -106,16 +83,20 @@ const SMSCampaignComponent = () => {
           orderBy('Last Updated', 'desc')
         );
       }
+      // Default query for super admin
+      return query(votersCollection, orderBy('Last Updated', 'desc'));
     }
     
-    return query(votersCollection, orderBy('Last Updated', 'desc'));
+    return null;
   };
 
   const votersQuery = createVotersQuery();
 
   const createQueryKey = () => {
     const baseKey = ['sms-voters', userProfile?.uid];
-    if (selectedLocation && Object.keys(selectedLocation).length > 0) {
+    if (userProfile?.role === 'village_admin') {
+      baseKey.push(userProfile.accessScope?.village_id);
+    } else if (selectedLocation && Object.keys(selectedLocation).length > 0) {
       baseKey.push(JSON.stringify(selectedLocation));
     }
     return baseKey;
@@ -129,6 +110,8 @@ const SMSCampaignComponent = () => {
 
   // Ensure allVoters is always an array
   const allVoters: VoterData[] = Array.isArray(queryData) ? queryData : [];
+  
+  console.log('SMS Campaign - All voters:', allVoters.length);
 
   // Filter voters based on criteria with enhanced caching
   const targetVoters = useMemo(() => {
@@ -217,10 +200,12 @@ const SMSCampaignComponent = () => {
   };
 
   if (error) {
+    console.error('SMS Campaign error:', error);
     return (
       <RoleBasedSidebar>
         <div className="text-center py-8">
           <p className="text-red-600">ডেটা লোড করতে সমস্যা হয়েছে</p>
+          <p className="text-sm text-gray-500 mt-2">Error: {error.message}</p>
         </div>
       </RoleBasedSidebar>
     );
